@@ -57,11 +57,10 @@ export default function HolidaysPage() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Holidays & Non-Working Days</h1>
-        <p className="page-subtitle">Manage public holidays to ensure accurate absence tracking</p>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
+        <div>
+          <h1 className="page-title">Holidays & Non-Working Days</h1>
+          <p className="page-subtitle">Manage public holidays to ensure accurate absence tracking</p>
+        </div>
         <button className="btn btn-primary" onClick={openAdd}>
           <Plus size={18} style={{ marginRight: 8 }} />
           Add Holiday

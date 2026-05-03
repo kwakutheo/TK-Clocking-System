@@ -89,7 +89,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div className="page-header dashboard-header">
         <div>
           <h1 className="page-title">
             {greeting}, <span className="text-gradient">{user?.fullName.split(' ')[0]}</span>
@@ -178,15 +178,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Chart + Activity */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
+      <div className="dashboard-content-grid">
         <div className="table-wrap" style={{ padding: '20px 24px' }}>
           <div className="table-header" style={{ padding: '0 0 16px', borderBottom: 'none' }}>
             <span className="table-title">Attendance Overview</span>

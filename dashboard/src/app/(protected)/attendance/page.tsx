@@ -237,7 +237,7 @@ export default function AttendanceReportPage() {
 
       {report && (
         <>
-          <div className="report-controls" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="report-controls">
             <div className="tabs" style={{ display: 'flex', gap: 8 }}>
               {viewMode === 'term' && (
                 <>
@@ -273,7 +273,7 @@ export default function AttendanceReportPage() {
             </label>
           </div>
 
-          <div className="stats-grid" style={{ marginBottom: 24, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <div className="stats-grid">
             <div className="stat-card" style={{ '--stat-color': 'var(--success)', '--stat-color-dim': 'var(--success-dim)' } as any}>
               <div className="stat-card-glow" />
               <div className="stat-card-content">

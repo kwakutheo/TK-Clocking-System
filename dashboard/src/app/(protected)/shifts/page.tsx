@@ -77,18 +77,17 @@ export default function ShiftsPage() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Shift Management</h1>
-        <p className="page-subtitle">Define working hours to track lateness and early departures</p>
-      </div>
-
-      {canManage && (
-        <div style={{ marginBottom: 20 }}>
+        <div>
+          <h1 className="page-title">Shift Management</h1>
+          <p className="page-subtitle">Define working hours to track lateness and early departures</p>
+        </div>
+        {canManage && (
           <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
             <Plus size={18} style={{ marginRight: 8 }} />
             Create New Shift
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="table-wrap">
         <div className="table-header">
@@ -124,11 +123,22 @@ export default function ShiftsPage() {
                   </td>
                   <td>{s.graceMinutes} minutes</td>
                   {canManage && (
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="btn btn-sm btn-ghost" onClick={() => handleOpenEdit(s)}>
+                     <td style={{ textAlign: 'right' }}>
+                      <button 
+                        className="btn btn-sm btn-ghost" 
+                        onClick={() => handleOpenEdit(s)}
+                        aria-label="Edit Shift"
+                        title="Edit Shift"
+                      >
                         <Edit size={16} />
                       </button>
-                      <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(s.id)}>
+                      <button 
+                        className="btn btn-sm btn-ghost" 
+                        style={{ color: 'var(--danger)' }} 
+                        onClick={() => handleDelete(s.id)}
+                        aria-label="Delete Shift"
+                        title="Delete Shift"
+                      >
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -149,8 +159,9 @@ export default function ShiftsPage() {
             </div>
             <form onSubmit={handleAdd}>
               <div className="form-group">
-                <label>Shift Name</label>
+                <label htmlFor="shiftName">Shift Name</label>
                 <input 
+                  id="shiftName"
                   className="form-input" 
                   required 
                   value={form.name} 
@@ -160,8 +171,9 @@ export default function ShiftsPage() {
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Start Time</label>
+                  <label htmlFor="startTime">Start Time</label>
                   <input 
+                    id="startTime"
                     type="time" 
                     className="form-input" 
                     required 
@@ -170,8 +182,9 @@ export default function ShiftsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>End Time</label>
+                  <label htmlFor="endTime">End Time</label>
                   <input 
+                    id="endTime"
                     type="time" 
                     className="form-input" 
                     required 
@@ -181,8 +194,9 @@ export default function ShiftsPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label>Grace Minutes (Late threshold)</label>
+                <label htmlFor="graceMinutes">Grace Minutes (Late threshold)</label>
                 <input 
+                  id="graceMinutes"
                   type="number" 
                   className="form-input" 
                   required 

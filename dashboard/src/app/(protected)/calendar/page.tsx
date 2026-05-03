@@ -120,11 +120,10 @@ export default function AcademicCalendarPage() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Academic Calendar</h1>
-        <p className="page-subtitle">Manage school terms, mid-term breaks, and vacations</p>
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
+        <div>
+          <h1 className="page-title">Academic Calendar</h1>
+          <p className="page-subtitle">Manage school terms, mid-term breaks, and vacations</p>
+        </div>
         <button className="btn btn-primary" onClick={() => { setEditingTerm(null); setShowTermModal(true); }}>
           <Plus size={18} /> Add New Term
         </button>
@@ -175,7 +174,7 @@ export default function AcademicCalendarPage() {
                 
                 {isExpanded && (
                   <div style={{ padding: 20, background: 'var(--bg-secondary)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
                       {yearTerms.map((term) => (
                         <div key={term.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -187,8 +186,22 @@ export default function AcademicCalendarPage() {
                               {term.isActive && <span className="badge badge-green" style={{ marginTop: 4 }}>Current Term</span>}
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
-                              <button onClick={() => openEditTerm(term)} style={{ color: 'var(--text-secondary)' }}><Edit2 size={16} /></button>
-                              <button onClick={() => deleteTerm(term.id)} style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
+                              <button 
+                                onClick={() => openEditTerm(term)} 
+                                style={{ color: 'var(--text-secondary)' }}
+                                aria-label="Edit Term"
+                                title="Edit Term"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => deleteTerm(term.id)} 
+                                style={{ color: 'var(--danger)' }}
+                                aria-label="Delete Term"
+                                title="Delete Term"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                             </div>
                           </div>
 
@@ -232,7 +245,14 @@ export default function AcademicCalendarPage() {
                                         {format(parseISO(b.startDate), 'dd MMM')} — {format(parseISO(b.endDate), 'dd MMM')}
                                       </div>
                                     </div>
-                                    <button onClick={() => deleteBreak(b.id)} style={{ color: 'var(--danger)', opacity: 0.6 }}><Trash2 size={14} /></button>
+                                    <button 
+                                      onClick={() => deleteBreak(b.id)} 
+                                      style={{ color: 'var(--danger)', opacity: 0.6 }}
+                                      aria-label="Delete Break"
+                                      title="Delete Break"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
                                   </div>
                                 ))}
                               </div>
@@ -260,8 +280,9 @@ export default function AcademicCalendarPage() {
             <form onSubmit={handleTermSubmit}>
               <div className="form-grid">
                 <div className="form-group full-width">
-                  <label>Term Name</label>
+                  <label htmlFor="termName">Term Name</label>
                   <input 
+                    id="termName"
                     className="form-input" 
                     placeholder="e.g. Term 1" 
                     value={termForm.name}
@@ -270,8 +291,9 @@ export default function AcademicCalendarPage() {
                   />
                 </div>
                 <div className="form-group full-width">
-                  <label>Academic Year</label>
+                  <label htmlFor="academicYear">Academic Year</label>
                   <input 
+                    id="academicYear"
                     className="form-input" 
                     placeholder="e.g. 2023/2024" 
                     value={termForm.academicYear}
@@ -280,8 +302,9 @@ export default function AcademicCalendarPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Start Date</label>
+                  <label htmlFor="startDate">Start Date</label>
                   <input 
+                    id="startDate"
                     type="date" 
                     className="form-input" 
                     value={termForm.startDate}
@@ -290,8 +313,9 @@ export default function AcademicCalendarPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>End Date</label>
+                  <label htmlFor="endDate">End Date</label>
                   <input 
+                    id="endDate"
                     type="date" 
                     className="form-input" 
                     value={termForm.endDate}
@@ -322,8 +346,9 @@ export default function AcademicCalendarPage() {
             <form onSubmit={handleBreakSubmit}>
               <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="form-group">
-                  <label>Break Name</label>
+                  <label htmlFor="breakName">Break Name</label>
                   <input 
+                    id="breakName"
                     className="form-input" 
                     placeholder="e.g. Mid-term break" 
                     value={breakForm.name}
@@ -332,8 +357,9 @@ export default function AcademicCalendarPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Start Date</label>
+                  <label htmlFor="breakStartDate">Start Date</label>
                   <input 
+                    id="breakStartDate"
                     type="date" 
                     className="form-input" 
                     value={breakForm.startDate}
@@ -342,8 +368,9 @@ export default function AcademicCalendarPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>End Date</label>
+                  <label htmlFor="breakEndDate">End Date</label>
                   <input 
+                    id="breakEndDate"
                     type="date" 
                     className="form-input" 
                     value={breakForm.endDate}

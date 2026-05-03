@@ -39,9 +39,15 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { user, isHydrated, hydrate, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => { hydrate(); }, [hydrate]);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -86,8 +92,43 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   return (
     <div className={`app-shell ${collapsed ? 'collapsed' : ''}`}>
+      {/* ── Mobile Header ────────────────────────────────────────────────── */}
+      <header className="mobile-header">
+        <button 
+          className="mobile-menu-btn" 
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+        <div className="mobile-logo">
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={32}
+            height={32}
+            style={{ borderRadius: '6px' }}
+          />
+          <span>TK Clocking</span>
+        </div>
+        <button 
+          className="mobile-theme-btn"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      </header>
+
+      {/* ── Overlay ──────────────────────────────────────────────────────── */}
+      <div 
+        className={`sidebar-overlay ${mobileOpen ? 'active' : ''}`} 
+        onClick={() => setMobileOpen(false)}
+      />
+
       {/* ── Sidebar ────────────────────────────────────────────────────── */}
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <Image
@@ -122,9 +163,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`nav-item ${pathname === item.href ? 'active' : ''}`}
                 title={collapsed ? item.label : undefined}
+                onClick={() => setMobileOpen(false)}
               >
                 <span className="nav-item-icon"><item.icon size={18} /></span>
-                {!collapsed && item.label}
+                {(collapsed && !mobileOpen) ? null : item.label}
               </Link>
             ))}
           </nav>
@@ -136,7 +178,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
               background: 'linear-gradient(135deg, var(--primary), #a855f7)',
               boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
             }}>{initials(user.fullName)}</div>
-            {!collapsed && (
+            {(!collapsed || mobileOpen) && (
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="user-name" style={{ 
                   overflow: 'hidden', 
@@ -153,7 +195,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 </div>
               </div>
             )}
-            {!collapsed && (
+            {(!collapsed || mobileOpen) && (
               <button
                 onClick={logout}
                 aria-label="Sign out"
@@ -171,6 +213,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       {/* ── Main ───────────────────────────────────────────────────────── */}
       <main className="main-content" style={{ position: 'relative' }}>
         <button 
+          className="theme-toggle-btn desktop-only"
           onClick={toggleTheme}
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           style={{

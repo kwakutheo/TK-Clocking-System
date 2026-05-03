@@ -378,11 +378,10 @@ export default function BranchesPage() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Branches</h1>
-        <p className="page-subtitle">Physical attendance locations and geofence settings</p>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
+        <div>
+          <h1 className="page-title">Branches</h1>
+          <p className="page-subtitle">Physical attendance locations and geofence settings</p>
+        </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Add Branch</button>
       </div>
 

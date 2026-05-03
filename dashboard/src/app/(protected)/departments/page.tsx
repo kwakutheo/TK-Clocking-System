@@ -77,11 +77,10 @@ export default function DepartmentsPage() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Departments</h1>
-        <p className="page-subtitle">Manage company departments</p>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
+        <div>
+          <h1 className="page-title">Departments</h1>
+          <p className="page-subtitle">Manage company departments</p>
+        </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Add Department</button>
       </div>
 
@@ -128,8 +127,9 @@ export default function DepartmentsPage() {
             <form onSubmit={handleSubmit}>
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="form-group">
-                <label>Department Name</label>
+                <label htmlFor="deptName">Department Name</label>
                 <input
+                  id="deptName"
                   className="form-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}

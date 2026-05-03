@@ -210,7 +210,7 @@ export default function EmployeesPage() {
       <div className="table-wrap">
         <div className="table-header">
           <span className="table-title">All Employees</span>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div className="table-controls">
             <input
               className="form-input"
               placeholder="Search by name, code or department…"
