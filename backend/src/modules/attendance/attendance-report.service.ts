@@ -200,8 +200,11 @@ export class AttendanceReportService {
       } else if (clockIn || clockOut) {
         if (isToday && clockIn && !clockOut) {
           status = 'IN PROGRESS';
+          daysWorked++; // Count today as worked if they are currently clocked in
         } else {
-          status = 'INCOMPLETE';
+          // If they clocked in but missed clock out, count as PRESENT but flag the error
+          status = 'PRESENT'; 
+          daysWorked++;
           missingClockIn = !clockIn;
           missingClockOut = !clockOut;
           if (missingClockOut) daysForgotClockOut++;
