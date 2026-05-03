@@ -106,9 +106,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           <button 
             className="sidebar-toggle" 
             onClick={toggleSidebar}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
+            {collapsed ? <Menu size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
 
@@ -131,22 +132,36 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
         <div className="sidebar-footer">
           <div className="user-card" title={collapsed ? user.fullName : undefined}>
-            <div className="user-avatar">{initials(user.fullName)}</div>
+            <div className="user-avatar" style={{ 
+              background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+              boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+            }}>{initials(user.fullName)}</div>
             {!collapsed && (
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="user-name" style={{ 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)'
+                }}>
                   {user.fullName}
                 </div>
-                <div className="user-role">{roleLabel[user.role]}</div>
+                <div className="user-role" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  {roleLabel[user.role]}
+                </div>
               </div>
             )}
             {!collapsed && (
               <button
                 onClick={logout}
+                aria-label="Sign out"
                 title="Sign out"
-                style={{ fontSize: 16, color: 'var(--text-secondary)', padding: '4px', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+                className="btn-ghost"
+                style={{ padding: '6px', borderRadius: '8px', minWidth: 'auto' }}
               >
-                <LogOut size={18} />
+                <LogOut size={16} />
               </button>
             )}
           </div>

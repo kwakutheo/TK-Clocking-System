@@ -183,11 +183,12 @@ input, select, textarea { font-family: inherit; }
 }
 
 .sidebar-logo-text {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text-primary);
-  line-height: 1.2;
+  line-height: 1.1;
   white-space: nowrap;
+  letter-spacing: -0.5px;
 }
 
 .sidebar-logo-sub {
@@ -237,11 +238,32 @@ input, select, textarea { font-family: inherit; }
 .nav-item:hover {
   background: var(--bg-card-hover);
   color: var(--text-primary);
+  padding-left: 18px;
+}
+
+.nav-item:active {
+  transform: scale(0.98);
 }
 
 .nav-item.active {
-  background: var(--primary-dim);
+  background: linear-gradient(90deg, var(--primary-dim) 0%, transparent 100%);
   color: var(--primary);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin-left: -12px;
+  padding-left: 23px;
+}
+
+.sidebar.collapsed .nav-item.active {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: none;
+  background: var(--primary-dim);
+  border-radius: var(--radius);
+}
+
+.nav-item.active .nav-item-icon {
+  filter: drop-shadow(0 0 8px var(--primary));
 }
 
 .nav-item-icon { 
@@ -252,6 +274,11 @@ input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.2s;
+}
+
+.nav-item:hover .nav-item-icon {
+  transform: translateX(2px);
 }
 
 .sidebar.collapsed .nav-item-icon {
@@ -787,8 +814,6 @@ pre, code {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
-
-
 
 .modal-content {
   background: var(--bg-surface);

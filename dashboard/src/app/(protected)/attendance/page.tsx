@@ -157,19 +157,20 @@ export default function AttendanceReportPage() {
             {loading ? '...' : 'Refresh Report'}
           </button>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 20px', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: '1 1 200px', minWidth: 220 }}>
-            <label>Select Employee</label>
-            <select className="form-input" value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, alignItems: 'flex-end' }}>
+          <div className="form-group">
+            <label htmlFor="selectEmployee">Select Employee</label>
+            <select id="selectEmployee" className="form-input" value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)}>
               <option value="">— Select Employee —</option>
               {(employees ?? []).map((emp: any) => (
                 <option key={emp.id} value={emp.id}>{emp.user?.fullName} ({emp.employeeCode})</option>
               ))}
             </select>
           </div>
-          <div className="form-group" style={{ flex: '1 1 150px', minWidth: 150 }}>
-            <label>View Mode</label>
+          <div className="form-group">
+            <label htmlFor="viewMode">View Mode</label>
             <select 
+              id="viewMode"
               className="form-input" 
               value={viewMode} 
               onChange={e => {
@@ -181,9 +182,10 @@ export default function AttendanceReportPage() {
               <option value="term">Term Report</option>
             </select>
           </div>
-          <div className="form-group" style={{ flex: '1 1 150px', minWidth: 150 }}>
-            <label>Academic Year</label>
+          <div className="form-group">
+            <label htmlFor="academicYear">Academic Year</label>
             <select 
+              id="academicYear"
               className="form-input" 
               value={selectedAcademicYear} 
               onChange={e => {
@@ -198,9 +200,9 @@ export default function AttendanceReportPage() {
               ))}
             </select>
           </div>
-          <div className="form-group" style={{ flex: '1 1 150px', minWidth: 150 }}>
-            <label>Term</label>
-            <select className="form-input" value={selectedTermId} onChange={e => setSelectedTermId(e.target.value)}>
+          <div className="form-group">
+            <label htmlFor="termSelect">Term</label>
+            <select id="termSelect" className="form-input" value={selectedTermId} onChange={e => setSelectedTermId(e.target.value)}>
               <option value="">— Select Term —</option>
               {filteredTerms.map((term: any) => (
                 <option key={term.id} value={term.id}>
@@ -210,9 +212,10 @@ export default function AttendanceReportPage() {
             </select>
           </div>
           {viewMode === 'month' && (
-            <div className="form-group" style={{ flex: '1 1 150px', minWidth: 150 }}>
-              <label>Month Within Term</label>
+            <div className="form-group">
+              <label htmlFor="monthSelect">Month Within Term</label>
               <select
+                id="monthSelect"
                 className="form-input"
                 value={month !== null && year !== null ? `${year}-${String(month).padStart(2, '0')}` : ''}
                 onChange={e => {
@@ -270,35 +273,88 @@ export default function AttendanceReportPage() {
             </label>
           </div>
 
-          <div className="stats-grid" style={{ marginBottom: 24 }}>
-            <div className="stat-card">
-              <div className="stat-label">Days Worked</div>
-              <div className="stat-value" style={{ color: 'var(--success)' }}>{currentSummary.daysWorked}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Total Hours</div>
-              <div className="stat-value">{currentSummary.totalHours}h</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Absences</div>
-              <div className="stat-value" style={{ color: 'var(--danger)' }}>{currentSummary.daysAbsent}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Lateness</div>
-              <div className="stat-value" style={{ color: 'var(--amber)' }}>
-                {currentSummary.daysLate}d <span style={{ fontSize: 14, fontWeight: 500 }}>({formatMinutes(currentSummary.totalLateMinutes)})</span>
+          <div className="stats-grid" style={{ marginBottom: 24, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className="stat-card" style={{ '--stat-color': 'var(--success)', '--stat-color-dim': 'var(--success-dim)' } as any}>
+              <div className="stat-card-glow" />
+              <div className="stat-card-content">
+                <div className="stat-icon-wrapper">
+                  <div className="stat-icon"><CheckCircle size={20} /></div>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value" style={{ color: 'var(--success)' }}>{currentSummary.daysWorked}</div>
+                  <div className="stat-label" style={{ fontSize: 13, textTransform: 'none', letterSpacing: 'normal' }}>Days Worked</div>
+                </div>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-label">Early Outs</div>
-              <div className="stat-value" style={{ color: 'var(--orange)' }}>
-                {currentSummary.daysEarlyDeparture}d <span style={{ fontSize: 14, fontWeight: 500 }}>({formatMinutes(currentSummary.totalEarlyOutMinutes)})</span>
+            
+            <div className="stat-card" style={{ '--stat-color': 'var(--primary)', '--stat-color-dim': 'var(--primary-dim)' } as any}>
+              <div className="stat-card-glow" />
+              <div className="stat-card-content">
+                <div className="stat-icon-wrapper">
+                  <div className="stat-icon"><Clock size={20} /></div>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value">{currentSummary.totalHours}h</div>
+                  <div className="stat-label" style={{ fontSize: 13, textTransform: 'none', letterSpacing: 'normal' }}>Total Hours</div>
+                </div>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-label">Forgot Out</div>
-              <div className="stat-value" style={{ color: 'var(--brown, #795548)' }}>
-                {currentSummary.daysForgotClockOut}d
+
+            <div className="stat-card" style={{ '--stat-color': 'var(--danger)', '--stat-color-dim': 'var(--danger-dim)' } as any}>
+              <div className="stat-card-glow" />
+              <div className="stat-card-content">
+                <div className="stat-icon-wrapper">
+                  <div className="stat-icon"><XCircle size={20} /></div>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value" style={{ color: 'var(--danger)' }}>{currentSummary.daysAbsent}</div>
+                  <div className="stat-label" style={{ fontSize: 13, textTransform: 'none', letterSpacing: 'normal' }}>Absences</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ '--stat-color': 'var(--accent)', '--stat-color-dim': 'var(--accent-dim)' } as any}>
+              <div className="stat-card-glow" />
+              <div className="stat-card-content">
+                <div className="stat-icon-wrapper">
+                  <div className="stat-icon"><AlertTriangle size={20} /></div>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value" style={{ color: 'var(--accent)' }}>
+                    {currentSummary.daysLate}d
+                  </div>
+                  <div className="stat-label" style={{ fontSize: 13, textTransform: 'none', letterSpacing: 'normal' }}>Lateness <span style={{ fontSize: 11, opacity: 0.8 }}>({formatMinutes(currentSummary.totalLateMinutes)})</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ '--stat-color': 'var(--warning)', '--stat-color-dim': 'var(--warning-dim)' } as any}>
+              <div className="stat-card-glow" />
+              <div className="stat-card-content">
+                <div className="stat-icon-wrapper">
+                  <div className="stat-icon"><Clock size={20} /></div>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value" style={{ color: 'var(--warning)' }}>
+                    {currentSummary.daysEarlyDeparture}d
+                  </div>
+                  <div className="stat-label" style={{ fontSize: 13, textTransform: 'none', letterSpacing: 'normal' }}>Early Outs <span style={{ fontSize: 11, opacity: 0.8 }}>({formatMinutes(currentSummary.totalEarlyOutMinutes)})</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ '--stat-color': 'var(--brown)', '--stat-color-dim': 'var(--brown-dim)' } as any}>
+              <div className="stat-card-glow" />
+              <div className="stat-card-content">
+                <div className="stat-icon-wrapper">
+                  <div className="stat-icon"><AlertTriangle size={20} /></div>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value" style={{ color: 'var(--brown)' }}>
+                    {currentSummary.daysForgotClockOut}d
+                  </div>
+                  <div className="stat-label" style={{ fontSize: 13, textTransform: 'none', letterSpacing: 'normal' }}>Forgot Out</div>
+                </div>
               </div>
             </div>
           </div>
@@ -454,21 +510,19 @@ export default function AttendanceReportPage() {
       <style jsx>{`
         .row-absent { background: rgba(239, 68, 68, 0.05); }
         .report-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-        .stat-card { background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center; }
-        .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; }
-        .stat-value { font-size: 24px; font-weight: 700; color: var(--text-primary); }
         .tab { 
           padding: 8px 16px; 
           border: 1px solid var(--border); 
           background: var(--bg-card); 
           border-radius: 8px; 
-          font-size: 14px; 
-          font-weight: 500; 
+          font-size: 13px; 
+          font-weight: 600; 
           cursor: pointer;
           transition: all 0.2s;
+          color: var(--text-secondary);
         }
-        .tab:hover { background: var(--bg-hover); }
-        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .tab:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
       `}</style>
     </>
   );

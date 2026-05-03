@@ -54,7 +54,8 @@ function PasswordModal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.6)',
+        background: 'rgba(0,0,0,0.4)',
+        backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -64,49 +65,42 @@ function PasswordModal({
       onClick={onClose}
     >
       <div
+        className="modal-content"
         style={{
-          background: 'var(--card-bg, #1e1e2e)',
-          borderRadius: 16,
-          padding: 24,
-          width: '100%',
-          maxWidth: 380,
-          border: '1px solid var(--border)',
+          padding: 28,
+          maxWidth: 400,
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Confirm Password</div>
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Confirm Password</div>
+        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
           Enter your login password to regenerate this branch QR code. The old code will become invalid immediately.
         </div>
 
-        <input
-          ref={inputRef}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Your password"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && password.length >= 6 && !isLoading) {
-              onConfirm(password);
-            }
-          }}
-          style={{
-            width: '100%',
-            padding: '12px 14px',
-            borderRadius: 10,
-            border: '1px solid var(--border)',
-            background: 'rgba(0,0,0,0.2)',
-            color: 'inherit',
-            fontSize: 14,
-            marginBottom: 20,
-            outline: 'none',
-          }}
-        />
+        <div className="form-group">
+          <label htmlFor="modalPassword">Your Password</label>
+          <input
+            id="modalPassword"
+            ref={inputRef}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && password.length >= 6 && !isLoading) {
+                onConfirm(password);
+              }
+            }}
+            className="form-input"
+            style={{ marginBottom: 24 }}
+          />
+        </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={onClose}
-            className="btn btn-ghost btn-sm"
+            className="btn"
             style={{ flex: 1, justifyContent: 'center' }}
             disabled={isLoading}
           >
@@ -115,7 +109,7 @@ function PasswordModal({
           <button
             onClick={() => onConfirm(password)}
             disabled={password.length < 6 || isLoading}
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary"
             style={{ flex: 1, justifyContent: 'center' }}
           >
             {isLoading ? '⏳ Verifying…' : 'Confirm'}
@@ -190,84 +184,96 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
   };
 
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{branch.name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Branch ID: {branch.id.slice(0, 8)}…</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{branch.name}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, fontFamily: 'monospace' }}>ID: {branch.id}</div>
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="btn btn-ghost btn-sm" onClick={onEdit}>✏️ Edit</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-sm btn-ghost" onClick={onEdit} aria-label="Edit Branch">✏️</button>
           {canDelete && (
-            <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑️ Delete</button>
+            <button className="btn btn-sm btn-danger-ghost" onClick={onDelete} aria-label="Delete Branch">🗑️</button>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {[
-          { label: '📍 Latitude', value: branch.latitude ? Number(branch.latitude).toFixed(6) : 'Not set' },
-          { label: '📍 Longitude', value: branch.longitude ? Number(branch.longitude).toFixed(6) : 'Not set' },
-          { label: '📏 Geofence Radius', value: branch.allowedRadius ? `${branch.allowedRadius}m` : '—' },
-        ].map((item) => (
-          <div key={item.label} style={{ background: 'rgba(255,255,255,0.04)', padding: '10px 14px', borderRadius: 10 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{item.label}</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{item.value}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+        <div style={{ background: 'var(--bg-card-alt)', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Latitude</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{branch.latitude ? Number(branch.latitude).toFixed(6) : '—'}</div>
+        </div>
+        <div style={{ background: 'var(--bg-card-alt)', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Longitude</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{branch.longitude ? Number(branch.longitude).toFixed(6) : '—'}</div>
+        </div>
+        <div style={{ background: 'var(--bg-card-alt)', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', gridColumn: 'span 2' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Geofence Radius</div>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>{branch.allowedRadius ? `${branch.allowedRadius}m` : '300m'}</div>
+            </div>
+            {branch.latitude && branch.longitude && (
+              <a
+                href={`https://maps.google.com/?q=${branch.latitude},${branch.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-ghost"
+                style={{ fontSize: 12 }}
+              >
+                🗺 View Map
+              </a>
+            )}
           </div>
-        ))}
-        {branch.latitude && branch.longitude ? (
-          <a
-            href={`https://maps.google.com/?q=${branch.latitude},${branch.longitude}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost btn-sm"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
-          >
-            🗺 View on Google Maps
-          </a>
-        ) : (
-          <div />
-        )}
+        </div>
       </div>
 
-      {/* QR Code Section */}
-      <div style={{ marginTop: 16, padding: '14px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>QR Code (print & paste at branch)</div>
+      <div style={{ 
+        marginTop: 'auto', 
+        padding: '20px', 
+        background: 'var(--bg-card-alt)', 
+        borderRadius: 16, 
+        border: '1px dashed var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 16, textAlign: 'center' }}>
+          Branch Access QR Code
+        </div>
+        
         {qrCode ? (
-          <>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <div ref={printRef}>
-                <QrCodeImage text={qrCode} size={180} />
-              </div>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div ref={printRef} style={{ background: '#fff', padding: 12, borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+              <QrCodeImage text={qrCode} size={160} />
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={handlePrint} className="btn btn-ghost btn-sm" style={{ flex: 1, justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, width: '100%', marginTop: 20 }}>
+              <button onClick={handlePrint} className="btn btn-sm btn-ghost" style={{ flex: 1, background: 'var(--bg-card)' }}>
                 🖨️ Print
               </button>
               <button
                 onClick={() => setShowPasswordModal(true)}
                 disabled={isRegenerating}
-                className="btn btn-primary btn-sm"
-                style={{ flex: 1, justifyContent: 'center' }}
+                className="btn btn-sm btn-primary"
+                style={{ flex: 1 }}
+                title="Regenerate QR Code"
               >
-                {isRegenerating ? '⏳' : '🔄'}
+                {isRegenerating ? '⏳' : '🔄 Refresh'}
               </button>
             </div>
-          </>
+          </div>
         ) : (
-          <>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
-              No QR code generated yet.
-            </div>
+          <div style={{ textAlign: 'center', width: '100%' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>No QR code generated yet.</p>
             <button
               onClick={() => setShowPasswordModal(true)}
               disabled={isRegenerating}
-              className="btn btn-primary btn-sm"
-              style={{ width: '100%', justifyContent: 'center' }}
+              className="btn btn-primary"
+              style={{ width: '100%' }}
             >
-              {isRegenerating ? '⏳ Generating…' : '⚡ Generate QR Code'}
+              {isRegenerating ? 'Generating…' : 'Generate QR Code'}
             </button>
-          </>
+          </div>
         )}
       </div>
 
@@ -277,7 +283,6 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
         onConfirm={handleRegenerate}
         isLoading={isRegenerating}
       />
-
     </div>
   );
 }
@@ -410,23 +415,26 @@ export default function BranchesPage() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingId ? 'Edit Branch' : 'Add Branch'}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowModal(false)} aria-label="Close Modal">✕</button>
             </div>
             <form onSubmit={handleSubmit}>
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="form-grid">
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Branch Name</label>
+                  <label htmlFor="branchName">Branch Name</label>
                   <input
+                    id="branchName"
                     className="form-input"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
+                    placeholder="e.g. Accra Central"
                   />
                 </div>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Google Maps URL <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(paste to auto-fill coordinates)</span></label>
+                  <label htmlFor="mapsUrl">Google Maps URL <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(paste to auto-fill coordinates)</span></label>
                   <input
+                    id="mapsUrl"
                     className="form-input"
                     type="text"
                     value={mapsUrl}
@@ -462,8 +470,9 @@ export default function BranchesPage() {
                   </span>
                 </div>
                 <div className="form-group">
-                  <label>Latitude</label>
+                  <label htmlFor="latitude">Latitude</label>
                   <input
+                    id="latitude"
                     className="form-input"
                     type="number"
                     step="any"
@@ -473,8 +482,9 @@ export default function BranchesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Longitude</label>
+                  <label htmlFor="longitude">Longitude</label>
                   <input
+                    id="longitude"
                     className="form-input"
                     type="number"
                     step="any"
@@ -484,8 +494,9 @@ export default function BranchesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Geofence Radius (meters)</label>
+                  <label htmlFor="radius">Geofence Radius (meters)</label>
                   <input
+                    id="radius"
                     className="form-input"
                     type="number"
                     value={form.allowedRadius}
