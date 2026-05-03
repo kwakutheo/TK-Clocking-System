@@ -23,6 +23,7 @@
   --warning-dim:  rgba(249, 115, 22, 0.15);
   --brown:        #a1887f;
   --brown-dim:    rgba(161, 136, 127, 0.15);
+  --bg-card-alt:  rgba(255, 255, 255, 0.02);
 
   --text-primary:   #f1f5f9;
   --text-secondary: #64748b;
@@ -52,10 +53,14 @@
   --shadow:         0 4px 20px rgba(0,0,0,0.08);
   --brown:          #795548;
   --brown-dim:      rgba(121, 85, 72, 0.1);
+  --bg-card-alt:    #f1f5f9;
 }
 
 [data-theme="light"] .attendance-chart-container { background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, transparent 100%); }
-[data-theme="light"] .card:hover { border-color: rgba(0,0,0,0.14); }
+[data-theme="light"] .card:hover { 
+  border-color: rgba(0,0,0,0.1); 
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
 [data-theme="light"] .stat-icon { border: 1px solid rgba(0,0,0,0.05); }
 [data-theme="light"] th { background: rgba(0,0,0,0.02); }
 [data-theme="light"] tr:hover td { background: rgba(0,0,0,0.02); }
@@ -326,10 +331,15 @@ input, select, textarea { font-family: inherit; }
   border-radius: var(--radius-lg);
   padding: 24px;
   backdrop-filter: blur(12px);
-  transition: border-color 0.2s, transform 0.2s;
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card:hover { border-color: rgba(255,255,255,0.14); }
+.card:hover { 
+  border-color: rgba(255,255,255,0.2); 
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5);
+}
 
 .card-title {
   font-size: 13px;
@@ -564,6 +574,15 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 }
 
 .btn-danger:hover { background: rgba(239,68,68,0.25); }
+.btn-danger-ghost {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid transparent;
+}
+.btn-danger-ghost:hover {
+  background: var(--danger-dim);
+  border-color: rgba(239,68,68,0.2);
+}
 
 .btn-success {
   background: var(--success-dim);
@@ -613,6 +632,7 @@ pre, code {
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -768,18 +788,7 @@ pre, code {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
-/* ── Modal ────────────────────────────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 24px;
-}
+
 
 .modal-content {
   background: var(--bg-surface);
