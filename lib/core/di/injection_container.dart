@@ -9,6 +9,7 @@ import 'package:tk_clocking_system/core/services/connectivity_service.dart';
 import 'package:tk_clocking_system/core/services/location_service.dart';
 import 'package:tk_clocking_system/core/services/storage_service.dart';
 import 'package:tk_clocking_system/core/services/biometric_service.dart';
+import 'package:tk_clocking_system/core/services/notification_service.dart';
 import 'package:tk_clocking_system/features/attendance/data/repositories/attendance_repository_impl.dart';
 import 'package:tk_clocking_system/features/attendance/domain/repositories/attendance_repository.dart';
 import 'package:tk_clocking_system/features/attendance/domain/usecases/get_attendance_history_usecase.dart';
@@ -60,6 +61,7 @@ Future<void> init() async {
   sl.registerLazySingleton<ApiClient>(
     () => ApiClient(storage: sl<StorageService>()),
   );
+  sl.registerLazySingleton<NotificationService>(() => NotificationService());
 
   sl.registerLazySingleton<LocationService>(() => LocationService());
   sl.registerLazySingleton<BiometricService>(() => BiometricService());

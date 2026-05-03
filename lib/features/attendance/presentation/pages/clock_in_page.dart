@@ -11,6 +11,7 @@ import 'package:tk_clocking_system/shared/enums/attendance_type.dart';
 import 'package:tk_clocking_system/shared/enums/sync_status.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
 import 'package:tk_clocking_system/core/services/biometric_service.dart';
+import 'package:tk_clocking_system/core/services/notification_service.dart';
 
 /// The main clock-in / clock-out screen for employees.
 class ClockInPage extends StatelessWidget {
@@ -23,6 +24,13 @@ class ClockInPage extends StatelessWidget {
       body: BlocConsumer<AttendanceBloc, AttendanceState>(
         listener: (context, state) {
           if (state is AttendanceRecorded) {
+            // Notification logic: Schedule reminder on clock-in, cancel on clock-out
+            if (state.record.type == AttendanceType.clockIn) {
+              sl<NotificationService>().scheduleClockOutReminder();
+            } else if (state.record.type == AttendanceType.clockOut) {
+              sl<NotificationService>().cancelClockOutReminder();
+            }
+
             final isOffline = state.record.syncStatus == SyncStatus.pending;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
