@@ -9,6 +9,8 @@ import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_bloc.dar
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.dart';
 import 'package:tk_clocking_system/shared/enums/attendance_type.dart';
 import 'package:tk_clocking_system/shared/enums/sync_status.dart';
+import 'package:tk_clocking_system/core/di/injection_container.dart';
+import 'package:tk_clocking_system/core/services/biometric_service.dart';
 
 /// The main clock-in / clock-out screen for employees.
 class ClockInPage extends StatelessWidget {
@@ -97,34 +99,39 @@ class ClockInPage extends StatelessWidget {
           final user = authState is AuthAuthenticated ? authState.user : null;
           final isLoading = state is AttendanceLoading;
 
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ClockDisplay(),
-                  const SizedBox(height: 40),
-                  _StatusCard(userName: user?.fullName ?? ''),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Actions',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+          return Stack(
+            children: [
+              SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ClockDisplay(),
+                      const SizedBox(height: 40),
+                      _StatusCard(userName: user?.fullName ?? ''),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Actions',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      _ActionGrid(
+                        employeeId: user?.id ?? '',
+                        isLoading: isLoading,
+                      ),
+                      const SizedBox(height: 24),
+                      _QrScanButton(
+                        isLoading: isLoading,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  _ActionGrid(
-                    employeeId: user?.id ?? '',
-                    isLoading: isLoading,
-                  ),
-                  const SizedBox(height: 24),
-                  _QrScanButton(
-                    isLoading: isLoading,
-                  ),
-                ],
+                ),
               ),
-            ),
+              if (isLoading) const _LoadingOverlay(),
+            ],
           );
         },
       ),
@@ -331,12 +338,28 @@ class _ActionTile extends StatelessWidget {
     return InkWell(
       onTap: isLoading
           ? null
-          : () => context.read<AttendanceBloc>().add(
-                AttendanceRecordEvent(
-                  employeeId: employeeId,
-                  type: type,
-                ),
-              ),
+          : () async {
+              final confirmed = await _showConfirmDialog(context, label, icon, color);
+              if (confirmed == true && context.mounted) {
+                // Biometric/PIN Verification
+                final biometricService = sl<BiometricService>();
+                if (await biometricService.isBiometricAvailable()) {
+                  final authenticated = await biometricService.authenticate(
+                    'Please verify your identity to $label',
+                  );
+                  if (!authenticated) return;
+                }
+
+                if (context.mounted) {
+                  context.read<AttendanceBloc>().add(
+                        AttendanceRecordEvent(
+                          employeeId: employeeId,
+                          type: type,
+                        ),
+                      );
+                }
+              }
+            },
       borderRadius: BorderRadius.circular(16),
       child: Ink(
         decoration: BoxDecoration(
@@ -451,14 +474,28 @@ class _QrScanButton extends StatelessWidget {
                   icon: Icons.login_rounded,
                   label: 'Clock In',
                   color: Colors.green,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    bloc.add(
-                      AttendanceQrRecordEvent(
-                        qrCode: qrCode,
-                        type: AttendanceType.clockIn,
-                      ),
-                    );
+                  onTap: () async {
+                    final confirmed = await _showConfirmDialog(ctx, 'Clock In', Icons.login_rounded, Colors.green);
+                    if (confirmed == true && context.mounted) {
+                      // Biometric/PIN Verification
+                      final biometricService = sl<BiometricService>();
+                      if (await biometricService.isBiometricAvailable()) {
+                        final authenticated = await biometricService.authenticate(
+                          'Please verify your identity to Clock In',
+                        );
+                        if (!authenticated) return;
+                      }
+
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        bloc.add(
+                          AttendanceQrRecordEvent(
+                            qrCode: qrCode,
+                            type: AttendanceType.clockIn,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -466,14 +503,28 @@ class _QrScanButton extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   label: 'Clock Out',
                   color: Colors.red,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    bloc.add(
-                      AttendanceQrRecordEvent(
-                        qrCode: qrCode,
-                        type: AttendanceType.clockOut,
-                      ),
-                    );
+                  onTap: () async {
+                    final confirmed = await _showConfirmDialog(ctx, 'Clock Out', Icons.logout_rounded, Colors.red);
+                    if (confirmed == true && context.mounted) {
+                      // Biometric/PIN Verification
+                      final biometricService = sl<BiometricService>();
+                      if (await biometricService.isBiometricAvailable()) {
+                        final authenticated = await biometricService.authenticate(
+                          'Please verify your identity to Clock Out',
+                        );
+                        if (!authenticated) return;
+                      }
+
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        bloc.add(
+                          AttendanceQrRecordEvent(
+                            qrCode: qrCode,
+                            type: AttendanceType.clockOut,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -481,14 +532,28 @@ class _QrScanButton extends StatelessWidget {
                   icon: Icons.free_breakfast_rounded,
                   label: 'Break Start',
                   color: Colors.orange,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    bloc.add(
-                      AttendanceQrRecordEvent(
-                        qrCode: qrCode,
-                        type: AttendanceType.breakIn,
-                      ),
-                    );
+                  onTap: () async {
+                    final confirmed = await _showConfirmDialog(ctx, 'Break Start', Icons.free_breakfast_rounded, Colors.orange);
+                    if (confirmed == true && context.mounted) {
+                      // Biometric/PIN Verification
+                      final biometricService = sl<BiometricService>();
+                      if (await biometricService.isBiometricAvailable()) {
+                        final authenticated = await biometricService.authenticate(
+                          'Please verify your identity to record Break Start',
+                        );
+                        if (!authenticated) return;
+                      }
+
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        bloc.add(
+                          AttendanceQrRecordEvent(
+                            qrCode: qrCode,
+                            type: AttendanceType.breakIn,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -496,14 +561,28 @@ class _QrScanButton extends StatelessWidget {
                   icon: Icons.replay_rounded,
                   label: 'Break End',
                   color: Colors.blue,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    bloc.add(
-                      AttendanceQrRecordEvent(
-                        qrCode: qrCode,
-                        type: AttendanceType.breakOut,
-                      ),
-                    );
+                  onTap: () async {
+                    final confirmed = await _showConfirmDialog(ctx, 'Break End', Icons.replay_rounded, Colors.blue);
+                    if (confirmed == true && context.mounted) {
+                      // Biometric/PIN Verification
+                      final biometricService = sl<BiometricService>();
+                      if (await biometricService.isBiometricAvailable()) {
+                        final authenticated = await biometricService.authenticate(
+                          'Please verify your identity to record Break End',
+                        );
+                        if (!authenticated) return;
+                      }
+
+                      if (context.mounted) {
+                        Navigator.pop(ctx);
+                        bloc.add(
+                          AttendanceQrRecordEvent(
+                            qrCode: qrCode,
+                            type: AttendanceType.breakOut,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
               ],
@@ -556,6 +635,65 @@ class _QrTypeTile extends StatelessWidget {
               size: 16,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+// ── Helper Methods ─────────────────────────────────────────────────────────
+Future<bool?> _showConfirmDialog(
+  BuildContext context,
+  String label,
+  IconData icon,
+  Color color,
+) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: Icon(icon, color: color, size: 40),
+      title: Text('Confirm $label'),
+      content: Text('Are you sure you want to record a $label?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: color),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text('Confirm $label'),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Loading Overlay ─────────────────────────────────────────────────────────
+class _LoadingOverlay extends StatelessWidget {
+  const _LoadingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.3),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Processing...',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
         ),
       ),
     );
