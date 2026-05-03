@@ -1,0 +1,19 @@
+import 'package:flutter/material.dart';
+import 'package:tk_clocking_system/app.dart';
+import 'package:tk_clocking_system/core/di/injection_container.dart' as di;
+
+import 'package:tk_clocking_system/core/constants/app_constants.dart';
+import 'package:tk_clocking_system/core/services/storage_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await di.init();
+  
+  final storage = di.sl<StorageService>();
+  final savedUrl = storage.getServerUrl();
+  if (savedUrl != null && savedUrl.isNotEmpty) {
+    AppConstants.baseUrl = savedUrl;
+  }
+  
+  runApp(const App());
+}

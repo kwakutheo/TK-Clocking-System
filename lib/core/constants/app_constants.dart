@@ -1,0 +1,44 @@
+/// Application-wide constants.
+abstract final class AppConstants {
+  // ── API ───────────────────────────────────────────────────────────────────
+  static String baseUrl =
+      'http://10.16.78.130:3000/api/v1'; // physical device → host PC
+  static const Duration connectTimeout = Duration(seconds: 15);
+  static const Duration receiveTimeout = Duration(seconds: 30);
+
+  // ── Storage keys ─────────────────────────────────────────────────────────
+  static const String accessTokenKey = 'access_token';
+  static const String refreshTokenKey = 'refresh_token';
+  static const String userKey = 'current_user';
+  static const String themeKey = 'app_theme';
+  static const String serverUrlKey = 'server_url';
+
+  // ── Offline login keys ───────────────────────────────────────────────────
+  static const String offlineIdentifierKey = 'offline_identifier';
+  static const String offlinePasswordHashKey = 'offline_password_hash';
+
+  // ── Hive boxes ───────────────────────────────────────────────────────────
+  static const String attendanceBox = 'attendance_box';
+  static const String userBox = 'user_box';
+
+  // ── GPS ───────────────────────────────────────────────────────────────────
+  /// Default geofence radius in meters used when the branch has none set.
+  static const int defaultGeofenceRadius = 100;
+
+  // ── Pagination ────────────────────────────────────────────────────────────
+  static const int defaultPageSize = 20;
+
+  // ── Retry ─────────────────────────────────────────────────────────────────
+  static const int maxSyncRetries = 3;
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,94 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:tk_clocking_system/features/auth/domain/usecases/get_cached_user_usecase.dart';
+import 'package:tk_clocking_system/features/auth/domain/usecases/login_usecase.dart';
+import 'package:tk_clocking_system/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:tk_clocking_system/features/auth/domain/usecases/sync_profile_usecase.dart';
+import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_event.dart';
+import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.dart';
+
+/// Manages authentication state across the entire application.
+///
+/// Listens for [AuthEvent]s and emits [AuthState]s that drive
+/// both the router redirect logic and the login UI.
+class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  AuthBloc({
+    required LoginUseCase loginUseCase,
+    required LogoutUseCase logoutUseCase,
+    required GetCachedUserUseCase getCachedUserUseCase,
+    required SyncProfileUseCase syncProfileUseCase,
+  })  : _login = loginUseCase,
+        _logout = logoutUseCase,
+        _getCachedUser = getCachedUserUseCase,
+        _syncProfile = syncProfileUseCase,
+        super(const AuthInitial()) {
+    on<AuthCheckSessionEvent>(_onCheckSession);
+    on<AuthLoginEvent>(_onLogin);
+    on<AuthLogoutEvent>(_onLogout);
+    on<AuthSyncProfileEvent>(_onSyncProfile);
+  }
+
+  final LoginUseCase _login;
+  final LogoutUseCase _logout;
+  final GetCachedUserUseCase _getCachedUser;
+  final SyncProfileUseCase _syncProfile;
+
+  // ── Session restore ───────────────────────────────────────────────────────
+  Future<void> _onCheckSession(
+    AuthCheckSessionEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _getCachedUser();
+    result.fold(
+      (failure) => emit(const AuthUnauthenticated()),
+      (user) => user != null
+          ? emit(AuthAuthenticated(user))
+          : emit(const AuthUnauthenticated()),
+    );
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  Future<void> _onLogin(
+    AuthLoginEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _login(
+      username: event.username,
+      password: event.password,
+    );
+    result.fold(
+      (failure) => emit(AuthFailure(failure.message)),
+      (loginResult) => emit(
+        AuthAuthenticated(loginResult.user, isOffline: loginResult.isOffline),
+      ),
+    );
+  }
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+  Future<void> _onLogout(
+    AuthLogoutEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _logout();
+    emit(const AuthUnauthenticated());
+  }
+
+  // ── Sync Profile ──────────────────────────────────────────────────────────
+  Future<void> _onSyncProfile(
+    AuthSyncProfileEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    final result = await _syncProfile();
+    result.fold(
+      (failure) {
+        // If it fails, just keep the current state (don't log out)
+        // Optionally, we could emit an error state, but for a background refresh
+        // it's usually better to just ignore the failure.
+      },
+      (user) => emit(AuthAuthenticated(user)),
+    );
+  }
+}

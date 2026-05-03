@@ -1,0 +1,188 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useAuthStore, initials, roleLabel } from '@/lib/store';
+import { 
+  LayoutDashboard, 
+  Clock, 
+  Users, 
+  FileText, 
+  MapPin, 
+  Building2, 
+  UserCircle, 
+  LogOut, 
+  ShieldCheck,
+  Calendar,
+  ChevronLeft,
+  Menu,
+  Sun,
+  Moon
+} from 'lucide-react';
+
+const NAV = [
+  { href: '/dashboard',   icon: LayoutDashboard, label: 'Overview'    },
+  { href: '/attendance',  icon: Clock,            label: 'Attendance'   },
+  { href: '/employees',   icon: Users,            label: 'Employees'    },
+  { href: '/shifts',      icon: Clock,            label: 'Shifts'       },
+  { href: '/holidays',    icon: Calendar,         label: 'Holidays'     },
+  { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', roles: ['hr_admin', 'super_admin'] },
+  { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',    roles: ['super_admin'] },
+  { href: '/departments', icon: Building2,        label: 'Departments'  },
+  { href: '/branches',    icon: MapPin,           label: 'Branches'     },
+  { href: '/profile',     icon: UserCircle,       label: 'My Profile'   },
+];
+
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, isHydrated, hydrate, logout } = useAuthStore();
+  const [collapsed, setCollapsed] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => { hydrate(); }, [hydrate]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      if (saved === 'true') setCollapsed(true);
+      
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      if (savedTheme) {
+        setTheme(savedTheme);
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+        setTheme('light');
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const newState = !collapsed;
+    setCollapsed(newState);
+    localStorage.setItem('sidebar-collapsed', String(newState));
+  };
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+
+  useEffect(() => {
+    if (isHydrated && !user) router.push('/login');
+  }, [isHydrated, user, router]);
+
+  if (!isHydrated || !user) {
+    return (
+      <div className="loading-center" style={{ minHeight: '100vh' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`app-shell ${collapsed ? 'collapsed' : ''}`}>
+      {/* ── Sidebar ────────────────────────────────────────────────────── */}
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <Image
+              src="/logo.png"
+              alt="TK Clocking Logo"
+              width={36}
+              height={36}
+              style={{ borderRadius: '8px', flexShrink: 0 }}
+              priority
+            />
+            <div>
+              <div className="sidebar-logo-text">TK Clocking</div>
+              <div className="sidebar-logo-sub">HR Dashboard</div>
+            </div>
+          </div>
+          <button 
+            className="sidebar-toggle" 
+            onClick={toggleSidebar}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        </div>
+
+        <div className="sidebar-nav">
+          <span className="nav-section-label">Main Menu</span>
+          <nav>
+            {NAV.filter(item => !item.roles || item.roles.includes(user?.role || '')).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+                title={collapsed ? item.label : undefined}
+              >
+                <span className="nav-item-icon"><item.icon size={18} /></span>
+                {!collapsed && item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="user-card" title={collapsed ? user.fullName : undefined}>
+            <div className="user-avatar">{initials(user.fullName)}</div>
+            {!collapsed && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.fullName}
+                </div>
+                <div className="user-role">{roleLabel[user.role]}</div>
+              </div>
+            )}
+            {!collapsed && (
+              <button
+                onClick={logout}
+                title="Sign out"
+                style={{ fontSize: 16, color: 'var(--text-secondary)', padding: '4px', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main ───────────────────────────────────────────────────────── */}
+      <main className="main-content" style={{ position: 'relative' }}>
+        <button 
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          style={{
+            position: 'absolute',
+            top: '24px',
+            right: '32px',
+            zIndex: 10,
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow)',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card)'}
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+        {children}
+      </main>
+    </div>
+  );
+}
