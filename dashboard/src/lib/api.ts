@@ -89,6 +89,7 @@ export const employeesApi = {
     shiftId?: string;
     position?: string;
     hireDate?: string;
+    phone?: string;
     salary?: number;
     overtimeRate?: number;
     latenessDeductionAmount?: number;

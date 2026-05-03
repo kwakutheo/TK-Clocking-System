@@ -54,6 +54,7 @@ export default function EmployeesPage() {
     branchId: '',
     shiftId: '',
     position: '',
+    phone: '',
     hireDate: '',
     role: 'employee',
   });
@@ -82,6 +83,7 @@ export default function EmployeesPage() {
       branchId: '',
       shiftId: '',
       position: '',
+      phone: '',
       hireDate: '',
       role: 'employee',
     });
@@ -107,6 +109,7 @@ export default function EmployeesPage() {
       branchId: emp.branch?.id ?? '',
       shiftId: emp.shift?.id ?? '',
       position: emp.position ?? '',
+      phone: emp.user?.phone ?? '',
       hireDate: emp.hireDate ? emp.hireDate.slice(0, 10) : '',
       role: emp.user?.role ?? 'employee',
     });
@@ -129,6 +132,7 @@ export default function EmployeesPage() {
           branchId: form.branchId || undefined,
           shiftId: form.shiftId || undefined,
           position: form.position || undefined,
+          phone: form.phone || undefined,
           hireDate: form.hireDate || undefined,
           role: form.role,
         });
@@ -146,6 +150,7 @@ export default function EmployeesPage() {
           branchId: form.branchId || undefined,
           shiftId: form.shiftId || undefined,
           position: form.position || undefined,
+          phone: form.phone || undefined,
           hireDate: form.hireDate || undefined,
           role: form.role,
         });
@@ -253,7 +258,9 @@ export default function EmployeesPage() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 600 }}>{emp.user?.fullName}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{emp.user?.email ?? emp.user?.phone}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                            {emp.user?.email} {emp.user?.email && emp.user?.phone ? '•' : ''} {emp.user?.phone}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -321,8 +328,9 @@ export default function EmployeesPage() {
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="form-grid">
                 <div className="form-group">
-                  <label>First Name</label>
+                  <label htmlFor="firstName">First Name</label>
                   <input
+                    id="firstName"
                     className="form-input"
                     value={form.firstName}
                     onChange={(e) => setForm({ ...form, firstName: e.target.value })}
@@ -330,8 +338,9 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Last Name</label>
+                  <label htmlFor="lastName">Last Name</label>
                   <input
+                    id="lastName"
                     className="form-input"
                     value={form.lastName}
                     onChange={(e) => setForm({ ...form, lastName: e.target.value })}
@@ -341,8 +350,9 @@ export default function EmployeesPage() {
                 {!editingId && (
                   <>
                     <div className="form-group">
-                      <label>Username</label>
+                      <label htmlFor="username">Username</label>
                       <input
+                        id="username"
                         className="form-input"
                         value={form.username}
                         onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -350,8 +360,9 @@ export default function EmployeesPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label>Password</label>
+                      <label htmlFor="password">Password</label>
                       <input
+                        id="password"
                         className="form-input"
                         type="password"
                         value={form.password}
@@ -363,8 +374,9 @@ export default function EmployeesPage() {
                   </>
                 )}
                 <div className="form-group">
-                  <label>Department</label>
+                  <label htmlFor="departmentId">Department</label>
                   <select
+                    id="departmentId"
                     className="form-input"
                     value={form.departmentId}
                     onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
@@ -376,8 +388,9 @@ export default function EmployeesPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Branch</label>
+                  <label htmlFor="branchId">Branch</label>
                   <select
+                    id="branchId"
                     className="form-input"
                     value={form.branchId}
                     onChange={(e) => setForm({ ...form, branchId: e.target.value })}
@@ -389,8 +402,9 @@ export default function EmployeesPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Assigned Shift</label>
+                  <label htmlFor="shiftId">Assigned Shift</label>
                   <select
+                    id="shiftId"
                     className="form-input"
                     value={form.shiftId}
                     onChange={(e) => setForm({ ...form, shiftId: e.target.value })}
@@ -402,16 +416,18 @@ export default function EmployeesPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Position</label>
+                  <label htmlFor="position">Position</label>
                   <input
+                    id="position"
                     className="form-input"
                     value={form.position}
                     onChange={(e) => setForm({ ...form, position: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Date Hired</label>
+                  <label htmlFor="hireDate">Date Hired</label>
                   <input
+                    id="hireDate"
                     className="form-input"
                     type="date"
                     value={form.hireDate}
@@ -420,8 +436,20 @@ export default function EmployeesPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Role</label>
+                  <label htmlFor="phone">Phone Number</label>
+                  <input
+                    id="phone"
+                    className="form-input"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="+233..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="role">Role</label>
                   <select
+                    id="role"
                     className="form-input"
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}

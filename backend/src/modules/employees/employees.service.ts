@@ -81,6 +81,7 @@ export class EmployeesService {
     shiftId?: string;
     position?: string;
     hireDate?: string;
+    phone?: string;
     role?: UserRole;
   }): Promise<Employee> {
     const employeeCode = payload.employeeCode ?? await this._generateEmployeeCode();
@@ -108,6 +109,7 @@ export class EmployeesService {
       const user = queryRunner.manager.create(User, {
         fullName: payload.fullName,
         username: payload.username,
+        phone: payload.phone,
         passwordHash,
         role: payload.role ?? UserRole.EMPLOYEE,
         isActive: true,

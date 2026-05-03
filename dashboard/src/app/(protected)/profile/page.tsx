@@ -13,11 +13,13 @@ export default function ProfilePage() {
 
   const [editingFullName, setEditingFullName] = useState(false);
   const [editingUsername, setEditingUsername] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '',
     username: '',
+    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -27,6 +29,7 @@ export default function ProfilePage() {
       setForm({
         fullName: user.fullName ?? '',
         username: user.username ?? '',
+        phone: user.phone ?? '',
         password: '',
         confirmPassword: '',
       });
@@ -39,9 +42,10 @@ export default function ProfilePage() {
     setError('');
     setSuccess('');
 
-    const payload: Record<string, string> = {};
+    const payload: any = {};
     if (editingFullName) payload.fullName = form.fullName.trim();
     if (editingUsername) payload.username = form.username.trim();
+    if (editingPhone) payload.phone = form.phone.trim();
     if (isChangingPassword) payload.password = form.password;
 
     if (Object.keys(payload).length === 0) return;
@@ -59,6 +63,7 @@ export default function ProfilePage() {
       setSuccess('Profile updated successfully.');
       setEditingFullName(false);
       setEditingUsername(false);
+      setEditingPhone(false);
       setIsChangingPassword(false);
       setForm((prev) => ({ ...prev, password: '', confirmPassword: '' }));
     } catch (err: any) {
@@ -72,11 +77,13 @@ export default function ProfilePage() {
   const isDirty = 
     (editingFullName && form.fullName !== user?.fullName) ||
     (editingUsername && form.username !== user?.username) ||
+    (editingPhone && form.phone !== user?.phone) ||
     (isChangingPassword && form.password !== '');
 
   const isValid = 
     (!editingFullName || form.fullName.trim() !== '') &&
     (!editingUsername || form.username.trim() !== '') &&
+    (!editingPhone || form.phone.trim() !== '') &&
     (!isChangingPassword || (form.password.trim() !== '' && form.password === form.confirmPassword));
 
   const canSave = isDirty && isValid && !isSaving;
@@ -104,7 +111,7 @@ export default function ProfilePage() {
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ margin: 0 }}>Full Name</label>
+                <label htmlFor="fullName" style={{ margin: 0 }}>Full Name</label>
                 <button 
                   type="button" 
                   onClick={() => {
@@ -121,6 +128,7 @@ export default function ProfilePage() {
                 </button>
               </div>
               <input
+                id="fullName"
                 className="form-input"
                 value={form.fullName}
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })}
@@ -132,7 +140,7 @@ export default function ProfilePage() {
             
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ margin: 0 }}>Username</label>
+                <label htmlFor="username" style={{ margin: 0 }}>Username</label>
                 <button 
                   type="button" 
                   onClick={() => {
@@ -149,6 +157,7 @@ export default function ProfilePage() {
                 </button>
               </div>
               <input
+                id="username"
                 className="form-input"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -160,7 +169,37 @@ export default function ProfilePage() {
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ margin: 0 }}>New Password</label>
+                <label htmlFor="phone" style={{ margin: 0 }}>Phone Number</label>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    if (editingPhone) {
+                      setEditingPhone(false);
+                      setForm(prev => ({ ...prev, phone: user?.phone ?? '' }));
+                    } else {
+                      setEditingPhone(true);
+                    }
+                  }}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+                >
+                  {editingPhone ? <X size={16} /> : <Pencil size={16} />}
+                </button>
+              </div>
+              <input
+                id="phone"
+                className="form-input"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                readOnly={!editingPhone}
+                required={editingPhone}
+                placeholder="+233..."
+                style={{ backgroundColor: !editingPhone ? 'var(--bg-card-alt)' : undefined, opacity: !editingPhone ? 0.7 : 1 }}
+              />
+            </div>
+
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label htmlFor="password" style={{ margin: 0 }}>New Password</label>
                 <button 
                   type="button" 
                   onClick={() => {
@@ -186,6 +225,7 @@ export default function ProfilePage() {
                 </button>
               </div>
               <input
+                id="password"
                 className="form-input"
                 type="password"
                 value={form.password}
@@ -200,8 +240,9 @@ export default function ProfilePage() {
 
             {isChangingPassword && (
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Confirm New Password</label>
+                <label htmlFor="confirmPassword">Confirm New Password</label>
                 <input
+                  id="confirmPassword"
                   className="form-input"
                   type="password"
                   value={form.confirmPassword}
