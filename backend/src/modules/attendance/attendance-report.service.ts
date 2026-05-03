@@ -193,22 +193,52 @@ export class AttendanceReportService {
         }
       }
 
-      if (clockIn && clockOut) {
+      if (clockIn || clockOut) {
         daysWorked++;
-        hours = (clockOut.timestamp.getTime() - clockIn.timestamp.getTime()) / (1000 * 60 * 60);
-        totalHours += hours;
-      } else if (clockIn || clockOut) {
-        if (isToday && clockIn && !clockOut) {
+        
+        if (clockIn && employee.shift) {
+          const [sHours, sMins] = employee.shift.startTime.split(':').map(Number);
+          const [eHours, eMins] = employee.shift.endTime.split(':').map(Number);
+          
+          const sStart = new Date(day);
+          sStart.setHours(sHours, sMins, 0, 0);
+          const sEnd = new Date(day);
+          sEnd.setHours(eHours, eMins, 0, 0);
+
+          // Start at max(clockIn, shiftStart)
+          const calcStart = clockIn.timestamp > sStart ? clockIn.timestamp : sStart;
+          
+          // End at min(clockOut ?? now, shiftEnd)
+          let calcEnd: Date;
+          if (clockOut) {
+            calcEnd = clockOut.timestamp < sEnd ? clockOut.timestamp : sEnd;
+          } else if (isToday) {
+            calcEnd = new Date() > sEnd ? sEnd : new Date();
+            status = 'IN PROGRESS';
+          } else if (!isFuture) {
+            calcEnd = sEnd;
+            status = 'PRESENT';
+            missingClockOut = true;
+            daysForgotClockOut++;
+          } else {
+            calcEnd = calcStart; // No hours for future?
+          }
+
+          hours = Math.max(0, (calcEnd.getTime() - calcStart.getTime()) / 3600000);
+        } else if (clockIn && clockOut) {
+          // Legacy calculation if no shift
+          hours = (clockOut.timestamp.getTime() - clockIn.timestamp.getTime()) / (1000 * 60 * 60);
+        } else if (isToday && clockIn) {
           status = 'IN PROGRESS';
-          daysWorked++; // Count today as worked if they are currently clocked in
-        } else {
-          // If they clocked in but missed clock out, count as PRESENT but flag the error
-          status = 'PRESENT'; 
-          daysWorked++;
+          hours = (new Date().getTime() - clockIn.timestamp.getTime()) / (1000 * 60 * 60);
+        } else if (clockIn || clockOut) {
+          status = 'PRESENT';
           missingClockIn = !clockIn;
           missingClockOut = !clockOut;
           if (missingClockOut) daysForgotClockOut++;
         }
+        
+        totalHours += hours;
       } else if (isFuture || isToday) {
         // If it's today or the future and they haven't clocked out yet, don't mark as absent
         if (isWeekEnd) {

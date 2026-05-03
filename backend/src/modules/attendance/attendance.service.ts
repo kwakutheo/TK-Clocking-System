@@ -467,23 +467,44 @@ export class AttendanceService {
 
     const hasClockedInToday = todayLogs.some(l => l.type === AttendanceType.CLOCK_IN);
 
+    // 3. Shift and Hours Calculation
+    const fullEmp = await this.employees.findById(employee.id);
+    const shift = fullEmp?.shift;
+
     let todayHours = 0;
     if (todayLogs.length > 0) {
       const clockIn = todayLogs.find(l => l.type === AttendanceType.CLOCK_IN);
       const clockOut = todayLogs.find(l => l.type === AttendanceType.CLOCK_OUT);
 
       if (clockIn) {
-        if (clockOut) {
-          todayHours = (clockOut.timestamp.getTime() - clockIn.timestamp.getTime()) / 3600000;
-        } else if (isClockedIn) {
-          todayHours = (new Date().getTime() - clockIn.timestamp.getTime()) / 3600000;
+        if (shift) {
+          const [sHours, sMins] = shift.startTime.split(':').map(Number);
+          const [eHours, eMins] = shift.endTime.split(':').map(Number);
+          const shiftStart = new Date(today);
+          shiftStart.setHours(sHours, sMins, 0, 0);
+          const shiftEnd = new Date(today);
+          shiftEnd.setHours(eHours, eMins, 0, 0);
+
+          // Start at max(clockIn, shiftStart)
+          const calcStart = clockIn.timestamp > shiftStart ? clockIn.timestamp : shiftStart;
+          
+          // End at min(clockOut ?? now, shiftEnd)
+          // If no clock out, we use 'now' but cap at shiftEnd (covers "forgot to clock out" case)
+          const calcEnd = clockOut 
+            ? (clockOut.timestamp < shiftEnd ? clockOut.timestamp : shiftEnd)
+            : (new Date() > shiftEnd ? shiftEnd : new Date());
+
+          todayHours = Math.max(0, (calcEnd.getTime() - calcStart.getTime()) / 3600000);
+        } else {
+          // Fallback if no shift is assigned
+          if (clockOut) {
+            todayHours = (clockOut.timestamp.getTime() - clockIn.timestamp.getTime()) / 3600000;
+          } else if (isClockedIn) {
+            todayHours = (new Date().getTime() - clockIn.timestamp.getTime()) / 3600000;
+          }
         }
       }
     }
-
-    // ── Shift-aware late / forgot-to-clock-out logic ──────────────────────
-    const fullEmp = await this.employees.findById(employee.id);
-    const shift = fullEmp?.shift;
 
     if (shift) {
       const now = new Date();
@@ -560,7 +581,34 @@ export class AttendanceService {
       const cOut = dayLogs.find(l => l.type === AttendanceType.CLOCK_OUT);
       if (cIn) {
         daysWorkedThisWeek++;
-        if (cOut) {
+        if (shift) {
+          const logDate = new Date(cIn.timestamp);
+          logDate.setHours(0, 0, 0, 0);
+
+          const [sHours, sMins] = shift.startTime.split(':').map(Number);
+          const [eHours, eMins] = shift.endTime.split(':').map(Number);
+
+          const sStart = new Date(logDate);
+          sStart.setHours(sHours, sMins, 0, 0);
+          const sEnd = new Date(logDate);
+          sEnd.setHours(eHours, eMins, 0, 0);
+
+          const calcStart = cIn.timestamp > sStart ? cIn.timestamp : sStart;
+          let calcEnd: Date;
+          if (cOut) {
+            calcEnd = cOut.timestamp < sEnd ? cOut.timestamp : sEnd;
+          } else {
+            // For the current day, if still clocked in, use min(now, sEnd)
+            // For past days, treat as "forgot to clock out" and use sEnd
+            const isLogToday = logDate.getTime() === today.getTime();
+            if (isLogToday && isClockedIn) {
+              calcEnd = new Date() > sEnd ? sEnd : new Date();
+            } else {
+              calcEnd = sEnd;
+            }
+          }
+          weekHours += Math.max(0, (calcEnd.getTime() - calcStart.getTime()) / 3600000);
+        } else if (cOut) {
           weekHours += (cOut.timestamp.getTime() - cIn.timestamp.getTime()) / 3600000;
         }
       }
