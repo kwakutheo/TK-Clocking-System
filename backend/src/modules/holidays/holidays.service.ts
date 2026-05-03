@@ -24,6 +24,13 @@ export class HolidaysService {
     if (result.affected === 0) throw new NotFoundException('Holiday not found');
   }
 
+  async update(id: string, data: Partial<Holiday>): Promise<Holiday> {
+    const holiday = await this.repo.findOne({ where: { id } });
+    if (!holiday) throw new NotFoundException('Holiday not found');
+    Object.assign(holiday, data);
+    return this.repo.save(holiday);
+  }
+
   async getHolidayForDate(date: Date): Promise<Holiday | null> {
     const dateStr = date.toISOString().split('T')[0];
     const monthDay = dateStr.substring(5); // MM-DD

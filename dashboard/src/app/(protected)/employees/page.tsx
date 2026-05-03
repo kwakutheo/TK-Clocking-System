@@ -283,6 +283,7 @@ export default function EmployeesPage() {
                           style={{ padding: '4px 8px', fontSize: 12 }}
                           onClick={() => openEdit(emp)}
                           title="Edit"
+                          aria-label="Edit Employee"
                         >
                           ✏️
                         </button>
@@ -292,6 +293,7 @@ export default function EmployeesPage() {
                             style={{ padding: '4px 8px', fontSize: 12, backgroundColor: 'var(--amber-100)', color: 'var(--amber-800)', borderColor: 'var(--amber-200)' }}
                             onClick={() => { setResetPasswordConfirm(emp.id); setAdminPasswordValue(''); }}
                             title="Reset Password"
+                            aria-label="Reset Password"
                           >
                             🔑
                           </button>
@@ -302,6 +304,7 @@ export default function EmployeesPage() {
                             style={{ padding: '4px 8px', fontSize: 12 }}
                             onClick={() => setDeleteConfirm(emp.id)}
                             title="Delete"
+                            aria-label="Delete Employee"
                           >
                             🗑️
                           </button>
@@ -322,7 +325,7 @@ export default function EmployeesPage() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingId ? 'Edit Employee' : 'Register New Employee'}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowModal(false)} aria-label="Close Modal">✕</button>
             </div>
             <form onSubmit={handleSubmit}>
               {error && <div className="alert alert-danger">{error}</div>}

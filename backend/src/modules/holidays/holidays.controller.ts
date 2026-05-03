@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Delete, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { HolidaysService } from './holidays.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -26,6 +26,14 @@ export class HolidaysController {
   @ApiOperation({ summary: 'Create a holiday (HR Admin+)' })
   create(@Body() data: Partial<Holiday>) {
     return this.service.create(data);
+  }
+
+  @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update a holiday (HR Admin+)' })
+  update(@Param('id') id: string, @Body() data: Partial<Holiday>) {
+    return this.service.update(id, data);
   }
 
   @Delete(':id')

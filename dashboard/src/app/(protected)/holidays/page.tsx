@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useState } from 'react';
 import { holidaysApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
-import { Calendar, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Plus, Trash2, Edit } from 'lucide-react';
 
 const fetcher = () => holidaysApi.list().then((r) => r.data);
 
@@ -11,18 +11,24 @@ export default function HolidaysPage() {
   const { data, isLoading, mutate } = useSWR('holidays-list', fetcher);
   const holidays: any[] = data ?? [];
 
-  const [showAdd, setShowAdd] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', date: '', isRecurring: true });
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await holidaysApi.create(form);
+      if (editingId) {
+        await holidaysApi.update(editingId, form);
+      } else {
+        await holidaysApi.create(form);
+      }
       mutate();
-      setShowAdd(false);
+      setShowModal(false);
+      setEditingId(null);
       setForm({ name: '', date: '', isRecurring: true });
     } catch (err) {
-      alert('Failed to add holiday');
+      alert(editingId ? 'Failed to update holiday' : 'Failed to add holiday');
     }
   };
 
@@ -36,6 +42,18 @@ export default function HolidaysPage() {
     }
   };
 
+  const openEdit = (h: any) => {
+    setForm({ name: h.name, date: h.date, isRecurring: h.isRecurring });
+    setEditingId(h.id);
+    setShowModal(true);
+  };
+
+  const openAdd = () => {
+    setForm({ name: '', date: '', isRecurring: true });
+    setEditingId(null);
+    setShowModal(true);
+  };
+
   return (
     <>
       <div className="page-header">
@@ -44,7 +62,7 @@ export default function HolidaysPage() {
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+        <button className="btn btn-primary" onClick={openAdd}>
           <Plus size={18} style={{ marginRight: 8 }} />
           Add Holiday
         </button>
@@ -84,9 +102,14 @@ export default function HolidaysPage() {
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(h.id)}>
-                      <Trash2 size={16} />
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-sm btn-ghost" onClick={() => openEdit(h)} aria-label="Edit Holiday">
+                        <Edit size={16} />
+                      </button>
+                      <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(h.id)} aria-label="Delete Holiday">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -95,29 +118,29 @@ export default function HolidaysPage() {
         )}
       </div>
 
-      {showAdd && (
-        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Add New Holiday</h3>
-              <button className="modal-close" onClick={() => setShowAdd(false)}>✕</button>
+              <h3>{editingId ? 'Edit Holiday' : 'Add New Holiday'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)} aria-label="Close Modal">✕</button>
             </div>
-            <form onSubmit={handleAdd}>
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Holiday Name</label>
-                <input className="form-input" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Independence Day" />
+                <label htmlFor="holidayName">Holiday Name</label>
+                <input id="holidayName" className="form-input" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Independence Day" />
               </div>
               <div className="form-group">
-                <label>Date</label>
-                <input type="date" className="form-input" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+                <label htmlFor="holidayDate">Date</label>
+                <input id="holidayDate" type="date" className="form-input" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
               </div>
               <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={form.isRecurring} onChange={e => setForm({...form, isRecurring: e.target.checked})} />
-                <label style={{ marginBottom: 0 }}>Repeats every year</label>
+                <input id="holidayRecurring" type="checkbox" checked={form.isRecurring} onChange={e => setForm({...form, isRecurring: e.target.checked})} />
+                <label htmlFor="holidayRecurring" style={{ marginBottom: 0 }}>Repeats every year</label>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Save Holiday</button>
+                <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">{editingId ? 'Update' : 'Save Holiday'}</button>
               </div>
             </form>
           </div>
