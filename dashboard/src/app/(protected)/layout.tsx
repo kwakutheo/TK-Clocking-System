@@ -172,6 +172,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           <span className="nav-section-label">Main Menu</span>
           <nav>
             {NAV.filter(item => !item.roles || item.roles.includes(user?.role || '')).map((item) => {
+              const Icon = item.icon;
               const hasChildren = !!item.children;
               const isActive = item.href ? pathname === item.href : item.children?.some(c => pathname === c.href);
               
@@ -186,7 +187,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                       className={`nav-item ${isActive ? 'active' : ''}`}
                       title={collapsed ? item.label : undefined}
                     >
-                      <span className="nav-item-icon"><item.icon size={18} /></span>
+                      <span className="nav-item-icon"><Icon size={18} /></span>
                       {(!collapsed || mobileOpen) && (
                         <>
                           <span>{item.label}</span>
@@ -196,17 +197,20 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                     </button>
                     {settingsOpen && (!collapsed || mobileOpen) && (
                       <div className="nav-submenu">
-                        {item.children!.filter(c => !c.roles || c.roles.includes(user?.role || '')).map(child => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className={`nav-item ${pathname === child.href ? 'active' : ''}`}
-                            onClick={() => setMobileOpen(false)}
-                          >
-                            <span className="nav-item-icon"><child.icon size={16} /></span>
-                            {child.label}
-                          </Link>
-                        ))}
+                        {item.children!.filter(c => !c.roles || c.roles.includes(user?.role || '')).map(child => {
+                          const ChildIcon = child.icon;
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className={`nav-item ${pathname === child.href ? 'active' : ''}`}
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              <span className="nav-item-icon"><ChildIcon size={16} /></span>
+                              {child.label}
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -221,7 +225,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                   title={collapsed ? item.label : undefined}
                   onClick={() => setMobileOpen(false)}
                 >
-                  <span className="nav-item-icon"><item.icon size={18} /></span>
+                  <span className="nav-item-icon"><Icon size={18} /></span>
                   {(collapsed && !mobileOpen) ? null : item.label}
                 </Link>
               );
