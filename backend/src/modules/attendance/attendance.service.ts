@@ -29,6 +29,12 @@ export class AttendanceService {
       throw new NotFoundException('No employee profile found for this user.');
     }
 
+    if (!employee.shift) {
+      throw new BadRequestException(
+        'You have not been assigned a work shift. Please contact HR to assign you a shift before clocking in.',
+      );
+    }
+
     const now = dto.timestamp ? new Date(dto.timestamp) : new Date();
 
     // ── Non-working day guard ─────────────────────────────────────────────
@@ -182,7 +188,16 @@ export class AttendanceService {
 
     // ── Geofence validation ───────────────────────────────────────────────
     const branchId = dto.branchId ?? employee.branch?.id;
-    let branch = branchId ? await this.branches.findById(branchId).catch(() => null) : null;
+    if (!branchId) {
+      throw new BadRequestException(
+        'You are not assigned to any branch. Please contact HR to assign you to a branch before clocking in.',
+      );
+    }
+
+    let branch = await this.branches.findById(branchId).catch(() => null);
+    if (!branch) {
+      throw new BadRequestException('The assigned branch could not be found.');
+    }
 
     if (branch?.latitude && dto.latitude && dto.longitude) {
       const dist = this._haversine(
@@ -242,6 +257,12 @@ export class AttendanceService {
     const employee = await this.employees.findByUserId(userId);
     if (!employee) {
       throw new NotFoundException('No employee profile found for this user.');
+    }
+
+    if (!employee.shift) {
+      throw new BadRequestException(
+        'You have not been assigned a work shift. Please contact HR to assign you a shift before clocking in.',
+      );
     }
 
     const now = dto.timestamp ? new Date(dto.timestamp) : new Date();
@@ -442,6 +463,7 @@ export class AttendanceService {
     let isWeekend = false;
     let isVacation = false;
     let vacationName: string | null = null;
+    let noShiftAssigned = false;
 
     // Check non-working day
     const dayStatus = await this._checkNonWorkingDay(new Date());
@@ -539,7 +561,7 @@ export class AttendanceService {
       }
 
       // Forgot to clock out: employee is still "clocked in" (no CLOCK_OUT today) and 
-      // working hours ended more than 1 hour ago
+      // working hours ended more than 10 minutes ago
       if (isClockedIn && hasClockedInToday && now > forgotCutoff) {
         const hasClockOut = todayLogs.some(l => l.type === AttendanceType.CLOCK_OUT);
         if (!hasClockOut) {
@@ -555,6 +577,7 @@ export class AttendanceService {
         isClockedIn = false;
       }
     } else {
+      noShiftAssigned = true;
       // No shift assigned — keep legacy "clocked in since yesterday" logic only
       if (isClockedIn && clockedInTime && clockedInTime < today) {
         forgotToClockOut = true;
@@ -630,14 +653,15 @@ export class AttendanceService {
       lateStatus,
       isShiftOver,
       isAbsentToday,
+      isWeekend,
+      isVacation,
+      vacationName,
+      noShiftAssigned,
       todayHours: Number(todayHours.toFixed(2)),
       weekHours: Number(weekHours.toFixed(2)),
       daysWorkedThisWeek,
       isHoliday: holidayName !== null,
       holidayName,
-      isWeekend,
-      isVacation,
-      vacationName,
     };
   }
 

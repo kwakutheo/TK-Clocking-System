@@ -31,6 +31,7 @@ class HomeDataEntity extends Equatable {
   final bool isWeekend;
   final bool isVacation;
   final String? vacationName;
+  final bool noShiftAssigned;
 
   const HomeDataEntity({
     this.lastActivityType,
@@ -50,6 +51,7 @@ class HomeDataEntity extends Equatable {
     this.isWeekend = false,
     this.isVacation = false,
     this.vacationName,
+    this.noShiftAssigned = false,
   });
 
   @override
@@ -71,5 +73,6 @@ class HomeDataEntity extends Equatable {
         isWeekend,
         isVacation,
         vacationName,
+        noShiftAssigned,
       ];
 }

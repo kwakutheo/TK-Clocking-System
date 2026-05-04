@@ -298,6 +298,16 @@ class _LiveStatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ── Forgot to clock out (shift ended > 1h ago, still clocked in) ────────
+    if (data.noShiftAssigned) {
+      return _buildBanner(
+        context,
+        color: Colors.amber,
+        icon: Icons.assignment_late_rounded,
+        title: 'Missing Shift Assignment',
+        subtitle: 'Contact HR to assign your work schedule',
+      );
+    }
+
     if (data.forgotToClockOut) {
       return Container(
         padding: const EdgeInsets.all(16),

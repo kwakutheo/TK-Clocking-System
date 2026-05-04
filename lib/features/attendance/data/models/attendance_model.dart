@@ -52,12 +52,10 @@ class AttendanceModel extends AttendanceEntity {
     final selfieUrl =
         json['selfie_url'] as String? ?? json['selfieUrl'] as String?;
 
-    // Backend returns `isOfflineSync` boolean; app uses `sync_status` enum.
+    // If it's coming from the backend, it's synced.
     final syncStatus = json['sync_status'] != null
         ? SyncStatus.fromValue(json['sync_status'] as String)
-        : (json['isOfflineSync'] == true)
-            ? SyncStatus.pending
-            : SyncStatus.synced;
+        : SyncStatus.synced;
 
     double? parseDouble(dynamic val) {
       if (val == null) return null;

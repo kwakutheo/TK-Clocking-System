@@ -20,6 +20,7 @@ class HomeDataModel extends HomeDataEntity {
     super.isWeekend,
     super.isVacation,
     super.vacationName,
+    super.noShiftAssigned,
   });
 
   factory HomeDataModel.fromJson(Map<String, dynamic> json) {
@@ -65,6 +66,7 @@ class HomeDataModel extends HomeDataEntity {
       isWeekend: json['isWeekend'] as bool? ?? false,
       isVacation: json['isVacation'] as bool? ?? false,
       vacationName: json['vacationName'] as String?,
+      noShiftAssigned: json['noShiftAssigned'] as bool? ?? false,
     );
   }
 }

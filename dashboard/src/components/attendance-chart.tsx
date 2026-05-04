@@ -32,8 +32,8 @@ export function AttendanceChart({ data }: { data: Log[] }) {
   });
 
   return (
-    <div style={{ width: '100%', height: 280 }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ width: '100%', height: 280, minHeight: 280 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <BarChart data={chartData} barGap={4}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis
