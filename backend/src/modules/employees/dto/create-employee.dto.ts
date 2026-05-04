@@ -37,15 +37,15 @@ export class CreateEmployeeDto {
   @IsOptional()
   departmentId?: string;
 
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440001' })
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001' })
   @IsUUID()
-  @IsOptional()
-  branchId?: string;
+  @IsNotEmpty()
+  branchId: string;
 
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440002' })
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440002' })
   @IsUUID()
-  @IsOptional()
-  shiftId?: string;
+  @IsNotEmpty()
+  shiftId: string;
 
   @ApiPropertyOptional({ example: 'Field Engineer' })
   @IsString()

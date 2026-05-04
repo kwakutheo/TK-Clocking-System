@@ -20,6 +20,7 @@ class HomeDataModel extends HomeDataEntity {
     super.isWeekend,
     super.isVacation,
     super.vacationName,
+    super.isOnBreak,
     super.noShiftAssigned,
   });
 
@@ -67,6 +68,7 @@ class HomeDataModel extends HomeDataEntity {
       isVacation: json['isVacation'] as bool? ?? false,
       vacationName: json['vacationName'] as String?,
       noShiftAssigned: json['noShiftAssigned'] as bool? ?? false,
+      isOnBreak: json['isOnBreak'] as bool? ?? false,
     );
   }
 }

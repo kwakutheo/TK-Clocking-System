@@ -10,6 +10,7 @@ import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
 import { AttendanceType, UserRole } from '../../common/enums';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class AttendanceService {
@@ -20,6 +21,7 @@ export class AttendanceService {
     private readonly branches: BranchesService,
     private readonly holidays: HolidaysService,
     private readonly academicCalendar: AcademicCalendarService,
+    private readonly settings: SettingsService,
   ) {}
 
   // ── Record single event ───────────────────────────────────────────────────
@@ -32,6 +34,12 @@ export class AttendanceService {
     if (!employee.shift) {
       throw new BadRequestException(
         'You have not been assigned a work shift. Please contact HR to assign you a shift before clocking in.',
+      );
+    }
+
+    if (employee.status !== 'active') {
+      throw new BadRequestException(
+        `Action denied. Your account status is currently: ${employee.status.toUpperCase()}.`,
       );
     }
 
@@ -265,6 +273,12 @@ export class AttendanceService {
       );
     }
 
+    if (employee.status !== 'active') {
+      throw new BadRequestException(
+        `Action denied. Your account status is currently: ${employee.status.toUpperCase()}.`,
+      );
+    }
+
     const now = dto.timestamp ? new Date(dto.timestamp) : new Date();
 
     const dayStatus = await this._checkNonWorkingDay(now);
@@ -453,6 +467,7 @@ export class AttendanceService {
       .getOne();
 
     let isClockedIn = false;
+    let isOnBreak = false;
     let clockedInTime: Date | null = null;
     let forgotToClockOut = false;
     // 'none' | 'late' | 'persistent_late'
@@ -477,9 +492,15 @@ export class AttendanceService {
     }
 
     // Determine current clock-in status
-    if (lastLog && (lastLog.type === AttendanceType.CLOCK_IN || lastLog.type === AttendanceType.BREAK_OUT)) {
-      isClockedIn = true;
-      clockedInTime = lastLog.timestamp;
+    if (lastLog) {
+      if (lastLog.type === AttendanceType.CLOCK_IN || lastLog.type === AttendanceType.BREAK_OUT) {
+        isClockedIn = true;
+        clockedInTime = lastLog.timestamp;
+      } else if (lastLog.type === AttendanceType.BREAK_IN) {
+        isClockedIn = true;
+        isOnBreak = true;
+        clockedInTime = lastLog.timestamp;
+      }
     }
 
     // 2. Today's logs
@@ -543,8 +564,10 @@ export class AttendanceService {
       const shiftEnd = new Date(today);
       shiftEnd.setHours(eHours, eMins, 0, 0);
 
-      // The window 10 minutes after shift end — for "forgot to clock out" detection
-      const forgotCutoff = new Date(shiftEnd.getTime() + 10 * 60 * 1000);
+      // Dynamic window for "forgot to clock out" detection
+      const bufferStr = await this.settings.findOne('clock_out_reminder_buffer') || '10';
+      const bufferMins = parseInt(bufferStr, 10) || 10;
+      const forgotCutoff = new Date(shiftEnd.getTime() + bufferMins * 60 * 1000);
 
       // Track whether the shift window has ended
       isShiftOver = now > shiftEnd;
@@ -647,6 +670,7 @@ export class AttendanceService {
       } : null,
       isClockedIn,
       clockedInTime,
+      isOnBreak,
       forgotToClockOut,
       // Backwards-compatible: isLateToday is true for either late variant
       isLateToday: lateStatus !== 'none',

@@ -7,7 +7,7 @@ import {
   IsNumber,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../../../common/enums';
+import { UserRole, EmployeeStatus } from '../../../common/enums';
 
 export class UpdateEmployeeDto {
   @ApiPropertyOptional({ example: 'Kofi Mensah' })
@@ -59,4 +59,9 @@ export class UpdateEmployeeDto {
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
+
+  @ApiPropertyOptional({ enum: EmployeeStatus })
+  @IsEnum(EmployeeStatus)
+  @IsOptional()
+  status?: EmployeeStatus;
 }

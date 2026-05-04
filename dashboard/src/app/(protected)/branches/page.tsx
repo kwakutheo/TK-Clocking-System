@@ -158,13 +158,54 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
         <head>
           <title>QR Code - ${branch.name}</title>
           <style>
-            body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: system-ui, sans-serif; }
-            .container { text-align: center; padding: 40px; }
-            img { width: 300px; height: 300px; border: 2px solid #000; border-radius: 12px; }
-            h1 { margin: 24px 0 8px; font-size: 28px; }
-            p { margin: 0; color: #666; font-size: 16px; }
-            .hint { margin-top: 24px; padding: 12px 20px; background: #f3f4f6; border-radius: 8px; font-size: 14px; color: #374151; }
-            @media print { .no-print { display: none; } }
+            @page { size: A4; margin: 0; }
+            body { 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh; 
+              margin: 0; 
+              font-family: system-ui, sans-serif; 
+              background: #fff;
+            }
+            .container { 
+              text-align: center; 
+              width: 100%;
+              max-width: 800px;
+            }
+            img { 
+              width: 500px; 
+              height: 500px; 
+              border: 4px solid #000; 
+              border-radius: 24px; 
+              padding: 20px;
+              background: #fff;
+            }
+            h1 { 
+              margin: 48px 0 12px; 
+              font-size: 56px; 
+              font-weight: 800;
+              letter-spacing: -1px;
+            }
+            p { 
+              margin: 0; 
+              color: #4b5563; 
+              font-size: 28px; 
+              font-weight: 500;
+            }
+            .hint { 
+              margin-top: 40px; 
+              padding: 16px 24px; 
+              background: #f3f4f6; 
+              border-radius: 12px; 
+              font-size: 18px; 
+              color: #374151; 
+            }
+            @media print { 
+              .no-print { display: none; } 
+              body { -webkit-print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
@@ -172,7 +213,7 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
             <img src="${printRef.current.querySelector('img')?.src}" alt="QR Code" />
             <h1>${branch.name}</h1>
             <p>Scan to clock in / out</p>
-            <div class="hint no-print">Print this page and paste it at the branch entrance.</div>
+            <div class="hint no-print">Print this page on A4 paper and paste it at the entrance.</div>
           </div>
         </body>
       </html>

@@ -285,6 +285,36 @@ input, select, textarea { font-family: inherit; }
   width: 100%;
 }
 
+.nav-submenu {
+  margin-left: 24px;
+  border-left: 1px solid var(--border);
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.nav-submenu .nav-item {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.nav-item-chevron {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  color: var(--text-muted);
+}
+
+.nav-item:hover .nav-item-chevron {
+  color: var(--text-primary);
+}
+
+.nav-item-chevron.open {
+  transform: rotate(90deg);
+}
+
 .sidebar-footer {
   margin-top: auto;
   border-top: 1px solid var(--border);

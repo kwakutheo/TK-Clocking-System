@@ -12,6 +12,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
 import { AcademicCalendarModule } from './modules/academic-calendar/academic-calendar.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AcademicCalendarModule } from './modules/academic-calendar/academic-cal
     AuditModule,
     HolidaysModule,
     AcademicCalendarModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

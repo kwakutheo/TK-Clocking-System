@@ -54,6 +54,13 @@ export class AuthService {
 
     const publicUser = this.users.toPublic(user);
     const employee = await this.employees.findByUserId(user.id).catch(() => null);
+    
+    if (employee && employee.status !== 'active') {
+      throw new UnauthorizedException(
+        `Account disabled or suspended. Status: ${employee.status}. Please contact HR.`,
+      );
+    }
+
     if (employee) {
       (publicUser as any).employeeId = employee.id;
     }

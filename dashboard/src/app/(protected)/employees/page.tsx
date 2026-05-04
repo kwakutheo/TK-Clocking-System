@@ -57,6 +57,7 @@ export default function EmployeesPage() {
     phone: '',
     hireDate: '',
     role: 'employee',
+    status: 'active',
   });
 
   const employees: any[] = data ?? [];
@@ -86,6 +87,7 @@ export default function EmployeesPage() {
       phone: '',
       hireDate: '',
       role: 'employee',
+      status: 'active',
     });
     setEditingId(null);
     setError('');
@@ -112,6 +114,7 @@ export default function EmployeesPage() {
       phone: emp.user?.phone ?? '',
       hireDate: emp.hireDate ? emp.hireDate.slice(0, 10) : '',
       role: emp.user?.role ?? 'employee',
+      status: emp.status ?? 'active',
     });
     setEditingId(emp.id);
     setShowModal(true);
@@ -135,6 +138,7 @@ export default function EmployeesPage() {
           phone: form.phone || undefined,
           hireDate: form.hireDate || undefined,
           role: form.role,
+          status: form.status,
         });
 
         if (user && res.data.user?.id === user.id) {
@@ -331,7 +335,7 @@ export default function EmployeesPage() {
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="form-grid">
                 <div className="form-group">
-                  <label htmlFor="firstName">First Name</label>
+                  <label htmlFor="firstName">First Name <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <input
                     id="firstName"
                     className="form-input"
@@ -341,7 +345,7 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="lastName">Last Name</label>
+                  <label htmlFor="lastName">Last Name <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <input
                     id="lastName"
                     className="form-input"
@@ -353,7 +357,7 @@ export default function EmployeesPage() {
                 {!editingId && (
                   <>
                     <div className="form-group">
-                      <label htmlFor="username">Username</label>
+                      <label htmlFor="username">Username <span style={{ color: 'var(--danger)' }}>*</span></label>
                       <input
                         id="username"
                         className="form-input"
@@ -363,7 +367,7 @@ export default function EmployeesPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="password">Password</label>
+                      <label htmlFor="password">Password <span style={{ color: 'var(--danger)' }}>*</span></label>
                       <input
                         id="password"
                         className="form-input"
@@ -391,12 +395,13 @@ export default function EmployeesPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="branchId">Branch</label>
+                  <label htmlFor="branchId">Branch <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <select
                     id="branchId"
                     className="form-input"
                     value={form.branchId}
                     onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                    required
                   >
                     <option value="">— Select —</option>
                     {branches.map((b: any) => (
@@ -405,12 +410,13 @@ export default function EmployeesPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="shiftId">Assigned Shift</label>
+                  <label htmlFor="shiftId">Assigned Shift <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <select
                     id="shiftId"
                     className="form-input"
                     value={form.shiftId}
                     onChange={(e) => setForm({ ...form, shiftId: e.target.value })}
+                    required
                   >
                     <option value="">— Select Shift —</option>
                     {shifts.map((s: any) => (
@@ -463,6 +469,21 @@ export default function EmployeesPage() {
                     <option value="super_admin">Super Admin</option>
                   </select>
                 </div>
+                {editingId && userRole === 'super_admin' && (
+                  <div className="form-group">
+                    <label htmlFor="status">Status</label>
+                    <select
+                      id="status"
+                      className="form-input"
+                      value={form.status}
+                      onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="suspended">Suspended</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn" onClick={() => setShowModal(false)}>

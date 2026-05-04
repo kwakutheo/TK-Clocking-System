@@ -31,6 +31,7 @@ class HomeDataEntity extends Equatable {
   final bool isWeekend;
   final bool isVacation;
   final String? vacationName;
+  final bool isOnBreak;
   final bool noShiftAssigned;
 
   const HomeDataEntity({
@@ -38,6 +39,7 @@ class HomeDataEntity extends Equatable {
     this.lastActivityTime,
     required this.isClockedIn,
     this.clockedInTime,
+    this.isOnBreak = false,
     this.forgotToClockOut = false,
     this.isLateToday = false,
     this.lateStatus = LateStatus.none,
@@ -60,6 +62,7 @@ class HomeDataEntity extends Equatable {
         lastActivityTime,
         isClockedIn,
         clockedInTime,
+        isOnBreak,
         forgotToClockOut,
         isLateToday,
         lateStatus,

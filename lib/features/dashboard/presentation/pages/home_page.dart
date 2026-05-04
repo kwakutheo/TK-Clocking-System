@@ -425,6 +425,16 @@ class _LiveStatusBanner extends StatelessWidget {
     final isClockedIn = data.isClockedIn;
 
     if (isClockedIn) {
+      if (data.isOnBreak) {
+        return _buildBanner(
+          context,
+          color: Colors.orange,
+          icon: Icons.pause_circle_filled_rounded,
+          title: 'Currently on Break',
+          subtitle: 'End your break to resume work',
+        );
+      }
+
       String subtitle = 'Start your shift when you arrive';
       if (data.clockedInTime != null) {
         final hours = data.todayHours.floor();

@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { Employee } from './employee.entity';
 import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
-import { UserRole } from '../../common/enums';
+import { UserRole, EmployeeStatus } from '../../common/enums';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -156,10 +156,15 @@ export class EmployeesService {
       branchId?: string;
       shiftId?: string;
       hireDate?: string;
+      status?: EmployeeStatus;
     },
     adminUser?: User,
   ): Promise<Employee> {
     const emp = await this.findById(id);
+
+    if (data.status && adminUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new UnauthorizedException('Only Super Admins can change employee status.');
+    }
 
     const oldValues = {
       position: emp.position,
@@ -200,6 +205,7 @@ export class EmployeesService {
     if (branchId !== undefined) (emp as any).branch = branchId ? { id: branchId } : null;
     if (shiftId !== undefined) (emp as any).shift = shiftId ? { id: shiftId } : null;
     if (hireDate !== undefined) emp.hireDate = hireDate ? new Date(hireDate) : null as any;
+    if (data.status !== undefined) emp.status = data.status as any;
     Object.assign(emp, employeeData);
 
     await this.repo.save(emp);
