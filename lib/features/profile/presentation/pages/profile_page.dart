@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
 import 'package:tk_clocking_system/core/network/api_client.dart';
 import 'package:tk_clocking_system/core/network/api_endpoints.dart';
@@ -163,187 +164,197 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
         ],
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
+      body: VisibilityDetector(
+        key: const Key('profile-page'),
+        onVisibilityChanged: (info) {
+          if (info.visibleFraction > 0.5 && !_isEditing) {
             context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-            await Future.delayed(const Duration(seconds: 1));
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-            children: [
-              _ProfileHeader(user: user, theme: theme, cs: cs),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    if (user != null) ...[
-                      if (_isEditing) ...[
-                        Form(
-                          key: _formKey,
-                          child: _EditSection(
-                            title: 'Edit Profile',
-                            children: [
-                              AppTextField(
-                                controller: _usernameController,
-                                label: 'Username',
-                                prefixIcon: Icons.alternate_email_outlined,
-                                validator: (v) => v == null || v.isEmpty
-                                    ? 'Username is required'
-                                    : null,
-                              ),
-                              const SizedBox(height: 12),
-                              if (!_isChangingPassword)
-                                Center(
-                                  child: TextButton.icon(
-                                    onPressed: () => setState(
-                                        () => _isChangingPassword = true),
-                                    icon: const Icon(Icons.lock_open_rounded),
-                                    label: const Text('Change Password'),
+          }
+        },
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+              await Future.delayed(const Duration(seconds: 1));
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  _ProfileHeader(user: user, theme: theme, cs: cs),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        if (user != null) ...[
+                          if (_isEditing) ...[
+                            Form(
+                              key: _formKey,
+                              child: _EditSection(
+                                title: 'Edit Profile',
+                                children: [
+                                  AppTextField(
+                                    controller: _usernameController,
+                                    label: 'Username',
+                                    prefixIcon: Icons.alternate_email_outlined,
+                                    validator: (v) => v == null || v.isEmpty
+                                        ? 'Username is required'
+                                        : null,
                                   ),
-                                )
-                              else ...[
-                                Row(
-                                  children: [
-                                    const Expanded(
-                                        child: Text('Update Password',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold))),
-                                    TextButton(
-                                      onPressed: () => setState(
-                                          () => _isChangingPassword = false),
-                                      child: const Text('Cancel'),
+                                  const SizedBox(height: 12),
+                                  if (!_isChangingPassword)
+                                    Center(
+                                      child: TextButton.icon(
+                                        onPressed: () => setState(
+                                            () => _isChangingPassword = true),
+                                        icon:
+                                            const Icon(Icons.lock_open_rounded),
+                                        label: const Text('Change Password'),
+                                      ),
+                                    )
+                                  else ...[
+                                    Row(
+                                      children: [
+                                        const Expanded(
+                                            child: Text('Update Password',
+                                                style: TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold))),
+                                        TextButton(
+                                          onPressed: () => setState(() =>
+                                              _isChangingPassword = false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                      ],
+                                    ),
+                                    AppTextField(
+                                      controller: _passwordController,
+                                      label: 'New Password',
+                                      prefixIcon: Icons.lock_outline,
+                                      obscureText: true,
+                                      validator: (v) => v == null || v.isEmpty
+                                          ? 'Password is required'
+                                          : null,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    AppTextField(
+                                      controller: _confirmPasswordController,
+                                      label: 'Confirm New Password',
+                                      prefixIcon: Icons.lock_reset_outlined,
+                                      obscureText: true,
+                                      validator: (v) {
+                                        if (v == null || v.isEmpty) {
+                                          return 'Please confirm your password';
+                                        }
+                                        if (v != _passwordController.text) {
+                                          return 'Passwords do not match';
+                                        }
+                                        return null;
+                                      },
                                     ),
                                   ],
-                                ),
-                                AppTextField(
-                                  controller: _passwordController,
-                                  label: 'New Password',
-                                  prefixIcon: Icons.lock_outline,
-                                  obscureText: true,
-                                  validator: (v) => v == null || v.isEmpty
-                                      ? 'Password is required'
-                                      : null,
-                                ),
-                                const SizedBox(height: 12),
-                                AppTextField(
-                                  controller: _confirmPasswordController,
-                                  label: 'Confirm New Password',
-                                  prefixIcon: Icons.lock_reset_outlined,
-                                  obscureText: true,
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) {
-                                      return 'Please confirm your password';
-                                    }
-                                    if (v != _passwordController.text) {
-                                      return 'Passwords do not match';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              PrimaryButton(
-                                label: 'Save Changes',
-                                isLoading: _isSaving,
-                                onPressed: _saveProfile,
+                                  const SizedBox(height: 16),
+                                  PrimaryButton(
+                                    label: 'Save Changes',
+                                    isLoading: _isSaving,
+                                    onPressed: _saveProfile,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ] else ...[
+                            ),
+                            const SizedBox(height: 16),
+                          ] else ...[
+                            _InfoSection(
+                              title: 'Account Details',
+                              items: [
+                                _InfoItem(
+                                  icon: Icons.alternate_email_outlined,
+                                  label: 'Username',
+                                  value: user.username.isNotEmpty
+                                      ? user.username
+                                      : '—',
+                                ),
+                                if (user.employeeCode != null)
+                                  _InfoItem(
+                                    icon: Icons.numbers_outlined,
+                                    label: 'Employee Code',
+                                    value: user.employeeCode!,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
                         _InfoSection(
-                          title: 'Account Details',
+                          title: 'App Settings',
                           items: [
                             _InfoItem(
-                              icon: Icons.alternate_email_outlined,
-                              label: 'Username',
-                              value: user.username.isNotEmpty
-                                  ? user.username
-                                  : '—',
-                            ),
-                            if (user.employeeCode != null)
-                              _InfoItem(
-                                icon: Icons.numbers_outlined,
-                                label: 'Employee Code',
-                                value: user.employeeCode!,
+                              icon: Icons.notifications_outlined,
+                              label: 'Notifications',
+                              value: 'Enabled',
+                              trailing: Switch(
+                                value: true,
+                                onChanged: (_) {},
                               ),
+                            ),
+                            _InfoItem(
+                              icon: Icons.gps_fixed_outlined,
+                              label: 'Location Services',
+                              value: 'Required for clock-in',
+                              trailing: const Icon(Icons.check_circle_rounded,
+                                  color: Colors.green, size: 20),
+                            ),
+                            _InfoItem(
+                              icon: Icons.wifi_off_outlined,
+                              label: 'Offline Mode',
+                              value: 'Auto-sync when reconnected',
+                              trailing: const Icon(Icons.check_circle_rounded,
+                                  color: Colors.green, size: 20),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                      ],
-                    ],
-                    _InfoSection(
-                      title: 'App Settings',
-                      items: [
-                        _InfoItem(
-                          icon: Icons.notifications_outlined,
-                          label: 'Notifications',
-                          value: 'Enabled',
-                          trailing: Switch(
-                            value: true,
-                            onChanged: (_) {},
+                        _InfoSection(
+                          title: 'About',
+                          items: [
+                            _InfoItem(
+                              icon: Icons.info_outlined,
+                              label: 'App Version',
+                              value: '1.0.0',
+                            ),
+                            _InfoItem(
+                              icon: Icons.business_outlined,
+                              label: 'Organisation',
+                              value: 'TK Clocking System',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: cs.error,
+                              side: BorderSide(color: cs.error),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: () => _confirmSignOut(context),
+                            icon: const Icon(Icons.logout_rounded),
+                            label: const Text(
+                              'Sign Out',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
                           ),
                         ),
-                        _InfoItem(
-                          icon: Icons.gps_fixed_outlined,
-                          label: 'Location Services',
-                          value: 'Required for clock-in',
-                          trailing: const Icon(Icons.check_circle_rounded,
-                              color: Colors.green, size: 20),
-                        ),
-                        _InfoItem(
-                          icon: Icons.wifi_off_outlined,
-                          label: 'Offline Mode',
-                          value: 'Auto-sync when reconnected',
-                          trailing: const Icon(Icons.check_circle_rounded,
-                              color: Colors.green, size: 20),
-                        ),
+                        const SizedBox(height: 32),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _InfoSection(
-                      title: 'About',
-                      items: [
-                        _InfoItem(
-                          icon: Icons.info_outlined,
-                          label: 'App Version',
-                          value: '1.0.0',
-                        ),
-                        _InfoItem(
-                          icon: Icons.business_outlined,
-                          label: 'Organisation',
-                          value: 'TK Clocking System',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: cs.error,
-                          side: BorderSide(color: cs.error),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () => _confirmSignOut(context),
-                        icon: const Icon(Icons.logout_rounded),
-                        label: const Text(
-                          'Sign Out',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
         ),
       ),
     );

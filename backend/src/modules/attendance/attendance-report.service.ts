@@ -58,7 +58,7 @@ export class AttendanceReportService {
       if (monthDays.length > 0) {
         const mSummary = monthDays.reduce((acc, day) => {
           acc.totalHours += day.hours;
-          if (day.status === 'PRESENT') acc.daysWorked++;
+          if (day.status === 'PRESENT' || day.status === 'IN PROGRESS') acc.daysWorked++;
           if (day.status === 'ABSENT') acc.daysAbsent++;
           if (day.isLate) {
             acc.daysLate++;

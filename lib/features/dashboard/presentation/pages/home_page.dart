@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:intl/intl.dart';
 import 'package:tk_clocking_system/core/constants/app_constants.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
@@ -127,18 +128,27 @@ class _DashboardTabState extends State<_DashboardTab> {
           _checkPending();
         }
       },
-      child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            setState(() {
-              _loadData();
-              _checkPending();
-            });
+      child: VisibilityDetector(
+        key: const Key('dashboard-tab'),
+        onVisibilityChanged: (info) {
+          if (info.visibleFraction > 0.5) {
+            _loadData();
+            _checkPending();
             context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-            await _homeDataFuture;
-          },
-          child: CustomScrollView(
-            slivers: [
+          }
+        },
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              setState(() {
+                _loadData();
+                _checkPending();
+              });
+              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+              await _homeDataFuture;
+            },
+            child: CustomScrollView(
+              slivers: [
               SliverAppBar(
                 floating: true,
                 title: Column(
@@ -229,7 +239,8 @@ class _DashboardTabState extends State<_DashboardTab> {
                   ]),
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -527,9 +538,13 @@ class _LastActivitySnippet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String label = 'Clocked In';
-    if (type == AttendanceType.clockOut) label = 'Clocked Out';
-    else if (type == AttendanceType.breakIn) label = 'Started Break';
-    else if (type == AttendanceType.breakOut) label = 'Ended Break';
+    if (type == AttendanceType.clockOut) {
+      label = 'Clocked Out';
+    } else if (type == AttendanceType.breakIn) {
+      label = 'Started Break';
+    } else if (type == AttendanceType.breakOut) {
+      label = 'Ended Break';
+    }
 
     final formatter = DateFormat('EEE, d MMM • h:mm a');
 

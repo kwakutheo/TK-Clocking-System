@@ -14,6 +14,7 @@ import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { UserRole } from '../../common/enums';
 import * as nodemailer from 'nodemailer';
+import { EmployeesService } from '../employees/employees.service';
 
 const SALT_ROUNDS = 12;
 
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly auditService: AuditService,
+    private readonly employees: EmployeesService,
   ) {}
 
   // ── Validate credentials (used by LocalStrategy) ──────────────────────────
@@ -50,10 +52,16 @@ export class AuthService {
       }),
     ]);
 
+    const publicUser = this.users.toPublic(user);
+    const employee = await this.employees.findByUserId(user.id).catch(() => null);
+    if (employee) {
+      (publicUser as any).employeeId = employee.id;
+    }
+
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
-      user: this.users.toPublic(user),
+      user: publicUser,
     };
   }
 
@@ -92,7 +100,12 @@ export class AuthService {
 
   // ── Get current user ───────────────────────────────────────────────────────
   async me(user: User) {
-    return this.users.toPublic(user);
+    const publicUser = this.users.toPublic(user);
+    const employee = await this.employees.findByUserId(user.id).catch(() => null);
+    if (employee) {
+      (publicUser as any).employeeId = employee.id;
+    }
+    return publicUser;
   }
 
   // ── Request Password Reset ──────────────────────────────────────────────────

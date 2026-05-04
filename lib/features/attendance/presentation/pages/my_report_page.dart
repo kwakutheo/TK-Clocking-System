@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:tk_clocking_system/core/errors/failures.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
 import 'package:tk_clocking_system/features/attendance/domain/entities/term_report_entity.dart';
@@ -36,68 +37,82 @@ class _MyReportPageState extends State<MyReportPage> {
       appBar: AppBar(
         title: const Text('My Report'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _loadReport();
-          });
-          try {
-            await _reportFuture;
-          } catch (_) {}
+      body: VisibilityDetector(
+        key: const Key('my-report-page'),
+        onVisibilityChanged: (info) {
+          if (info.visibleFraction > 0.5) {
+            setState(() {
+              _loadReport();
+            });
+          }
         },
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: FutureBuilder<TermReportEntity>(
-                future: _reportFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingIndicator(
-                        message: 'Loading report...');
-                  }
+        child: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {
+              _loadReport();
+            });
+            try {
+              await _reportFuture;
+            } catch (_) {}
+          },
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: FutureBuilder<TermReportEntity>(
+                  future: _reportFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const AppLoadingIndicator(
+                          message: 'Loading report...');
+                    }
 
-                  if (snapshot.hasError) {
-                    return _ErrorView(
-                      message: snapshot.error.toString(),
+                    if (snapshot.hasError) {
+                      return _ErrorView(
+                        message: snapshot.error.toString(),
+                      );
+                    }
+
+                    if (!snapshot.hasData) {
+                      return const Center(child: Text('No data found.'));
+                    }
+
+                    final report = snapshot.data!;
+
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Term Summary: ${report.termName}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          _SummaryGrid(summary: report.summary),
+                          const SizedBox(height: 32),
+                          Text(
+                            'Monthly Breakdown',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          ...report.months.map((m) => _MonthCard(month: m)),
+                        ],
+                      ),
                     );
-                  }
-
-                  if (!snapshot.hasData) {
-                    return const Center(child: Text('No data found.'));
-                  }
-
-                  final report = snapshot.data!;
-
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Term Summary: ${report.termName}',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                        const SizedBox(height: 16),
-                        _SummaryGrid(summary: report.summary),
-                        const SizedBox(height: 32),
-                        Text(
-                          'Monthly Breakdown',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                        const SizedBox(height: 16),
-                        ...report.months.map((m) => _MonthCard(month: m)),
-                      ],
-                    ),
-                  );
-                },
+                  },
+                ),
               ),
             ),
           ),

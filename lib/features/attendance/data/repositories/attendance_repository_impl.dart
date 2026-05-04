@@ -7,6 +7,7 @@ import 'package:tk_clocking_system/core/constants/app_constants.dart';
 import 'package:tk_clocking_system/core/errors/failures.dart';
 import 'package:tk_clocking_system/core/network/api_client.dart';
 import 'package:tk_clocking_system/core/network/api_endpoints.dart';
+import 'package:tk_clocking_system/core/services/connectivity_service.dart';
 import 'package:tk_clocking_system/features/attendance/data/models/attendance_model.dart';
 import 'package:tk_clocking_system/features/attendance/domain/entities/attendance_entity.dart';
 import 'package:tk_clocking_system/features/attendance/domain/repositories/attendance_repository.dart';
@@ -26,12 +27,12 @@ import 'package:tk_clocking_system/features/dashboard/domain/entities/home_data_
 class AttendanceRepositoryImpl implements AttendanceRepository {
   const AttendanceRepositoryImpl({
     required ApiClient apiClient,
-    required Connectivity connectivity,
+    required ConnectivityService connectivity,
   })  : _api = apiClient,
         _connectivity = connectivity;
 
   final ApiClient _api;
-  final Connectivity _connectivity;
+  final ConnectivityService _connectivity;
 
   Box<Map> get _box => Hive.box<Map>(AppConstants.attendanceBox);
 
@@ -55,9 +56,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
       deviceId: deviceId,
     );
 
-    final connections = await _connectivity.checkConnectivity();
-    final isOnline = connections.contains(ConnectivityResult.mobile) ||
-        connections.contains(ConnectivityResult.wifi);
+    final isOnline = _connectivity.isOnline;
 
     if (!isOnline) {
       await _box.put(pending.id, pending.toJson());
@@ -255,9 +254,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
       longitude: longitude,
     );
 
-    final connections = await _connectivity.checkConnectivity();
-    final isOnline = connections.contains(ConnectivityResult.mobile) ||
-        connections.contains(ConnectivityResult.wifi);
+    final isOnline = _connectivity.isOnline;
 
     if (!isOnline) {
       // QR clock-ins still need online validation, so we can't fully support

@@ -383,6 +383,7 @@ export class AttendanceService {
     userRole: UserRole,
     page = 1,
     limit = 20,
+    employeeId?: string,
   ): Promise<{ data: AttendanceLog[]; total: number }> {
     const isAdmin =
       userRole === UserRole.SUPER_ADMIN ||
@@ -402,6 +403,8 @@ export class AttendanceService {
       const employee = await this.employees.findByUserId(userId);
       if (!employee) throw new NotFoundException('Employee profile not found.');
       qb.where('emp.id = :empId', { empId: employee.id });
+    } else if (employeeId) {
+      qb.where('emp.id = :empId', { empId: employeeId });
     }
 
     const [data, total] = await qb.getManyAndCount();
@@ -518,8 +521,8 @@ export class AttendanceService {
       const shiftEnd = new Date(today);
       shiftEnd.setHours(eHours, eMins, 0, 0);
 
-      // The window 1 hour after shift end — for "forgot to clock out" detection
-      const forgotCutoff = new Date(shiftEnd.getTime() + 60 * 60 * 1000);
+      // The window 10 minutes after shift end — for "forgot to clock out" detection
+      const forgotCutoff = new Date(shiftEnd.getTime() + 10 * 60 * 1000);
 
       // Track whether the shift window has ended
       isShiftOver = now > shiftEnd;

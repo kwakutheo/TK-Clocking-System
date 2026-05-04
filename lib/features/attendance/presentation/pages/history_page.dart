@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:tk_clocking_system/features/attendance/domain/entities/attendance_entity.dart';
 import 'package:tk_clocking_system/features/attendance/presentation/bloc/attendance_bloc.dart';
 import 'package:tk_clocking_system/features/attendance/presentation/bloc/attendance_event.dart';
@@ -27,7 +28,8 @@ class _HistoryPageState extends State<HistoryPage> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       context.read<AttendanceBloc>().add(
-            AttendanceLoadHistoryEvent(employeeId: authState.user.id),
+            AttendanceLoadHistoryEvent(
+                employeeId: authState.user.employeeId ?? authState.user.id),
           );
     }
   }
@@ -38,68 +40,98 @@ class _HistoryPageState extends State<HistoryPage> {
       appBar: AppBar(
         title: const Text('Attendance History'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          final authState = context.read<AuthBloc>().state;
-          if (authState is AuthAuthenticated) {
-            context.read<AttendanceBloc>().add(
-                  AttendanceLoadHistoryEvent(employeeId: authState.user.id),
-                );
-            context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-            await Future.delayed(const Duration(seconds: 1));
+      body: VisibilityDetector(
+        key: const Key('history-page'),
+        onVisibilityChanged: (info) {
+          if (info.visibleFraction > 0.5) {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticated) {
+              context.read<AttendanceBloc>().add(
+                    AttendanceLoadHistoryEvent(
+                        employeeId:
+                            authState.user.employeeId ?? authState.user.id),
+                  );
+              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+            }
           }
         },
-        child: BlocBuilder<AttendanceBloc, AttendanceState>(
-        builder: (context, state) {
-          if (state is AttendanceLoading) {
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: const AppLoadingIndicator(message: 'Loading history…'),
-              ),
-            );
-          }
-
-          if (state is AttendanceFailure) {
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: _ErrorView(
-                  message: state.message,
-                  onRetry: () {
-                    final authState = context.read<AuthBloc>().state;
-                    if (authState is AuthAuthenticated) {
-                      context.read<AttendanceBloc>().add(
-                            AttendanceLoadHistoryEvent(
-                                employeeId: authState.user.id),
-                          );
-                    }
-                  },
-                ),
-              ),
-            );
-          }
-
-          if (state is AttendanceSynced) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    state.count > 0
-                        ? '${state.count} record(s) synced successfully!'
-                        : 'No pending records to sync.',
+        child: RefreshIndicator(
+          onRefresh: () async {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticated) {
+              context.read<AttendanceBloc>().add(
+                    AttendanceLoadHistoryEvent(
+                        employeeId:
+                            authState.user.employeeId ?? authState.user.id),
+                  );
+              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+              await Future.delayed(const Duration(seconds: 1));
+            }
+          },
+          child: BlocBuilder<AttendanceBloc, AttendanceState>(
+            builder: (context, state) {
+              if (state is AttendanceLoading) {
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child:
+                        const AppLoadingIndicator(message: 'Loading history…'),
                   ),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            });
-          }
+                );
+              }
 
-          if (state is AttendanceHistoryLoaded) {
-            if (state.records.isEmpty) {
+              if (state is AttendanceFailure) {
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: _ErrorView(
+                      message: state.message,
+                      onRetry: () {
+                        final authState = context.read<AuthBloc>().state;
+                        if (authState is AuthAuthenticated) {
+                          context.read<AttendanceBloc>().add(
+                                AttendanceLoadHistoryEvent(
+                                    employeeId: authState.user.employeeId ??
+                                        authState.user.id),
+                              );
+                        }
+                      },
+                    ),
+                  ),
+                );
+              }
+
+              if (state is AttendanceSynced) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        state.count > 0
+                            ? '${state.count} record(s) synced successfully!'
+                            : 'No pending records to sync.',
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                });
+              }
+
+              if (state is AttendanceHistoryLoaded) {
+                if (state.records.isEmpty) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.7,
+                      child: const _EmptyView(),
+                    ),
+                  );
+                }
+                return _HistoryList(records: state.records);
+              }
+
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: SizedBox(
@@ -107,19 +139,9 @@ class _HistoryPageState extends State<HistoryPage> {
                   child: const _EmptyView(),
                 ),
               );
-            }
-            return _HistoryList(records: state.records);
-          }
-
-          return SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.7,
-              child: const _EmptyView(),
-            ),
-          );
-        },
-      ),
+            },
+          ),
+        ),
       ),
     );
   }

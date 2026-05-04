@@ -12,6 +12,7 @@ class UserEntity extends Equatable {
     required this.phone,
     required this.username,
     required this.role,
+    this.employeeId,
     this.employeeCode,
     this.photoUrl,
     this.departmentId,
@@ -19,6 +20,7 @@ class UserEntity extends Equatable {
   });
 
   final String id;
+  final String? employeeId;
   final String fullName;
   final String email;
   final String phone;
@@ -36,5 +38,5 @@ class UserEntity extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, fullName, username, email, role];
+  List<Object?> get props => [id, employeeId, fullName, username, email, role];
 }

@@ -8,10 +8,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
+import { EmployeesModule } from '../employees/employees.module';
 
 @Module({
   imports: [
     UsersModule,
+    EmployeesModule,
     AuditModule,
     PassportModule,
     JwtModule.registerAsync({

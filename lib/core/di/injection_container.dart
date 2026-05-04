@@ -92,7 +92,7 @@ Future<void> init() async {
   sl.registerLazySingleton<AttendanceRepository>(
     () => AttendanceRepositoryImpl(
       apiClient: sl<ApiClient>(),
-      connectivity: sl<Connectivity>(),
+      connectivity: sl<ConnectivityService>(),
     ),
   );
 

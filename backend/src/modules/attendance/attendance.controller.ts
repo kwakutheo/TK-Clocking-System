@@ -111,8 +111,9 @@ export class AttendanceController {
     @CurrentUser() user: User,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('employee_id') employeeId?: string,
   ) {
-    return this.service.getHistory(user.id, user.role, page, limit);
+    return this.service.getHistory(user.id, user.role, page, limit, employeeId);
   }
 
   @Get('live')
