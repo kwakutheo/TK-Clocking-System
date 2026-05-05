@@ -10,7 +10,7 @@ import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
 import { AttendanceType, UserRole } from '../../common/enums';
-import { SettingsService } from '../settings/settings.service';
+
 
 @Injectable()
 export class AttendanceService {
@@ -21,7 +21,7 @@ export class AttendanceService {
     private readonly branches: BranchesService,
     private readonly holidays: HolidaysService,
     private readonly academicCalendar: AcademicCalendarService,
-    private readonly settings: SettingsService,
+
   ) {}
 
   // ── Record single event ───────────────────────────────────────────────────
@@ -150,6 +150,12 @@ export class AttendanceService {
             'You have not clocked in today. You must clock in before starting a break.',
           );
         }
+        // Rule: Must be within working hours.
+        if (!this._isWithinShiftHours(now, employee.shift)) {
+          throw new BadRequestException(
+            `Action denied: Breaks can only be recorded within your assigned working hours (${employee.shift.startTime} - ${employee.shift.endTime}).`,
+          );
+        }
         // Rule: Cannot start a break if already on a break.
         const lastBreakRelevant = [...todayLogs]
           .reverse()
@@ -173,6 +179,12 @@ export class AttendanceService {
         if (!hasClockedInToday) {
           throw new BadRequestException(
             'You have not clocked in today. You must clock in before ending a break.',
+          );
+        }
+        // Rule: Must be within working hours.
+        if (!this._isWithinShiftHours(now, employee.shift)) {
+          throw new BadRequestException(
+            `Action denied: Breaks can only be recorded within your assigned working hours (${employee.shift.startTime} - ${employee.shift.endTime}).`,
           );
         }
         // Rule: Must be on a break to end one.
@@ -359,6 +371,12 @@ export class AttendanceService {
       }
       case AttendanceType.BREAK_IN: {
         if (!hasClockedInToday) throw new BadRequestException('You must clock in before starting a break.');
+        // Rule: Must be within working hours.
+        if (!this._isWithinShiftHours(now, employee.shift)) {
+          throw new BadRequestException(
+            `Action denied: Breaks can only be recorded within your assigned working hours (${employee.shift.startTime} - ${employee.shift.endTime}).`,
+          );
+        }
         if (hasClockOutToday)   throw new BadRequestException('You have already clocked out. You cannot start a break.');
         const last = [...todayLogs].reverse().find(l => [AttendanceType.BREAK_IN, AttendanceType.BREAK_OUT, AttendanceType.CLOCK_OUT].includes(l.type));
         if (last?.type === AttendanceType.BREAK_IN) throw new BadRequestException('You are already on a break.');
@@ -366,6 +384,12 @@ export class AttendanceService {
       }
       case AttendanceType.BREAK_OUT: {
         if (!hasClockedInToday) throw new BadRequestException('You must clock in before ending a break.');
+        // Rule: Must be within working hours.
+        if (!this._isWithinShiftHours(now, employee.shift)) {
+          throw new BadRequestException(
+            `Action denied: Breaks can only be recorded within your assigned working hours (${employee.shift.startTime} - ${employee.shift.endTime}).`,
+          );
+        }
         if (hasClockOutToday)   throw new BadRequestException('You have already clocked out. You cannot end a break.');
         const last = [...todayLogs].reverse().find(l => [AttendanceType.BREAK_IN, AttendanceType.BREAK_OUT, AttendanceType.CLOCK_IN].includes(l.type));
         if (!last || last.type !== AttendanceType.BREAK_IN) throw new BadRequestException('You are not currently on a break.');
@@ -565,7 +589,7 @@ export class AttendanceService {
       shiftEnd.setHours(eHours, eMins, 0, 0);
 
       // Dynamic window for "forgot to clock out" detection
-      const bufferStr = await this.settings.findOne('clock_out_reminder_buffer') || '10';
+      const bufferStr = '10';
       const bufferMins = parseInt(bufferStr, 10) || 10;
       const forgotCutoff = new Date(shiftEnd.getTime() + bufferMins * 60 * 1000);
 
@@ -851,5 +875,32 @@ export class AttendanceService {
     }
 
     return { isNonWorking: false, type: null, name: null };
+  }
+
+  // ── Shift Hour Checker ──────────────────────────────────────────────────
+  private _isWithinShiftHours(date: Date, shift: any): boolean {
+    if (!shift) return true;
+
+    const [sHours, sMins] = shift.startTime.split(':').map(Number);
+    const [eHours, eMins] = shift.endTime.split(':').map(Number);
+
+    const shiftStart = new Date(date);
+    shiftStart.setHours(sHours, sMins, 0, 0);
+
+    const shiftEnd = new Date(date);
+    shiftEnd.setHours(eHours, eMins, 0, 0);
+
+    // Handle overnight shifts (e.g., 22:00 to 06:00)
+    if (shiftEnd < shiftStart) {
+      if (date.getHours() < eHours || (date.getHours() === eHours && date.getMinutes() < eMins)) {
+        // We are in the post-midnight part of the shift; shift started yesterday.
+        shiftStart.setDate(shiftStart.getDate() - 1);
+      } else {
+        // We are in the pre-midnight part of the shift; shift ends tomorrow.
+        shiftEnd.setDate(shiftEnd.getDate() + 1);
+      }
+    }
+
+    return date >= shiftStart && date <= shiftEnd;
   }
 }

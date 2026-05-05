@@ -1,46 +1,54 @@
 @echo off
-title TK Clocking - Simple Starter
+chcp 65001 >nul
+title TK Clocking — Start Services
 color 0B
 
-:: 1. Force Cleanup (Kill any old processes on ports 3000 and 3001)
-echo [1/4] Cleaning up old processes...
-powershell -Command "Get-NetTCPConnection -LocalPort 3000, 3001 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
-echo Cleanup complete.
+echo ╔══════════════════════════════════════════════════════════════╗
+echo ║           TK Clocking System — Launch Services               ║
+echo ╚══════════════════════════════════════════════════════════════╝
 echo.
 
-:: 2. Update IP
-echo [2/4] Updating Mobile IP...
+:: Update Flutter IP
+echo [1/4] Updating Mobile App IP Address...
 powershell -ExecutionPolicy Bypass -File "%~dp0update_flutter_ip.ps1"
-echo IP update done.
 echo.
 
-:: 3. Check DB
-echo [3/4] Checking PostgreSQL...
+:: Check PostgreSQL
+echo [2/4] Checking PostgreSQL...
 netstat -ano | findstr ":5432" >nul
 if %errorlevel% == 0 (
-    echo PostgreSQL is active.
+    echo     ✓ PostgreSQL is running on port 5432
 ) else (
-    echo ERROR: PostgreSQL not detected! Please start your database.
+    echo     ⚠ PostgreSQL not detected on port 5432
+    echo       Please start PostgreSQL before continuing.
     pause
     exit /b 1
 )
-echo.
-
-:: 4. Start Services
-echo [4/4] Starting Services...
 
 :: Start Backend
-start "TK-Backend" cmd /k "cd /d ""%~dp0backend"" && npm run start:dev"
-echo Backend window opened.
+echo.
+echo [3/4] Starting Backend API (NestJS)...
+start "TK Clocking Backend" cmd /k "cd /d ""%~dp0backend"" && echo Installing dependencies if needed... && npm install && echo. && echo Starting Backend... && npm run start:dev && pause"
 
-timeout /t 5 /nobreak >nul
+echo     ✓ Backend window opened — compiling...
+timeout /t 8 /nobreak >nul
 
 :: Start Dashboard
-start "TK-Dashboard" cmd /k "cd /d ""%~dp0dashboard"" && npm run dev"
-echo Dashboard window opened.
+echo.
+echo [4/4] Starting Admin Dashboard (Next.js)...
+start "TK Clocking Dashboard" cmd /k "cd /d ""%~dp0dashboard"" && echo Installing dependencies if needed... && npm install && echo. && echo Starting Dashboard... && npm run dev && pause"
+
+echo     ✓ Dashboard window opened — compiling...
+timeout /t 4 /nobreak >nul
 
 echo.
-echo All services are launching!
-echo Dashboard will be available at: http://localhost:3001
-echo.
-pause
+echo ╔══════════════════════════════════════════════════════════════╗
+echo ║  All services launching...                                   ║
+echo ║                                                              ║
+echo ║  📡 Backend API:    http://localhost:3000/api/v1             ║
+echo ║  📖 Swagger Docs:   http://localhost:3000/api/docs           ║
+echo ║  🖥️  Dashboard:      http://localhost:3001                   ║
+echo ║                                                              ║
+echo ║  Press any key to close this window...                       ║
+echo ╚══════════════════════════════════════════════════════════════╝
+pause >nul

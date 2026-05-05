@@ -9,7 +9,7 @@ import { EmployeesModule } from '../employees/employees.module';
 import { BranchesModule } from '../branches/branches.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { AcademicCalendarModule } from '../academic-calendar/academic-calendar.module';
-import { SettingsModule } from '../settings/settings.module';
+
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { SettingsModule } from '../settings/settings.module';
     BranchesModule,
     HolidaysModule,
     AcademicCalendarModule,
-    SettingsModule,
+
   ],
   controllers: [AttendanceController],
   providers: [AttendanceService, AttendanceReportService],

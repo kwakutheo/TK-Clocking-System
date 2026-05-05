@@ -8,7 +8,6 @@ import {
   LayoutDashboard, 
   Clock, 
   Users, 
-  FileText, 
   MapPin, 
   Building2, 
   UserCircle, 
@@ -16,31 +15,22 @@ import {
   ShieldCheck,
   Calendar,
   ChevronLeft,
-  ChevronRight,
   Menu,
   Sun,
-  Moon,
-  Settings
+  Moon
 } from 'lucide-react';
 
 const NAV = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Overview'    },
   { href: '/attendance',  icon: Clock,            label: 'Attendance'   },
   { href: '/employees',   icon: Users,            label: 'Employees'    },
-  { 
-    label: 'Settings', 
-    icon: Settings, 
-    roles: ['hr_admin', 'super_admin'],
-    children: [
-      { href: '/shifts',      icon: Clock,            label: 'Shifts'       },
-      { href: '/holidays',    icon: Calendar,         label: 'Holidays'     },
-      { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', roles: ['hr_admin', 'super_admin'] },
-      { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',    roles: ['super_admin'] },
-      { href: '/departments', icon: Building2,        label: 'Departments'  },
-      { href: '/branches',    icon: MapPin,           label: 'Branches'     },
-      { href: '/profile',     icon: UserCircle,       label: 'My Profile'   },
-    ]
-  },
+  { href: '/shifts',      icon: Clock,            label: 'Shifts'       },
+  { href: '/holidays',    icon: Calendar,         label: 'Holidays'     },
+  { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', roles: ['hr_admin', 'super_admin'] },
+  { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',    roles: ['super_admin'] },
+  { href: '/departments', icon: Building2,        label: 'Departments'  },
+  { href: '/branches',    icon: MapPin,           label: 'Branches'     },
+  { href: '/profile',     icon: UserCircle,       label: 'My Profile'   },
 ];
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
@@ -49,7 +39,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const { user, isHydrated, hydrate, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => { hydrate(); }, [hydrate]);
@@ -57,10 +46,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   // Close mobile sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
-    
-    // Auto-expand Settings if we are on a sub-route
-    const isSettingsSubRoute = NAV.find(n => n.label === 'Settings')?.children?.some(c => pathname === c.href);
-    if (isSettingsSubRoute) setSettingsOpen(true);
   }, [pathname]);
 
   useEffect(() => {
@@ -173,50 +158,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           <nav>
             {NAV.filter(item => !item.roles || item.roles.includes(user?.role || '')).map((item) => {
               const Icon = item.icon;
-              const hasChildren = !!item.children;
-              const isActive = item.href ? pathname === item.href : item.children?.some(c => pathname === c.href);
               
-              if (hasChildren) {
-                return (
-                  <div key={item.label}>
-                    <button
-                      onClick={() => {
-                        if (collapsed) setCollapsed(false);
-                        setSettingsOpen(!settingsOpen);
-                      }}
-                      className={`nav-item ${isActive ? 'active' : ''}`}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <span className="nav-item-icon"><Icon size={18} /></span>
-                      {(!collapsed || mobileOpen) && (
-                        <>
-                          <span>{item.label}</span>
-                          <ChevronRight size={14} className={`nav-item-chevron ${settingsOpen ? 'open' : ''}`} />
-                        </>
-                      )}
-                    </button>
-                    {settingsOpen && (!collapsed || mobileOpen) && (
-                      <div className="nav-submenu">
-                        {item.children!.filter(c => !c.roles || c.roles.includes(user?.role || '')).map(child => {
-                          const ChildIcon = child.icon;
-                          return (
-                            <Link
-                              key={child.href}
-                              href={child.href}
-                              className={`nav-item ${pathname === child.href ? 'active' : ''}`}
-                              onClick={() => setMobileOpen(false)}
-                            >
-                              <span className="nav-item-icon"><ChildIcon size={16} /></span>
-                              {child.label}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
               return (
                 <Link
                   key={item.href}

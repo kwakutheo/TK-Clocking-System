@@ -10,6 +10,7 @@ const fetcher = () => calendarApi.listTerms().then((r) => r.data);
 export default function AcademicCalendarPage() {
   const { data, isLoading, mutate } = useSWR('academic-calendar', fetcher);
   const [showTermModal, setShowTermModal] = useState(false);
+  const [showYearModal, setShowYearModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,9 +19,18 @@ export default function AcademicCalendarPage() {
 
   const [termForm, setTermForm] = useState({
     name: '',
-    academicYear: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+    academicYear: '',
     startDate: '',
     endDate: '',
+  });
+
+  const [yearForm, setYearForm] = useState({
+    academicYear: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+    terms: [
+      { name: 'First Term', startDate: '', endDate: '' },
+      { name: 'Second Term', startDate: '', endDate: '' },
+      { name: 'Third Term', startDate: '', endDate: '' }
+    ]
   });
 
   const [breakForm, setBreakForm] = useState({
@@ -42,9 +52,102 @@ export default function AcademicCalendarPage() {
   // Sort years descending (e.g., "2025/2026" before "2024/2025")
   const sortedYears = Object.keys(groupedTerms).sort((a, b) => b.localeCompare(a));
 
+  const handleYearSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const validTerms = yearForm.terms.filter(t => t.name && t.startDate && t.endDate);
+    
+    // Validate terms internally
+    for (let i = 0; i < validTerms.length; i++) {
+      const currentStart = new Date(validTerms[i].startDate).getTime();
+      const currentEnd = new Date(validTerms[i].endDate).getTime();
+      
+      if (currentStart >= currentEnd) {
+        alert(`${validTerms[i].name} cannot end on or before its start date.`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      for (let j = i + 1; j < validTerms.length; j++) {
+        const nextStart = new Date(validTerms[j].startDate).getTime();
+        const nextEnd = new Date(validTerms[j].endDate).getTime();
+        if (Math.max(currentStart, nextStart) <= Math.min(currentEnd, nextEnd)) {
+           alert(`Dates for ${validTerms[i].name} and ${validTerms[j].name} overlap.`);
+           setIsSubmitting(false);
+           return;
+        }
+      }
+
+      // Check against existing terms
+      for (const existingTerm of terms) {
+        const extStart = new Date(existingTerm.startDate).getTime();
+        const extEnd = new Date(existingTerm.endDate).getTime();
+        if (Math.max(currentStart, extStart) <= Math.min(currentEnd, extEnd)) {
+          alert(`${validTerms[i].name} overlaps with an another term (${existingTerm.name}).`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
+    try {
+      await Promise.all(
+        yearForm.terms.map(t => {
+          if (t.name && t.startDate && t.endDate) {
+            return calendarApi.createTerm({
+              name: t.name,
+              startDate: t.startDate,
+              endDate: t.endDate,
+              academicYear: yearForm.academicYear
+            });
+          }
+          return Promise.resolve();
+        })
+      );
+      mutate();
+      setShowYearModal(false);
+      setYearForm({
+        academicYear: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
+        terms: [
+          { name: 'First Term', startDate: '', endDate: '' },
+          { name: 'Second Term', startDate: '', endDate: '' },
+          { name: 'Third Term', startDate: '', endDate: '' }
+        ]
+      });
+    } catch (err) {
+      alert('Failed to save academic year');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleTermSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    if (termForm.startDate && termForm.endDate) {
+      const newStart = new Date(termForm.startDate).getTime();
+      const newEnd = new Date(termForm.endDate).getTime();
+      
+      if (newStart >= newEnd) {
+        alert(`The term cannot end on or before its start date.`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      for (const existingTerm of terms) {
+        if (editingTerm && existingTerm.id === editingTerm.id) continue;
+        const extStart = new Date(existingTerm.startDate).getTime();
+        const extEnd = new Date(existingTerm.endDate).getTime();
+        if (Math.max(newStart, extStart) <= Math.min(newEnd, extEnd)) {
+          alert(`This term overlaps with an existing term (${existingTerm.name}).`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
     try {
       if (editingTerm) {
         await calendarApi.updateTerm(editingTerm.id, {
@@ -57,12 +160,7 @@ export default function AcademicCalendarPage() {
       mutate();
       setShowTermModal(false);
       setEditingTerm(null);
-      setTermForm({
-        name: '',
-        academicYear: `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`,
-        startDate: '',
-        endDate: '',
-      });
+      setTermForm({ name: '', academicYear: '', startDate: '', endDate: '' });
     } catch (err) {
       alert('Failed to save term');
     } finally {
@@ -74,6 +172,38 @@ export default function AcademicCalendarPage() {
     e.preventDefault();
     if (!selectedTermId) return;
     setIsSubmitting(true);
+
+    const bStart = new Date(breakForm.startDate).getTime();
+    const bEnd = new Date(breakForm.endDate).getTime();
+
+    if (bStart >= bEnd) {
+      alert("The break cannot end on or before its start date.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const parentTerm = terms.find(t => t.id === selectedTermId);
+    if (parentTerm) {
+      const tStart = new Date(parentTerm.startDate).getTime();
+      const tEnd = new Date(parentTerm.endDate).getTime();
+      
+      if (bStart < tStart || bEnd > tEnd) {
+        alert("The mid-term break must fall completely within the start and end dates of the term.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      for (const existingBreak of parentTerm.breaks || []) {
+        const eBStart = new Date(existingBreak.startDate).getTime();
+        const eBEnd = new Date(existingBreak.endDate).getTime();
+        if (Math.max(bStart, eBStart) <= Math.min(bEnd, eBEnd)) {
+          alert(`This break overlaps with an existing break (${existingBreak.name}).`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
     try {
       await calendarApi.createBreak(selectedTermId, breakForm);
       mutate();
@@ -117,6 +247,17 @@ export default function AcademicCalendarPage() {
     setShowTermModal(true);
   };
 
+  const openAddTerm = (year: string) => {
+    setEditingTerm(null);
+    setTermForm({
+      name: '',
+      academicYear: year,
+      startDate: '',
+      endDate: '',
+    });
+    setShowTermModal(true);
+  };
+
   return (
     <>
       <div className="page-header">
@@ -124,8 +265,8 @@ export default function AcademicCalendarPage() {
           <h1 className="page-title">Academic Calendar</h1>
           <p className="page-subtitle">Manage school terms, mid-term breaks, and vacations</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setEditingTerm(null); setShowTermModal(true); }}>
-          <Plus size={18} /> Add New Term
+        <button className="btn btn-primary" onClick={() => setShowYearModal(true)}>
+          <Plus size={18} /> Create Academic Year
         </button>
       </div>
 
@@ -167,32 +308,50 @@ export default function AcademicCalendarPage() {
                     </h2>
                     <span className="badge badge-gray" style={{ marginLeft: 8 }}>{yearTerms.length} terms</span>
                   </div>
-                  <div style={{ color: 'var(--text-secondary)' }}>
-                    {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {yearTerms.length < 3 && (
+                      <button 
+                        className="btn btn-sm btn-ghost" 
+                        onClick={(e) => { e.stopPropagation(); openAddTerm(year); }}
+                        style={{ padding: '4px 10px', fontSize: 12, border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        <Plus size={14} /> Add Missing Term
+                      </button>
+                    )}
+                    <div style={{ color: 'var(--text-secondary)' }}>
+                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    </div>
                   </div>
                 </div>
                 
                 {isExpanded && (
                   <div style={{ padding: 20, background: 'var(--bg-secondary)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-                      {yearTerms.map((term) => (
-                        <div key={term.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                <GraduationCap size={20} style={{ color: 'var(--primary)' }} />
-                                <h3 style={{ fontSize: 18, fontWeight: 700 }}>{term.name}</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'start' }}>
+                      {yearTerms.map((term) => {
+                        const today = new Date();
+                        const start = parseISO(term.startDate);
+                        const end = parseISO(term.endDate);
+                        end.setHours(23, 59, 59, 999);
+                        const isCurrentTerm = today >= start && today <= end;
+
+                        return (
+                          <div key={term.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                  <GraduationCap size={18} style={{ color: 'var(--primary)' }} />
+                                  <h3 style={{ fontSize: 16, fontWeight: 700 }}>{term.name}</h3>
+                                </div>
+                                {isCurrentTerm && <span className="badge badge-green" style={{ marginTop: 2, fontSize: 10, padding: '2px 6px' }}>Current Term</span>}
                               </div>
-                              {term.isActive && <span className="badge badge-green" style={{ marginTop: 4 }}>Current Term</span>}
-                            </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
+                              <div style={{ display: 'flex', gap: 4 }}>
                               <button 
                                 onClick={() => openEditTerm(term)} 
                                 style={{ color: 'var(--text-secondary)' }}
                                 aria-label="Edit Term"
                                 title="Edit Term"
                               >
-                                <Edit2 size={16} />
+                                <Edit2 size={14} />
                               </button>
                               <button 
                                 onClick={() => deleteTerm(term.id)} 
@@ -200,38 +359,38 @@ export default function AcademicCalendarPage() {
                                 aria-label="Delete Term"
                                 title="Delete Term"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
 
-                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8, fontSize: 13 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: 6, fontSize: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
                               <span style={{ color: 'var(--text-secondary)' }}>Starts:</span>
-                              <span style={{ fontWeight: 600 }}>{format(parseISO(term.startDate), 'PPP')}</span>
+                              <span style={{ fontWeight: 600 }}>{format(parseISO(term.startDate), 'MMM do, yyyy')}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <span style={{ color: 'var(--text-secondary)' }}>Ends:</span>
-                              <span style={{ fontWeight: 600 }}>{format(parseISO(term.endDate), 'PPP')}</span>
+                              <span style={{ fontWeight: 600 }}>{format(parseISO(term.endDate), 'MMM do, yyyy')}</span>
                             </div>
                           </div>
 
                           <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                              <h4 style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: 0.5 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                              <h4 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: 0.5 }}>
                                 Mid-term Breaks
                               </h4>
                               <button 
                                 className="btn btn-sm btn-ghost" 
                                 onClick={() => { setSelectedTermId(term.id); setShowBreakModal(true); }}
-                                style={{ padding: '4px 8px', fontSize: 11 }}
+                                style={{ padding: '2px 6px', fontSize: 10, height: 24 }}
                               >
-                                <Plus size={14} /> Add Break
+                                <Plus size={12} /> Add Break
                               </button>
                             </div>
 
                             {term.breaks?.length === 0 ? (
-                              <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>
+                              <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '6px 0', margin: 0 }}>
                                 No breaks scheduled for this term.
                               </p>
                             ) : (
@@ -259,7 +418,8 @@ export default function AcademicCalendarPage() {
                             )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -269,12 +429,97 @@ export default function AcademicCalendarPage() {
         </div>
       )}
 
-      {/* Term Modal */}
+      {/* Year Modal */}
+      {showYearModal && (
+        <div className="modal-overlay" onClick={() => setShowYearModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
+            <div className="modal-header">
+              <h3>Create Academic Year</h3>
+              <button className="modal-close" onClick={() => setShowYearModal(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleYearSubmit}>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label htmlFor="yearName">Academic Year</label>
+                <input 
+                  id="yearName"
+                  className="form-input" 
+                  placeholder="e.g. 2025/2026" 
+                  value={yearForm.academicYear}
+                  onChange={e => setYearForm({...yearForm, academicYear: e.target.value})}
+                  required 
+                />
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '50vh', overflowY: 'auto', paddingRight: 4 }}>
+                {yearForm.terms.map((term, index) => (
+                  <div key={index} style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div className="form-group" style={{ marginBottom: 12 }}>
+                      <label htmlFor={`termName-${index}`}>Term Name</label>
+                      <input 
+                        id={`termName-${index}`}
+                        className="form-input" 
+                        value={term.name}
+                        onChange={e => {
+                          const newTerms = [...yearForm.terms];
+                          newTerms[index].name = e.target.value;
+                          setYearForm({...yearForm, terms: newTerms});
+                        }}
+                        required={index === 0}
+                      />
+                    </div>
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor={`startDate-${index}`}>Start Date</label>
+                        <input 
+                          id={`startDate-${index}`}
+                          type="date" 
+                          className="form-input" 
+                          value={term.startDate}
+                          onChange={e => {
+                            const newTerms = [...yearForm.terms];
+                            newTerms[index].startDate = e.target.value;
+                            setYearForm({...yearForm, terms: newTerms});
+                          }}
+                          required={index === 0 || term.endDate !== ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor={`endDate-${index}`}>End Date</label>
+                        <input 
+                          id={`endDate-${index}`}
+                          type="date" 
+                          className="form-input" 
+                          value={term.endDate}
+                          onChange={e => {
+                            const newTerms = [...yearForm.terms];
+                            newTerms[index].endDate = e.target.value;
+                            setYearForm({...yearForm, terms: newTerms});
+                          }}
+                          required={index === 0 || term.startDate !== ''}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: 24 }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowYearModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Academic Year'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Term Modal */}
       {showTermModal && (
         <div className="modal-overlay" onClick={() => setShowTermModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingTerm ? 'Edit Term' : 'Add New Term'}</h3>
+              <h3>{editingTerm ? 'Edit Term' : 'Add Term'}</h3>
               <button className="modal-close" onClick={() => setShowTermModal(false)}>&times;</button>
             </div>
             <form onSubmit={handleTermSubmit}>
