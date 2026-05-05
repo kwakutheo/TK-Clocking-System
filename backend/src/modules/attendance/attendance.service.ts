@@ -81,6 +81,12 @@ export class AttendanceService {
             'You have already clocked in today. You cannot clock in again until the next working day.',
           );
         }
+        // Rule: Must clock in within assigned working hours.
+        if (!this._isWithinShiftHours(now, employee.shift)) {
+          throw new BadRequestException(
+            `Action denied: Clock-in can only be recorded within your assigned working hours (${employee.shift.startTime} - ${employee.shift.endTime}).`,
+          );
+        }
         break;
       }
 
@@ -329,6 +335,11 @@ export class AttendanceService {
         if (hasClockedInToday) {
           throw new BadRequestException(
             'You have already clocked in today. You cannot clock in again until the next working day.',
+          );
+        }
+        if (!this._isWithinShiftHours(now, employee.shift)) {
+          throw new BadRequestException(
+            `Action denied: Clock-in can only be recorded within your assigned working hours (${employee.shift.startTime} - ${employee.shift.endTime}).`,
           );
         }
         break;
@@ -640,14 +651,12 @@ export class AttendanceService {
 
       // Legacy: clocked in since a previous day (safety net)
       if (isClockedIn && clockedInTime && clockedInTime < today) {
-        forgotToClockOut = true;
         isClockedIn = false;
       }
     } else {
       noShiftAssigned = true;
-      // No shift assigned — keep legacy "clocked in since yesterday" logic only
+      // No shift assigned — reset stale clocked-in state from previous days
       if (isClockedIn && clockedInTime && clockedInTime < today) {
-        forgotToClockOut = true;
         isClockedIn = false;
       }
     }

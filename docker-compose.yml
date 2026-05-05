@@ -42,7 +42,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_refresh}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001,http://10.68.129.141:3001}
     ports:
       - '3000:3000'
     volumes:
@@ -55,7 +55,7 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000/api/v1
+        NEXT_PUBLIC_API_URL: http://10.68.129.141:3000/api/v1
     container_name: tk_clocking_dashboard
     restart: unless-stopped
     depends_on:
