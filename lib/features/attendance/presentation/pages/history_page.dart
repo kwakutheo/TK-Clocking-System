@@ -68,15 +68,47 @@ class _HistoryPageState extends State<HistoryPage> {
               await Future.delayed(const Duration(seconds: 1));
             }
           },
+        child: BlocListener<AttendanceBloc, AttendanceState>(
+          listener: (context, state) {
+            if (state is AttendanceSynced) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.count > 0
+                        ? '${state.count} record(s) synced successfully!'
+                        : 'No pending records to sync.',
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              // Re-load history after sync to show fresh data
+              final authState = context.read<AuthBloc>().state;
+              if (authState is AuthAuthenticated) {
+                context.read<AttendanceBloc>().add(
+                  AttendanceLoadHistoryEvent(
+                    employeeId: authState.user.employeeId ?? authState.user.id,
+                  ),
+                );
+              }
+            }
+          },
           child: BlocBuilder<AttendanceBloc, AttendanceState>(
+            buildWhen: (previous, current) =>
+                current is AttendanceLoading ||
+                current is AttendanceHistoryLoaded ||
+                current is AttendanceFailure ||
+                // Re-render whenever state changes to anything relevant so we
+                // never get stuck on a blank/stale view after a record or sync.
+                (previous is AttendanceLoading &&
+                    current is! AttendanceLoading),
             builder: (context, state) {
               if (state is AttendanceLoading) {
                 return SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: SizedBox(
                     height: MediaQuery.of(context).size.height * 0.7,
-                    child:
-                        const AppLoadingIndicator(message: 'Loading history…'),
+                    child: const AppLoadingIndicator(message: 'Loading history…'),
                   ),
                 );
               }
@@ -103,22 +135,6 @@ class _HistoryPageState extends State<HistoryPage> {
                 );
               }
 
-              if (state is AttendanceSynced) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        state.count > 0
-                            ? '${state.count} record(s) synced successfully!'
-                            : 'No pending records to sync.',
-                      ),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                });
-              }
-
               if (state is AttendanceHistoryLoaded) {
                 if (state.records.isEmpty) {
                   return SingleChildScrollView(
@@ -143,8 +159,9 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // ── History list ──────────────────────────────────────────────────────────────

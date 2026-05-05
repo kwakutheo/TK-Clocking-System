@@ -449,6 +449,28 @@ export class AttendanceService {
       userRole === UserRole.HR_ADMIN ||
       userRole === UserRole.SUPERVISOR;
 
+    // 1. Determine whose history we are fetching.
+    // Non-admin users always see their OWN records — resolved from the JWT user
+    // ID, never from the query param (which may carry a user UUID instead of an
+    // employee UUID when employeeId is null on the mobile side).
+    let targetEmployeeId: string | undefined;
+
+    if (!isAdmin) {
+      // Regular employee: always resolve from JWT, ignore query param.
+      const employee = await this.employees.findByUserId(userId);
+      if (!employee) throw new NotFoundException('Employee profile not found.');
+      targetEmployeeId = employee.id;
+    } else {
+      // Admin: use the supplied employee_id to scope, or show everything.
+      targetEmployeeId = employeeId || undefined;
+      // If admin passed their own user ID instead of an employee ID, resolve it.
+      if (targetEmployeeId) {
+        const asEmployee = await this.employees.findByUserId(targetEmployeeId).catch(() => null);
+        if (asEmployee) targetEmployeeId = asEmployee.id;
+      }
+    }
+
+    // 2. Build the query
     const qb = this.repo
       .createQueryBuilder('log')
       .leftJoinAndSelect('log.employee', 'emp')
@@ -458,13 +480,11 @@ export class AttendanceService {
       .take(limit)
       .skip((page - 1) * limit);
 
-    if (!isAdmin) {
-      const employee = await this.employees.findByUserId(userId);
-      if (!employee) throw new NotFoundException('Employee profile not found.');
-      qb.where('emp.id = :empId', { empId: employee.id });
-    } else if (employeeId) {
-      qb.where('emp.id = :empId', { empId: employeeId });
+    if (targetEmployeeId) {
+      // Filter by the resolved employee ID
+      qb.where('emp.id = :empId', { empId: targetEmployeeId });
     }
+
 
     const [data, total] = await qb.getManyAndCount();
     return { data, total };
