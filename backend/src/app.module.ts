@@ -13,6 +13,8 @@ import { AuditModule } from './modules/audit/audit.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
 import { AcademicCalendarModule } from './modules/academic-calendar/academic-calendar.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
+import { APP_GUARD } from '@nestjs/core';
 
 
 @Module({
@@ -51,7 +53,11 @@ import { SettingsModule } from './modules/settings/settings.module';
     HolidaysModule,
     AcademicCalendarModule,
     SettingsModule,
-
+  ],
+  providers: [
+    // Register PermissionsGuard globally so it can inject SettingsService
+    // in any module without explicit imports
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AppModule {}
