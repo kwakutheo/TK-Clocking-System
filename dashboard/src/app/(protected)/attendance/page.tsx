@@ -163,7 +163,7 @@ export default function AttendanceReportPage() {
             <select id="selectEmployee" className="form-input" value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)}>
               <option value="">— Select Employee —</option>
               {(employees ?? []).map((emp: any) => (
-                <option key={emp.id} value={emp.id}>{emp.user?.fullName} ({emp.employeeCode})</option>
+                <option key={emp.id} value={emp.id}>{emp.user?.fullName}</option>
               ))}
             </select>
           </div>
