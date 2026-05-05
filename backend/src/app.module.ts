@@ -54,10 +54,6 @@ import { APP_GUARD } from '@nestjs/core';
     AcademicCalendarModule,
     SettingsModule,
   ],
-  providers: [
-    // Register PermissionsGuard globally so it can inject SettingsService
-    // in any module without explicit imports
-    { provide: APP_GUARD, useClass: PermissionsGuard },
-  ],
+  providers: [],
 })
 export class AppModule {}
