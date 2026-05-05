@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { format } from 'date-fns';
 import { attendanceApi, employeesApi, branchesApi } from '@/lib/api';
@@ -11,6 +12,17 @@ import {
 } from 'lucide-react';
 
 const fetcher = (fn: () => Promise<unknown>) => () => fn().then((r: any) => r.data);
+
+// Parses a 'yyyy-MM-dd' string as LOCAL midnight, avoiding UTC timezone shift errors.
+// Returns null for incomplete/invalid strings (e.g. when user is mid-typing).
+function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  // Check the date actually round-trips (guards against e.g. Feb 30)
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return date;
+}
 
 function StatCard({
   icon,
@@ -70,8 +82,19 @@ function typeBadge(type: string) {
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
 
-  const { data: live, isLoading: liveLoading } = useSWR('live', fetcher(() => attendanceApi.live()), { refreshInterval: 30_000 });
-  const { data: stats, isLoading: statsLoading } = useSWR('attendance-stats', fetcher(() => attendanceApi.stats()), { refreshInterval: 30_000 });
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+
+  const { data: live, isLoading: liveLoading } = useSWR(
+    ['live', selectedDate], 
+    fetcher(() => attendanceApi.live(isToday ? undefined : selectedDate)), 
+    { refreshInterval: isToday ? 30_000 : 0 }
+  );
+  const { data: stats, isLoading: statsLoading } = useSWR(
+    ['attendance-stats', selectedDate], 
+    fetcher(() => attendanceApi.stats(isToday ? undefined : selectedDate)), 
+    { refreshInterval: isToday ? 30_000 : 0 }
+  );
   const { data: employees, isLoading: empLoading } = useSWR('employees', fetcher(() => employeesApi.list()));
   const { data: branches, isLoading: branchLoading } = useSWR('branches', fetcher(() => branchesApi.list()));
 
@@ -89,14 +112,41 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-container">
-      <div className="page-header dashboard-header">
+      <div className="page-header dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 className="page-title">
             {greeting}, <span className="text-gradient">{user?.fullName.split(' ')[0]}</span>
           </h1>
           <p className="page-subtitle">
-            {format(new Date(), 'EEEE, MMMM d, yyyy')} · <span style={{ color: 'var(--success)', fontWeight: 600 }}>● Live</span> Workforce Overview
+            {(() => {
+              const d = parseLocalDate(selectedDate);
+              return d ? format(d, 'EEEE, MMMM d, yyyy') : selectedDate;
+            })()} · 
+            {isToday ? (
+              <span style={{ color: 'var(--success)', fontWeight: 600 }}> ● Live</span>
+            ) : (
+              <span style={{ color: 'var(--warning)', fontWeight: 600 }}> ● Historical</span>
+            )} Workforce Overview
           </p>
+        </div>
+        <div style={{ marginRight: '80px' }}>
+          <input 
+            type="date" 
+            value={selectedDate} 
+            onChange={(e) => {
+              const val = e.target.value;
+              const parsed = parseLocalDate(val);
+              if (!parsed) return;
+              const today = parseLocalDate(format(new Date(), 'yyyy-MM-dd'))!;
+              // Clamp future dates to today
+              setSelectedDate(parsed > today ? format(new Date(), 'yyyy-MM-dd') : val);
+            }}
+            max={format(new Date(), 'yyyy-MM-dd')}
+            className="input-field"
+            aria-label="Select date for attendance history"
+            title="Select date for attendance history"
+            style={{ width: 'auto', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontFamily: 'inherit' }}
+          />
         </div>
       </div>
 
@@ -115,7 +165,7 @@ export default function DashboardPage() {
           gap: 12
         }}>
           <Calendar size={20} />
-          Today is a non-working day: {dashboardStats.dayStatus.name}
+          {isToday ? 'Today is' : 'This was'} a non-working day: {dashboardStats.dayStatus.name}
         </div>
       )}
       
@@ -127,17 +177,17 @@ export default function DashboardPage() {
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
-            <StatCardSkeleton />
+            {isToday && <StatCardSkeleton />}
           </>
         ) : (
           <>
             <StatCard
               icon={<Clock size={20} />}
               value={dashboardStats.currentlyOnSite}
-              label="Currently at work"
+              label={isToday ? "Currently at work" : "Total Present"}
               color="#10b981"
               trendUp={true}
-              secondary="Active clock-ins right now"
+              secondary={isToday ? "Active clock-ins right now" : "Total employees who clocked in"}
             />
             <StatCard
               icon={<TrendingDown size={20} />}
@@ -149,9 +199,9 @@ export default function DashboardPage() {
             <StatCard
               icon={<Users size={20} />}
               value={dashboardStats.absentToday ?? 0}
-              label="Absent Today"
+              label={isToday ? "Absent Today" : "Absent"}
               color="#f59e0b"
-              secondary="Expected but not clocked in"
+              secondary={isToday ? "Expected but not clocked in" : "Expected but didn't clock in"}
             />
             <StatCard
               icon={<Clock size={20} />}
@@ -167,13 +217,15 @@ export default function DashboardPage() {
               color="#a1887f"
               secondary="Missing clock-out logs"
             />
-            <StatCard
-              icon={<Building2 size={20} />}
-              value={employeeList.length}
-              label="Total Employees"
-              color="#3b82f6"
-              secondary="Registered in workforce"
-            />
+            {isToday && (
+              <StatCard
+                icon={<Building2 size={20} />}
+                value={employeeList.length}
+                label="Total Employees"
+                color="#3b82f6"
+                secondary="Registered in workforce"
+              />
+            )}
           </>
         )}
       </div>
@@ -182,7 +234,7 @@ export default function DashboardPage() {
         <div className="table-wrap" style={{ padding: '20px 24px' }}>
           <div className="table-header" style={{ padding: '0 0 16px', borderBottom: 'none' }}>
             <span className="table-title">Attendance Overview</span>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Today by hour</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{isToday ? 'Today' : 'Date'} by hour</span>
           </div>
           {isLoading ? (
             <div className="loading-center" style={{ padding: 40 }}>
@@ -193,18 +245,20 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="table-wrap" style={{ padding: '20px 0' }}>
-          <div className="table-header" style={{ padding: '0 24px 12px' }}>
-            <span className="table-title">Recent Activity</span>
-          </div>
-          {isLoading ? (
-            <div className="loading-center" style={{ padding: 40 }}>
-              <div className="spinner" />
+        {isToday && (
+          <div className="table-wrap" style={{ padding: '20px 0' }}>
+            <div className="table-header" style={{ padding: '0 24px 12px' }}>
+              <span className="table-title">Recent Activity</span>
             </div>
-          ) : (
-            <ActivityFeed logs={liveList} />
-          )}
-        </div>
+            {isLoading ? (
+              <div className="loading-center" style={{ padding: 40 }}>
+                <div className="spinner" />
+              </div>
+            ) : (
+              <ActivityFeed logs={liveList} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Live attendance feed */}
@@ -214,15 +268,17 @@ export default function DashboardPage() {
         <div className="table-wrap">
           <div className="table-header">
             <span className="table-title">
-              <span className="live-dot" style={{ marginRight: 8 }} />
-              Live Attendance Feed
+              {isToday && <span className="live-dot" style={{ marginRight: 8 }} />}
+              {isToday ? 'Live Attendance Feed' : 'Attendance Log'}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Auto-syncing
-              </span>
+              {isToday && (
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Auto-syncing
+                </span>
+              )}
               <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                {liveList.length} events today
+                {liveList.length} events {isToday ? 'today' : 'on this date'}
               </span>
             </div>
           </div>
@@ -230,7 +286,7 @@ export default function DashboardPage() {
           {liveList.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon"><Clock size={42} /></div>
-              <p className="empty-state-text">No attendance recorded today yet.</p>
+              <p className="empty-state-text">No attendance recorded {isToday ? 'today' : 'on this date'} yet.</p>
             </div>
           ) : (
             <table>

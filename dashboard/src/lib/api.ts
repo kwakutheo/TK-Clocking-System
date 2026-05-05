@@ -51,8 +51,8 @@ export const authApi = {
 export const attendanceApi = {
   history: (page = 1, limit = 20) =>
     api.get(`/attendance/history?page=${page}&limit=${limit}`),
-  live: () => api.get('/attendance/live'),
-  stats: () => api.get('/attendance/stats'),
+  live: (date?: string) => api.get('/attendance/live', { params: { date } }),
+  stats: (date?: string) => api.get('/attendance/stats', { params: { date } }),
   list: (params: any) => api.get('/attendance', { params }),
   getReport: (employeeId: string, month: number, year: number) =>
     api.get(`/attendance/report/${employeeId}`, { params: { month, year } }),

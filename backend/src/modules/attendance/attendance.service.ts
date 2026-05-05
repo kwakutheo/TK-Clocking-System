@@ -743,31 +743,42 @@ export class AttendanceService {
   }
 
   // ── Live attendance (for dashboard) ──────────────────────────────────────
-  async getLive(): Promise<AttendanceLog[]> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  async getLive(dateStr?: string): Promise<AttendanceLog[]> {
+    const targetDate = dateStr ? new Date(dateStr) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
     return this.repo
       .createQueryBuilder('log')
       .leftJoinAndSelect('log.employee', 'emp')
       .leftJoinAndSelect('emp.user', 'user')
       .leftJoinAndSelect('log.branch', 'branch')
-      .where('log.timestamp >= :today', { today })
+      .where('log.timestamp >= :startOfDay', { startOfDay })
+      .andWhere('log.timestamp <= :endOfDay', { endOfDay })
       .orderBy('log.timestamp', 'DESC')
       .getMany();
   }
 
-  async getDashboardStats() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const now = new Date();
+  async getDashboardStats(dateStr?: string) {
+    const targetDate = dateStr ? new Date(dateStr) : new Date();
+    const isHistorical = !!dateStr && targetDate.toDateString() !== new Date().toDateString();
 
-    const dayStatus = await this._checkNonWorkingDay(now);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const dayStatus = await this._checkNonWorkingDay(targetDate);
+    const evaluationTime = isHistorical ? endOfDay : new Date();
 
     const logs = await this.repo
       .createQueryBuilder('log')
       .leftJoinAndSelect('log.employee', 'emp')
       .leftJoinAndSelect('emp.shift', 'shift')
-      .where('log.timestamp >= :today', { today })
+      .where('log.timestamp >= :startOfDay', { startOfDay })
+      .andWhere('log.timestamp <= :endOfDay', { endOfDay })
       .orderBy('log.timestamp', 'ASC')
       .getMany();
 
@@ -795,7 +806,7 @@ export class AttendanceService {
         const emp = firstClockIn.employee;
         if (emp?.shift) {
           const [sHours, sMins] = emp.shift.startTime.split(':').map(Number);
-          const shiftStart = new Date(today);
+          const shiftStart = new Date(startOfDay);
           shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
           
           if (firstClockIn.timestamp > shiftStart && !dayStatus.isNonWorking) {
@@ -809,7 +820,7 @@ export class AttendanceService {
         const emp = clockIns[0].employee;
         if (emp?.shift) {
           const [eHours, eMins] = emp.shift.endTime.split(':').map(Number);
-          const shiftEnd = new Date(today);
+          const shiftEnd = new Date(startOfDay);
           shiftEnd.setHours(eHours, eMins, 0, 0);
           
           if (clockOuts.length > 0) {
@@ -819,7 +830,7 @@ export class AttendanceService {
             }
           } else {
             const forgotCutoff = new Date(shiftEnd.getTime() + 60 * 60 * 1000);
-            if (now > forgotCutoff) {
+            if (evaluationTime > forgotCutoff) {
               forgotClockOut++;
             }
           }
@@ -827,11 +838,17 @@ export class AttendanceService {
       }
 
       // Check their latest status
-      const latestLog = userLogs[userLogs.length - 1];
-      if (latestLog.type === AttendanceType.CLOCK_IN || latestLog.type === AttendanceType.BREAK_OUT) {
-        currentlyOnSite++;
+      if (!isHistorical) {
+        const latestLog = userLogs[userLogs.length - 1];
+        if (latestLog.type === AttendanceType.CLOCK_IN || latestLog.type === AttendanceType.BREAK_OUT) {
+          currentlyOnSite++;
+        }
       }
     });
+
+    if (isHistorical) {
+      currentlyOnSite = totalUniqueAttendance;
+    }
 
     let absentToday = 0;
     if (!dayStatus.isNonWorking) {
@@ -840,10 +857,10 @@ export class AttendanceService {
         if (!employeeLogs[emp.id] || !employeeLogs[emp.id].some(l => l.type === AttendanceType.CLOCK_IN)) {
           if (emp.shift) {
             const [sHours, sMins] = emp.shift.startTime.split(':').map(Number);
-            const shiftStart = new Date(today);
+            const shiftStart = new Date(startOfDay);
             shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
             
-            if (now > shiftStart) {
+            if (evaluationTime > shiftStart) {
               absentToday++;
             }
           }

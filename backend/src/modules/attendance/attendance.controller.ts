@@ -120,15 +120,17 @@ export class AttendanceController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions('attendance.view_live')
   @ApiOperation({ summary: "Today's live clock-in feed (Supervisor+)" })
-  getLive() {
-    return this.service.getLive();
+  @ApiQuery({ name: 'date', required: false, type: String })
+  getLive(@Query('date') date?: string) {
+    return this.service.getLive(date);
   }
 
   @Get('stats')
   @UseGuards(PermissionsGuard)
   @RequirePermissions('attendance.view_live')
   @ApiOperation({ summary: "Today's dashboard attendance stats (Supervisor+)" })
-  getStats() {
-    return this.service.getDashboardStats();
+  @ApiQuery({ name: 'date', required: false, type: String })
+  getStats(@Query('date') date?: string) {
+    return this.service.getDashboardStats(date);
   }
 }
