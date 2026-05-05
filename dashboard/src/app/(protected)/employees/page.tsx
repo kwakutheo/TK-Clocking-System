@@ -45,6 +45,16 @@ export default function EmployeesPage() {
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState<string | null>(null);
   const [adminPasswordValue, setAdminPasswordValue] = useState('');
 
+  const [activeBranch, setActiveBranch] = useState<string>('all');
+  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
+
+  const toggleDept = (deptName: string) => {
+    setExpandedDepts(prev => ({
+      ...prev,
+      [deptName]: prev[deptName] === undefined ? false : !prev[deptName]
+    }));
+  };
+
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -71,8 +81,19 @@ export default function EmployeesPage() {
     const uname = e.user?.username?.toLowerCase() ?? '';
     const dept = e.department?.name?.toLowerCase() ?? '';
     const q = search.toLowerCase();
-    return !q || name.includes(q) || code.includes(q) || uname.includes(q) || dept.includes(q);
+    
+    const matchesSearch = !q || name.includes(q) || code.includes(q) || uname.includes(q) || dept.includes(q);
+    const matchesBranch = activeBranch === 'all' || e.branch?.id === activeBranch;
+    
+    return matchesSearch && matchesBranch;
   });
+
+  const groupedEmployees = filtered.reduce((acc: Record<string, any[]>, emp) => {
+    const deptName = emp.department?.name || 'Unassigned Department';
+    if (!acc[deptName]) acc[deptName] = [];
+    acc[deptName].push(emp);
+    return acc;
+  }, {});
 
   const resetForm = useCallback(() => {
     setForm({
@@ -212,8 +233,28 @@ export default function EmployeesPage() {
       </div>
 
       <div className="table-wrap">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8 }}>
+          <button 
+            className={`btn btn-sm ${activeBranch === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveBranch('all')}
+            style={{ borderRadius: 20, whiteSpace: 'nowrap' }}
+          >
+            All Branches
+          </button>
+          {branches.map((b: any) => (
+            <button 
+              key={b.id}
+              className={`btn btn-sm ${activeBranch === b.id ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setActiveBranch(b.id)}
+              style={{ borderRadius: 20, whiteSpace: 'nowrap' }}
+            >
+              {b.name}
+            </button>
+          ))}
+        </div>
+
         <div className="table-header">
-          <span className="table-title">All Employees</span>
+          <span className="table-title">Employees List</span>
           <div className="table-controls">
             <input
               className="form-input"
@@ -252,72 +293,94 @@ export default function EmployeesPage() {
                   <th style={{ width: 100 }}>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {filtered.map((emp: any) => (
-                  <tr key={emp.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div className="avatar">
-                          {(emp.user?.fullName ?? '').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+              {Object.keys(groupedEmployees).sort().map(deptName => {
+                const isExpanded = expandedDepts[deptName] !== false; // true by default
+                const deptEmployees = groupedEmployees[deptName];
+                
+                return (
+                  <tbody key={deptName}>
+                    {/* Department Header Row */}
+                    <tr 
+                      onClick={() => toggleDept(deptName)}
+                      style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.02)', borderTop: '2px solid var(--border)', borderBottom: isExpanded ? '1px solid var(--border)' : 'none' }}
+                    >
+                      <td colSpan={10} style={{ padding: '12px 16px', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 10, opacity: 0.5 }}>{isExpanded ? '▼' : '▶'}</span>
+                          <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{deptName}</span>
+                          <span className="badge badge-gray" style={{ fontSize: 11 }}>{deptEmployees.length}</span>
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{emp.user?.fullName}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            {emp.user?.email} {emp.user?.email && emp.user?.phone ? '•' : ''} {emp.user?.phone}
+                      </td>
+                    </tr>
+                    
+                    {/* Employee Rows */}
+                    {isExpanded && deptEmployees.map((emp: any) => (
+                      <tr key={emp.id} style={{ background: 'transparent' }}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div className="avatar">
+                              {(emp.user?.fullName ?? '').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{emp.user?.fullName}</div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                {emp.user?.email} {emp.user?.email && emp.user?.phone ? '•' : ''} {emp.user?.phone}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
-                      {emp.user?.username ?? '—'}
-                    </td>
-                    <td style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{emp.employeeCode}</td>
-                    <td style={{ fontSize: 13 }}>{emp.department?.name ?? '—'}</td>
-                    <td style={{ fontSize: 13 }}>{emp.branch?.name ?? '—'}</td>
-                    <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{emp.position ?? '—'}</td>
-                    <td><span className={`badge ${roleBadge[emp.user?.role] ?? 'badge-blue'}`}>{roleLabel[emp.user?.role] ?? emp.user?.role}</span></td>
-                    <td><span className={`badge ${statusBadge[emp.status] ?? 'badge-blue'}`}>{emp.status}</span></td>
-                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                      {emp.hireDate ? format(new Date(emp.hireDate), 'MMM d, yyyy') : '—'}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          className="btn btn-sm"
-                          style={{ padding: '4px 8px', fontSize: 12 }}
-                          onClick={() => openEdit(emp)}
-                          title="Edit"
-                          aria-label="Edit Employee"
-                        >
-                          ✏️
-                        </button>
-                        {(userRole === 'super_admin' || userRole === 'hr_admin') && (
-                          <button
-                            className="btn btn-sm"
-                            style={{ padding: '4px 8px', fontSize: 12, backgroundColor: 'var(--amber-100)', color: 'var(--amber-800)', borderColor: 'var(--amber-200)' }}
-                            onClick={() => { setResetPasswordConfirm(emp.id); setAdminPasswordValue(''); }}
-                            title="Reset Password"
-                            aria-label="Reset Password"
-                          >
-                            🔑
-                          </button>
-                        )}
-                        {userRole === 'super_admin' && (
-                          <button
-                            className="btn btn-sm btn-danger"
-                            style={{ padding: '4px 8px', fontSize: 12 }}
-                            onClick={() => setDeleteConfirm(emp.id)}
-                            title="Delete"
-                            aria-label="Delete Employee"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                        </td>
+                        <td style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+                          {emp.user?.username ?? '—'}
+                        </td>
+                        <td style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{emp.employeeCode}</td>
+                        <td style={{ fontSize: 13 }}>{emp.department?.name ?? '—'}</td>
+                        <td style={{ fontSize: 13 }}>{emp.branch?.name ?? '—'}</td>
+                        <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{emp.position ?? '—'}</td>
+                        <td><span className={`badge ${roleBadge[emp.user?.role] ?? 'badge-blue'}`}>{roleLabel[emp.user?.role] ?? emp.user?.role}</span></td>
+                        <td><span className={`badge ${statusBadge[emp.status] ?? 'badge-blue'}`}>{emp.status}</span></td>
+                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                          {emp.hireDate ? format(new Date(emp.hireDate), 'MMM d, yyyy') : '—'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              className="btn btn-sm"
+                              style={{ padding: '4px 8px', fontSize: 12 }}
+                              onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
+                              title="Edit"
+                              aria-label="Edit Employee"
+                            >
+                              ✏️
+                            </button>
+                            {(userRole === 'super_admin' || userRole === 'hr_admin') && (
+                              <button
+                                className="btn btn-sm"
+                                style={{ padding: '4px 8px', fontSize: 12, backgroundColor: 'var(--amber-100)', color: 'var(--amber-800)', borderColor: 'var(--amber-200)' }}
+                                onClick={(e) => { e.stopPropagation(); setResetPasswordConfirm(emp.id); setAdminPasswordValue(''); }}
+                                title="Reset Password"
+                                aria-label="Reset Password"
+                              >
+                                🔑
+                              </button>
+                            )}
+                            {userRole === 'super_admin' && (
+                              <button
+                                className="btn btn-sm btn-danger"
+                                style={{ padding: '4px 8px', fontSize: 12 }}
+                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(emp.id); }}
+                                title="Delete"
+                                aria-label="Delete Employee"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                );
+              })}
             </table>
           </div>
         )}
