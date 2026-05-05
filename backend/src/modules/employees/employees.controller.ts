@@ -2,8 +2,8 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Request }
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums';
 import { Employee } from './employee.entity';
@@ -21,9 +21,9 @@ export class EmployeesController {
   constructor(private readonly service: EmployeesService) {}
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPERVISOR, UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'List all employees (Supervisor+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.view')
+  @ApiOperation({ summary: 'List all employees' })
   findAll(): Promise<Employee[]> { return this.service.findAll(); }
 
   @Get('me')
@@ -35,17 +35,17 @@ export class EmployeesController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPERVISOR, UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Get employee by ID (Supervisor+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.view')
+  @ApiOperation({ summary: 'Get employee by ID' })
   findOne(@Param('id') id: string): Promise<Employee> {
     return this.service.findById(id);
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Register new employee (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.create')
+  @ApiOperation({ summary: 'Register new employee' })
   register(@Body() dto: CreateEmployeeDto): Promise<Employee> {
     return this.service.createEmployeeWithUser(dto);
   }
@@ -60,9 +60,9 @@ export class EmployeesController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update employee (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.edit')
+  @ApiOperation({ summary: 'Update employee details' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateEmployeeDto,
@@ -72,9 +72,9 @@ export class EmployeesController {
   }
 
   @Post(':id/reset-password')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Request employee password reset (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.reset_password')
+  @ApiOperation({ summary: 'Request employee password reset' })
   resetPassword(
     @Param('id') id: string,
     @Body() dto: ResetPasswordDto,
@@ -84,9 +84,9 @@ export class EmployeesController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete employee (Super Admin)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.delete')
+  @ApiOperation({ summary: 'Delete employee' })
   remove(@Param('id') id: string): Promise<void> {
     return this.service.remove(id);
   }

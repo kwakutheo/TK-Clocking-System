@@ -2,8 +2,8 @@ import { Controller, Get, Post, Patch, Body, Param, Delete, UseGuards } from '@n
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { HolidaysService } from './holidays.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { UserRole } from '../../common/enums';
 import { Holiday } from './holiday.entity';
 
@@ -21,25 +21,25 @@ export class HolidaysController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Create a holiday (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('holidays.manage')
+  @ApiOperation({ summary: 'Create a holiday' })
   create(@Body() data: Partial<Holiday>) {
     return this.service.create(data);
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update a holiday (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('holidays.manage')
+  @ApiOperation({ summary: 'Update a holiday' })
   update(@Param('id') id: string, @Body() data: Partial<Holiday>) {
     return this.service.update(id, data);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete a holiday (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('holidays.manage')
+  @ApiOperation({ summary: 'Delete a holiday' })
   delete(@Param('id') id: string) {
     return this.service.delete(id);
   }

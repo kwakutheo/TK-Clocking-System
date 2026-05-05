@@ -2,8 +2,8 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@n
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BranchesService } from './branches.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums';
 import { Branch } from './branch.entity';
@@ -31,33 +31,33 @@ export class BranchesController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Create a branch (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('branches.manage')
+  @ApiOperation({ summary: 'Create a branch' })
   create(@Body() dto: CreateBranchDto): Promise<Branch> {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update a branch (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('branches.manage')
+  @ApiOperation({ summary: 'Update a branch' })
   update(@Param('id') id: string, @Body() dto: UpdateBranchDto): Promise<Branch> {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete a branch (Super Admin only)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('branches.manage')
+  @ApiOperation({ summary: 'Delete a branch' })
   remove(@Param('id') id: string): Promise<void> {
     return this.service.remove(id);
   }
 
   @Post(':id/qr-code')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Regenerate QR code for a branch (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('branches.manage')
+  @ApiOperation({ summary: 'Regenerate QR code for a branch' })
   regenerateQr(
     @Param('id') id: string,
     @CurrentUser() user: { id: string },
@@ -67,9 +67,9 @@ export class BranchesController {
   }
 
   @Get(':id/qr-code')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Get current QR code for a branch (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('branches.manage')
+  @ApiOperation({ summary: 'Get current QR code for a branch' })
   async getQr(@Param('id') id: string): Promise<{ qrCode: string | null }> {
     const branch = await this.service.findById(id);
     return { qrCode: branch.qrCode };

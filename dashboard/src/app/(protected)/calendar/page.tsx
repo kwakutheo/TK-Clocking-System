@@ -1,14 +1,21 @@
 'use client';
 import useSWR from 'swr';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { calendarApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
 import { Calendar, Plus, Trash2, Edit2, Coffee, ChevronRight, ChevronDown, GraduationCap } from 'lucide-react';
+import { can } from '@/lib/permissions';
 
 const fetcher = () => calendarApi.listTerms().then((r) => r.data);
 
 export default function AcademicCalendarPage() {
   const { data, isLoading, mutate } = useSWR('academic-calendar', fetcher);
+
+  const userRole = useMemo(() =>
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('user') ?? '{}')?.role as string
+      : ''
+  , []);
   const [showTermModal, setShowTermModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
@@ -265,9 +272,11 @@ export default function AcademicCalendarPage() {
           <h1 className="page-title">Academic Calendar</h1>
           <p className="page-subtitle">Manage school terms, mid-term breaks, and vacations</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowYearModal(true)}>
-          <Plus size={18} /> Create Academic Year
-        </button>
+        {can(userRole, 'calendar.create') && (
+          <button className="btn btn-primary" onClick={() => setShowYearModal(true)}>
+            <Plus size={18} /> Create Academic Year
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -309,7 +318,7 @@ export default function AcademicCalendarPage() {
                     <span className="badge badge-gray" style={{ marginLeft: 8 }}>{yearTerms.length} terms</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    {yearTerms.length < 3 && (
+                    {yearTerms.length < 3 && can(userRole, 'calendar.create') && (
                       <button 
                         className="btn btn-sm btn-ghost" 
                         onClick={(e) => { e.stopPropagation(); openAddTerm(year); }}
@@ -345,6 +354,7 @@ export default function AcademicCalendarPage() {
                                 {isCurrentTerm && <span className="badge badge-green" style={{ marginTop: 2, fontSize: 10, padding: '2px 6px' }}>Current Term</span>}
                               </div>
                               <div style={{ display: 'flex', gap: 4 }}>
+                              {can(userRole, 'calendar.edit') && (
                               <button 
                                 onClick={() => openEditTerm(term)} 
                                 style={{ color: 'var(--text-secondary)' }}
@@ -353,6 +363,8 @@ export default function AcademicCalendarPage() {
                               >
                                 <Edit2 size={14} />
                               </button>
+                              )}
+                              {can(userRole, 'calendar.delete') && (
                               <button 
                                 onClick={() => deleteTerm(term.id)} 
                                 style={{ color: 'var(--danger)' }}
@@ -361,6 +373,7 @@ export default function AcademicCalendarPage() {
                               >
                                 <Trash2 size={14} />
                               </button>
+                              )}
                             </div>
                           </div>
 
@@ -380,6 +393,7 @@ export default function AcademicCalendarPage() {
                               <h4 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: 0.5 }}>
                                 Mid-term Breaks
                               </h4>
+                              {can(userRole, 'calendar.edit') && (
                               <button 
                                 className="btn btn-sm btn-ghost" 
                                 onClick={() => { setSelectedTermId(term.id); setShowBreakModal(true); }}
@@ -387,6 +401,7 @@ export default function AcademicCalendarPage() {
                               >
                                 <Plus size={12} /> Add Break
                               </button>
+                              )}
                             </div>
 
                             {term.breaks?.length === 0 ? (
@@ -404,6 +419,7 @@ export default function AcademicCalendarPage() {
                                         {format(parseISO(b.startDate), 'dd MMM')} — {format(parseISO(b.endDate), 'dd MMM')}
                                       </div>
                                     </div>
+                                    {can(userRole, 'calendar.delete') && (
                                     <button 
                                       onClick={() => deleteBreak(b.id)} 
                                       style={{ color: 'var(--danger)', opacity: 0.6 }}
@@ -412,6 +428,7 @@ export default function AcademicCalendarPage() {
                                     >
                                       <Trash2 size={14} />
                                     </button>
+                                    )}
                                   </div>
                                 ))}
                               </div>

@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import QRCode from 'qrcode';
 import { branchesApi } from '@/lib/api';
+import { can } from '@/lib/permissions';
 
 const fetcher = () => branchesApi.list().then((r) => r.data);
 
@@ -409,12 +410,11 @@ export default function BranchesPage() {
     }
   };
 
-  const [userRole, setUserRole] = useState('');
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setUserRole(JSON.parse(localStorage.getItem('user') ?? '{}')?.role ?? '');
-    }
-  }, []);
+  const userRole = useMemo(() =>
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('user') ?? '{}')?.role as string
+      : ''
+  , []);
 
   return (
     <>
@@ -436,7 +436,7 @@ export default function BranchesPage() {
               branch={branch}
               onEdit={() => openEdit(branch)}
               onDelete={() => setDeleteConfirm(branch.id)}
-              canDelete={userRole === 'super_admin'}
+              canDelete={can(userRole, 'branches.manage')}
             />
           ))}
 

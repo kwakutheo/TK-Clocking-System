@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { departmentsApi } from '@/lib/api';
+import { can } from '@/lib/permissions';
 
 const fetcher = () => departmentsApi.list().then((r) => r.data);
 
@@ -16,13 +17,11 @@ export default function DepartmentsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [userRole, setUserRole] = useState('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setUserRole(JSON.parse(localStorage.getItem('user') ?? '{}')?.role ?? '');
-    }
-  }, []);
+  const userRole = useMemo(() =>
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('user') ?? '{}')?.role as string
+      : ''
+  , []);
 
   const resetForm = () => {
     setName('');
@@ -99,7 +98,7 @@ export default function DepartmentsPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => openEdit(dept)}>✏️ Edit</button>
-                  {userRole === 'super_admin' && (
+                  {can(userRole, 'departments.manage') && (
                     <button className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(dept.id)}>🗑️ Delete</button>
                   )}
                 </div>

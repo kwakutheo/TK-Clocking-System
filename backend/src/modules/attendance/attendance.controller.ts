@@ -7,8 +7,8 @@ import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/user.entity';
 import { UserRole } from '../../common/enums';
@@ -48,8 +48,8 @@ export class AttendanceController {
   }
 
   @Get('report/:employeeId')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.view')
   @ApiOperation({ summary: 'Get detailed monthly attendance report for an employee' })
   getMonthlyReport(
     @Param('employeeId') employeeId: string,
@@ -60,8 +60,8 @@ export class AttendanceController {
   }
 
   @Get('report/:employeeId/term/:termId')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.view')
   @ApiOperation({ summary: 'Get detailed term attendance report for an employee' })
   getTermReport(
     @Param('employeeId') employeeId: string,
@@ -117,16 +117,16 @@ export class AttendanceController {
   }
 
   @Get('live')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPERVISOR, UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.view_live')
   @ApiOperation({ summary: "Today's live clock-in feed (Supervisor+)" })
   getLive() {
     return this.service.getLive();
   }
 
   @Get('stats')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPERVISOR, UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.view_live')
   @ApiOperation({ summary: "Today's dashboard attendance stats (Supervisor+)" })
   getStats() {
     return this.service.getDashboardStats();

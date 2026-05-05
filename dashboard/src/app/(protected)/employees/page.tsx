@@ -1,9 +1,10 @@
 'use client';
 import useSWR from 'swr';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { employeesApi, branchesApi, departmentsApi, shiftsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
+import { can } from '@/lib/permissions';
 
 const fetcher = () => employeesApi.list().then((r) => r.data);
 const branchesFetcher = () => branchesApi.list().then((r) => r.data);
@@ -236,9 +237,11 @@ export default function EmployeesPage() {
     }
   };
 
-  const userRole = typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem('user') ?? '{}')?.role
-    : '';
+  const userRole = useMemo(() =>
+    typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('user') ?? '{}')?.role as string
+      : ''
+  , []);
 
   return (
     <>
@@ -303,9 +306,11 @@ export default function EmployeesPage() {
               onChange={(e) => setSearch(e.target.value)}
               style={{ width: 280 }}
             />
-            <button className="btn btn-primary" onClick={openCreate}>
-              + Register Employee
-            </button>
+            {can(userRole, 'employees.create') && (
+              <button className="btn btn-primary" onClick={openCreate}>
+                + Register Employee
+              </button>
+            )}
           </div>
         </div>
 
@@ -378,7 +383,7 @@ export default function EmployeesPage() {
                         <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{emp.position ?? '—'}</td>
                         <td><span className={`badge ${roleBadge[emp.user?.role] ?? 'badge-blue'}`}>{roleLabel[emp.user?.role] ?? emp.user?.role}</span></td>
                         <td>
-                          {(userRole === 'super_admin' || userRole === 'hr_admin') ? (
+                          {can(userRole, 'employees.toggle_status') ? (
                             <label className="toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 8 }}>
                               <input 
                                 type="checkbox" 
@@ -431,7 +436,7 @@ export default function EmployeesPage() {
                             >
                               ✏️
                             </button>
-                            {(userRole === 'super_admin' || userRole === 'hr_admin') && (
+                            {can(userRole, 'employees.reset_password') && (
                               <button
                                 className="btn btn-sm"
                                 style={{ padding: '4px 8px', fontSize: 12, backgroundColor: 'var(--amber-100)', color: 'var(--amber-800)', borderColor: 'var(--amber-200)' }}
@@ -442,7 +447,7 @@ export default function EmployeesPage() {
                                 🔑
                               </button>
                             )}
-                            {userRole === 'super_admin' && (
+                            {can(userRole, 'employees.delete') && (
                               <button
                                 className="btn btn-sm btn-danger"
                                 style={{ padding: '4px 8px', fontSize: 12 }}
@@ -611,7 +616,7 @@ export default function EmployeesPage() {
                     <option value="super_admin">Super Admin</option>
                   </select>
                 </div>
-                {editingId && userRole === 'super_admin' && (
+                {editingId && can(userRole, 'employees.toggle_status') && (
                   <div className="form-group">
                     <label htmlFor="status">Status</label>
                     <select

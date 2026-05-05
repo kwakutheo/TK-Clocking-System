@@ -1,6 +1,8 @@
 'use client';
-import React, { useState, useCallback, Fragment } from 'react';
+import React, { useState, useCallback, useEffect, Fragment } from 'react';
+import useSWR from 'swr';
 import { ShieldCheck } from 'lucide-react';
+
 import {
   PERMISSION_GROUPS,
   PERMISSION_LABELS,
@@ -12,6 +14,7 @@ import {
   type Permission,
   type Role,
 } from '@/lib/permissions';
+import { settingsApi } from '@/lib/api';
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
   super_admin: 'Full system control. Cannot be restricted.',
@@ -21,8 +24,22 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
 };
 
 export default function PermissionsPage() {
+  const { data: serverMatrix, isLoading } = useSWR('settings-permissions', () =>
+    settingsApi.getPermissions().then((r) => r.data).catch(() => null)
+  );
+
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => loadPermissions());
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Sync server data into local state + cache once loaded
+  useEffect(() => {
+    if (serverMatrix && typeof serverMatrix === 'object') {
+      const merged: PermissionMatrix = { ...DEFAULT_PERMISSIONS, ...serverMatrix };
+      setMatrix(merged);
+      savePermissions(merged); // update local cache
+    }
+  }, [serverMatrix]);
 
   const toggle = useCallback((role: Role, perm: Permission) => {
     if (role === 'super_admin') return; // Super Admin is immutable
@@ -36,18 +53,34 @@ export default function PermissionsPage() {
     setSaved(false);
   }, []);
 
-  const handleSave = () => {
-    savePermissions(matrix);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await settingsApi.updatePermissions(matrix as unknown as Record<string, string[]>);
+      savePermissions(matrix); // update local cache too
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      alert('Failed to save permissions. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!confirm('Reset all permissions to their default values?')) return;
-    setMatrix(DEFAULT_PERMISSIONS);
-    savePermissions(DEFAULT_PERMISSIONS);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setSaving(true);
+    try {
+      await settingsApi.updatePermissions(DEFAULT_PERMISSIONS as unknown as Record<string, string[]>);
+      setMatrix(DEFAULT_PERMISSIONS);
+      savePermissions(DEFAULT_PERMISSIONS);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      alert('Failed to reset permissions.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const countGranted = (role: Role) =>
@@ -64,15 +97,16 @@ export default function PermissionsPage() {
           <p className="page-subtitle">Define exactly what each role can and cannot do in the system.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={handleReset}>
+          <button className="btn btn-ghost" onClick={handleReset} disabled={saving}>
             Reset to Defaults
           </button>
           <button
             className="btn btn-primary"
             onClick={handleSave}
+            disabled={saving}
             style={{ minWidth: 120, transition: 'background 0.3s' }}
           >
-            {saved ? '✓ Saved!' : 'Save Changes'}
+            {saving ? 'Saving…' : saved ? '✓ Saved!' : 'Save Changes'}
           </button>
         </div>
       </div>

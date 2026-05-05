@@ -137,3 +137,9 @@ export const branchesApi = {
 export const auditApi = {
   list: () => api.get('/audit'),
 };
+
+// ── Settings ───────────────────────────────────────────────────────────────
+export const settingsApi = {
+  getPermissions: () => api.get('/settings/permissions'),
+  updatePermissions: (data: Record<string, string[]>) => api.patch('/settings/permissions', data),
+};

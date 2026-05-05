@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { shiftsApi, calendarApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { Clock, Plus, Trash2, Save, Edit } from 'lucide-react';
+import { can } from '@/lib/permissions';
 
 const fetcher = () => shiftsApi.list().then((r) => r.data);
 
@@ -11,7 +12,7 @@ export default function ShiftsPage() {
   const { data, isLoading, mutate } = useSWR('shifts-list', fetcher);
   const { user } = useAuthStore();
   
-  const canManage = user?.role === 'hr_admin' || user?.role === 'super_admin';
+  const canManage = can(user?.role, 'shifts.manage');
   const shifts: any[] = data ?? [];
 
   const [showAdd, setShowAdd] = useState(false);

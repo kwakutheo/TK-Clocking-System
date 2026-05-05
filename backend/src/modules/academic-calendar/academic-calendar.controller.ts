@@ -2,8 +2,8 @@ import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards } from '@nes
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AcademicCalendarService } from './academic-calendar.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { UserRole } from '../../common/enums';
 import { AcademicTerm } from './term.entity';
 import { TermBreak } from './term-break.entity';
@@ -24,41 +24,41 @@ export class AcademicCalendarController {
   }
 
   @Post('terms')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Create an academic term (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('calendar.create')
+  @ApiOperation({ summary: 'Create an academic term' })
   async createTerm(@Body() data: CreateTermDto) {
     return this.service.createTerm(data);
   }
 
   @Put('terms/:id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update an academic term (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('calendar.edit')
+  @ApiOperation({ summary: 'Update an academic term' })
   async updateTerm(@Param('id') id: string, @Body() data: UpdateTermDto) {
     return this.service.updateTerm(id, data);
   }
 
   @Delete('terms/:id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete an academic term (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('calendar.delete')
+  @ApiOperation({ summary: 'Delete an academic term' })
   deleteTerm(@Param('id') id: string) {
     return this.service.deleteTerm(id);
   }
 
   @Post('terms/:id/breaks')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Create a break for a term (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('calendar.edit')
+  @ApiOperation({ summary: 'Create a break for a term' })
   createBreak(@Param('id') termId: string, @Body() data: CreateBreakDto) {
     return this.service.createBreak(termId, data);
   }
 
   @Delete('breaks/:id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete a break (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('calendar.delete')
+  @ApiOperation({ summary: 'Delete a break' })
   deleteBreak(@Param('id') id: string) {
     return this.service.deleteBreak(id);
   }

@@ -134,6 +134,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
 
 const STORAGE_KEY = 'tk_permissions';
 
+// ── Cache helpers (localStorage acts as a fast local cache) ────────────────
 export function loadPermissions(): PermissionMatrix {
   if (typeof window === 'undefined') return DEFAULT_PERMISSIONS;
   try {
@@ -148,9 +149,35 @@ export function savePermissions(matrix: PermissionMatrix): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(matrix));
 }
 
+// ── API-backed load: fetches from server, updates cache ───────────────────
+export async function fetchAndCachePermissions(): Promise<PermissionMatrix> {
+  try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    if (!token) return loadPermissions();
+
+    const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+    const res = await fetch(`${base}/settings/permissions`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+
+    if (data && typeof data === 'object') {
+      const merged: PermissionMatrix = { ...DEFAULT_PERMISSIONS, ...data };
+      savePermissions(merged);
+      return merged;
+    }
+  } catch {
+    // Network error — use cached / defaults
+  }
+  return loadPermissions();
+}
+
+// ── Sync can() — reads from cache (populated at login / page load) ─────────
 export function can(role: Role | string | undefined, permission: Permission): boolean {
   if (!role) return false;
-  if (role === 'super_admin') return true; // Super Admin always has full access
+  if (role === 'super_admin') return true;
   const matrix = loadPermissions();
   const rolePerms = matrix[role as Role] ?? [];
   return rolePerms.includes(permission);

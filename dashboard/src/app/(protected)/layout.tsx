@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthStore, initials, roleLabel } from '@/lib/store';
+import { fetchAndCachePermissions } from '@/lib/permissions';
 import { 
   LayoutDashboard, 
   Clock, 
@@ -43,7 +44,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-  useEffect(() => { hydrate(); }, [hydrate]);
+  useEffect(() => { 
+    hydrate(); 
+    fetchAndCachePermissions();
+  }, [hydrate]);
 
   // Close mobile sidebar on route change
   useEffect(() => {

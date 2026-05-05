@@ -2,8 +2,8 @@ import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@n
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ShiftsService } from './shifts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { UserRole } from '../../common/enums';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
@@ -24,22 +24,22 @@ export class ShiftsController {
   findOne(@Param('id') id: string) { return this.service.findOne(id); }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Create a shift (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('shifts.manage')
+  @ApiOperation({ summary: 'Create a shift' })
   create(@Body() body: CreateShiftDto) { return this.service.create(body); }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update a shift (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('shifts.manage')
+  @ApiOperation({ summary: 'Update a shift' })
   update(@Param('id') id: string, @Body() body: UpdateShiftDto) {
     return this.service.update(id, body);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.HR_ADMIN, UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Delete a shift (HR Admin+)' })
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('shifts.manage')
+  @ApiOperation({ summary: 'Delete a shift' })
   remove(@Param('id') id: string) { return this.service.remove(id); }
 }
