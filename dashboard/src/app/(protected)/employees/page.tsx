@@ -46,6 +46,7 @@ export default function EmployeesPage() {
   const [adminPasswordValue, setAdminPasswordValue] = useState('');
 
   const [activeBranch, setActiveBranch] = useState<string>('all');
+  const [activeRoleView, setActiveRoleView] = useState<'all' | 'staff' | 'admin'>('all');
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
 
   const toggleDept = (deptName: string) => {
@@ -76,6 +77,10 @@ export default function EmployeesPage() {
   const shifts: any[] = shiftsData ?? [];
 
   const filtered = employees.filter((e) => {
+    const role = e.user?.role ?? 'employee';
+    if (activeRoleView === 'staff' && (role === 'hr_admin' || role === 'super_admin')) return false;
+    if (activeRoleView === 'admin' && (role === 'employee' || role === 'supervisor')) return false;
+
     const name = e.user?.fullName?.toLowerCase() ?? '';
     const code = e.employeeCode?.toLowerCase() ?? '';
     const uname = e.user?.username?.toLowerCase() ?? '';
@@ -210,6 +215,16 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleStatusToggle = async (id: string, newStatus: string) => {
+    try {
+      await employeesApi.update(id, { status: newStatus });
+      await mutate();
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      alert(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Failed to update status.');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await employeesApi.delete(id);
@@ -227,9 +242,34 @@ export default function EmployeesPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h1 className="page-title">Employees</h1>
-        <p className="page-subtitle">Manage your workforce — {employees.length} total</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 className="page-title">Employees</h1>
+          <p className="page-subtitle">Manage your workforce — {filtered.length} matching</p>
+        </div>
+        <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: 4, borderRadius: 8, gap: 4, border: '1px solid var(--border)' }}>
+          <button 
+            className={`btn btn-sm ${activeRoleView === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveRoleView('all')}
+            style={{ border: 'none', boxShadow: activeRoleView === 'all' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+          >
+            All Staff
+          </button>
+          <button 
+            className={`btn btn-sm ${activeRoleView === 'staff' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveRoleView('staff')}
+            style={{ border: 'none', boxShadow: activeRoleView === 'staff' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+          >
+            Regular Employees
+          </button>
+          <button 
+            className={`btn btn-sm ${activeRoleView === 'admin' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveRoleView('admin')}
+            style={{ border: 'none', boxShadow: activeRoleView === 'admin' ? '0 2px 4px rgba(0,0,0,0.2)' : 'none' }}
+          >
+            HR & Admins
+          </button>
+        </div>
       </div>
 
       <div className="table-wrap">
@@ -337,7 +377,46 @@ export default function EmployeesPage() {
                         <td style={{ fontSize: 13 }}>{emp.branch?.name ?? '—'}</td>
                         <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{emp.position ?? '—'}</td>
                         <td><span className={`badge ${roleBadge[emp.user?.role] ?? 'badge-blue'}`}>{roleLabel[emp.user?.role] ?? emp.user?.role}</span></td>
-                        <td><span className={`badge ${statusBadge[emp.status] ?? 'badge-blue'}`}>{emp.status}</span></td>
+                        <td>
+                          {(userRole === 'super_admin' || userRole === 'hr_admin') ? (
+                            <label className="toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 8 }}>
+                              <input 
+                                type="checkbox" 
+                                checked={emp.status === 'active'}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusToggle(emp.id, emp.status === 'active' ? 'inactive' : 'active');
+                                }}
+                                style={{ display: 'none' }}
+                              />
+                              <div style={{
+                                width: 36,
+                                height: 20,
+                                background: emp.status === 'active' ? 'var(--success)' : 'var(--border)',
+                                borderRadius: 10,
+                                position: 'relative',
+                                transition: '0.2s',
+                              }}>
+                                <div style={{
+                                  width: 16,
+                                  height: 16,
+                                  background: 'white',
+                                  borderRadius: '50%',
+                                  position: 'absolute',
+                                  top: 2,
+                                  left: emp.status === 'active' ? 18 : 2,
+                                  transition: '0.2s',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                }} />
+                              </div>
+                              <span style={{ fontSize: 12, color: emp.status === 'active' ? 'var(--success)' : 'var(--text-secondary)' }}>
+                                {emp.status.charAt(0).toUpperCase() + emp.status.slice(1)}
+                              </span>
+                            </label>
+                          ) : (
+                            <span className={`badge ${statusBadge[emp.status] ?? 'badge-blue'}`}>{emp.status}</span>
+                          )}
+                        </td>
                         <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {emp.hireDate ? format(new Date(emp.hireDate), 'MMM d, yyyy') : '—'}
                         </td>
