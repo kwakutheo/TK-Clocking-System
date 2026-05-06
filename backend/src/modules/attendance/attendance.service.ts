@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AttendanceLog } from './attendance-log.entity';
@@ -9,7 +9,9 @@ import { AcademicCalendarService } from '../academic-calendar/academic-calendar.
 import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
+import { AdminManualClockDto } from './dto/admin-manual-clock.dto';
 import { AttendanceType, UserRole } from '../../common/enums';
+
 
 
 @Injectable()
@@ -276,6 +278,107 @@ export class AttendanceService {
       }
     }
     return { synced };
+  }
+
+  // ── Admin Manual Clock Override ───────────────────────────────────────────
+  /**
+   * Allows an ADMIN to manually clock in/out on behalf of another employee.
+   * Rules:
+   *  - Only HR_ADMIN or SUPER_ADMIN can call this.
+   *  - An admin CANNOT clock themselves in/out (self-clocking is blocked).
+   *  - Another admin CAN clock for a fellow admin (cross-admin is allowed).
+   *  - Records are flagged as `isAdminOverride = true` for the audit trail.
+   */
+  async adminManualClock(
+    actingUserId: string,
+    actingUserRole: UserRole,
+    dto: AdminManualClockDto,
+  ): Promise<AttendanceLog> {
+    // ── Role guard ──────────────────────────────────────────────────────────
+    if (actingUserRole !== UserRole.HR_ADMIN && actingUserRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only admins can perform manual clock overrides.');
+    }
+
+    // ── Resolve the ACTING admin's own employee record ──────────────────────
+    const actingEmployee = await this.employees.findByUserId(actingUserId);
+
+    // ── Resolve the TARGET employee ─────────────────────────────────────────
+    const targetEmployee = await this.employees.findById(dto.employeeId);
+    if (!targetEmployee) {
+      throw new NotFoundException('Target employee not found.');
+    }
+
+    // ── Self-clocking block ─────────────────────────────────────────────────
+    if (actingEmployee && actingEmployee.id === targetEmployee.id) {
+      throw new ForbiddenException(
+        'You cannot perform a manual clock override for yourself. Another admin must do it for you.',
+      );
+    }
+
+    if (targetEmployee.status !== 'active') {
+      throw new BadRequestException(
+        `Action denied. The target employee account status is: ${targetEmployee.status.toUpperCase()}.`,
+      );
+    }
+
+    const now = dto.timestamp ? new Date(dto.timestamp) : new Date();
+
+    // ── Determine today's boundary relative to the chosen timestamp ──────────
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(now);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const todayLogs = await this.repo
+      .createQueryBuilder('log')
+      .where('log.employee = :empId', { empId: targetEmployee.id })
+      .andWhere('log.timestamp >= :dayStart', { dayStart })
+      .andWhere('log.timestamp <= :dayEnd', { dayEnd })
+      .orderBy('log.timestamp', 'ASC')
+      .getMany();
+
+    const hasClockedInToday = todayLogs.some(l => l.type === AttendanceType.CLOCK_IN);
+    const hasClockOutToday  = todayLogs.some(l => l.type === AttendanceType.CLOCK_OUT);
+
+    // ── State-machine validation (same rules as regular record) ─────────────
+    if (dto.type === AttendanceType.CLOCK_IN && hasClockedInToday) {
+      throw new BadRequestException(
+        'The employee has already clocked in today. Cannot add a duplicate clock-in.',
+      );
+    }
+    if (dto.type === AttendanceType.CLOCK_OUT) {
+      if (!hasClockedInToday) {
+        throw new BadRequestException(
+          'The employee has not clocked in today. Cannot clock out without a prior clock-in.',
+        );
+      }
+      if (hasClockOutToday) {
+        throw new BadRequestException('The employee has already clocked out today.');
+      }
+    }
+
+    // ── Determine isLate for CLOCK_IN ────────────────────────────────────────
+    let isLate = false;
+    if (dto.type === AttendanceType.CLOCK_IN && targetEmployee.shift) {
+      const [sHours, sMins] = targetEmployee.shift.startTime.split(':').map(Number);
+      const shiftStart = new Date(now);
+      shiftStart.setHours(sHours, sMins + (targetEmployee.shift.graceMinutes || 0), 0, 0);
+      isLate = now > shiftStart;
+    }
+
+    // ── Persist the log ──────────────────────────────────────────────────────
+    const log = this.repo.create({
+      employee: targetEmployee,
+      branch: targetEmployee.branch ?? undefined,
+      type: dto.type,
+      timestamp: now,
+      isLate,
+      isOfflineSync: false,
+      isAdminOverride: true,
+      adminNote: dto.note,
+    });
+
+    return this.repo.save(log);
   }
 
   // ── QR code clock-in ──────────────────────────────────────────────────────

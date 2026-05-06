@@ -47,6 +47,12 @@ export class AttendanceLog {
   @Column({ name: 'is_offline_sync', default: false })
   isOfflineSync: boolean;
 
+  @Column({ name: 'is_admin_override', default: false })
+  isAdminOverride: boolean;
+
+  @Column({ name: 'admin_note', nullable: true })
+  adminNote: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -1,14 +1,15 @@
 'use client';
 import { useState } from 'react';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
 import { format } from 'date-fns';
 import { attendanceApi, employeesApi, branchesApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { AttendanceChart } from '@/components/attendance-chart';
 import { ActivityFeed } from '@/components/activity-feed';
 import { StatCardSkeleton, TableSkeleton } from '@/components/skeleton';
+import { AdminManualClockModal } from '@/components/admin-manual-clock-modal';
 import {
-  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle,
+  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck,
 } from 'lucide-react';
 
 const fetcher = (fn: () => Promise<unknown>) => () => fn().then((r: any) => r.data);
@@ -81,8 +82,10 @@ function typeBadge(type: string) {
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'hr_admin' || user?.role === 'super_admin';
 
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [showManualClock, setShowManualClock] = useState(false);
   const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
 
   const { data: live, isLoading: liveLoading } = useSWR(
@@ -271,7 +274,18 @@ export default function DashboardPage() {
               {isToday && <span className="live-dot" style={{ marginRight: 8 }} />}
               {isToday ? 'Live Attendance Feed' : 'Attendance Log'}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {isToday && isAdmin && (
+                <button
+                  id="manual-clock-open-btn"
+                  className="btn btn-primary"
+                  style={{ fontSize: 13, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 6 }}
+                  onClick={() => setShowManualClock(true)}
+                >
+                  <UserCheck size={15} />
+                  Manual Clock
+                </button>
+              )}
               {isToday && (
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   Auto-syncing
@@ -301,7 +315,7 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {liveList.map((log: any) => (
-                  <tr key={log.id}>
+                  <tr key={log.id} style={log.isAdminOverride ? { background: 'rgba(59,130,246,0.04)' } : {}}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div className="avatar">
@@ -313,7 +327,16 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </td>
-                    <td><span className={`badge ${typeBadge(log.type)}`}>{typeLabel(log.type)}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className={`badge ${typeBadge(log.type)}`}>{typeLabel(log.type)}</span>
+                        {log.isAdminOverride && (
+                          <span className="badge badge-blue" style={{ fontSize: 10 }} title={log.adminNote}>
+                            Admin Override
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{log.branch?.name ?? '—'}</td>
                     <td style={{ fontSize: 13 }}>{format(new Date(log.timestamp), 'HH:mm:ss')}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -325,6 +348,17 @@ export default function DashboardPage() {
             </table>
           )}
         </div>
+      )}
+
+      {/* Admin Manual Clock Modal */}
+      {showManualClock && (
+        <AdminManualClockModal
+          onClose={() => setShowManualClock(false)}
+          onSuccess={() => {
+            mutate(['live', selectedDate]);
+            mutate(['attendance-stats', selectedDate]);
+          }}
+        />
       )}
     </div>
   );

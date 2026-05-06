@@ -15,6 +15,7 @@ export type Permission =
   | 'attendance.view_live'
   | 'attendance.edit'
   | 'attendance.export'
+  | 'attendance.admin_clock'
   // Academic Calendar
   | 'calendar.view'
   | 'calendar.create'
@@ -41,6 +42,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'attendance.view_live': 'View Live Attendance',
   'attendance.edit': 'Edit / Correct Clocking Times',
   'attendance.export': 'Export Attendance Reports',
+  'attendance.admin_clock': 'Manual Clock Override (on behalf of employees)',
   'calendar.view': 'View Academic Calendar',
   'calendar.create': 'Create Academic Years & Terms',
   'calendar.edit': 'Edit Terms & Breaks',
@@ -74,6 +76,7 @@ export const PERMISSION_GROUPS: { label: string; icon: string; permissions: Perm
       'attendance.view_live',
       'attendance.edit',
       'attendance.export',
+      'attendance.admin_clock',
     ],
   },
   {
@@ -112,7 +115,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   super_admin: [
     'employees.view', 'employees.create', 'employees.edit', 'employees.delete',
     'employees.reset_password', 'employees.toggle_status',
-    'attendance.view', 'attendance.view_live', 'attendance.edit', 'attendance.export',
+    'attendance.view', 'attendance.view_live', 'attendance.edit', 'attendance.export', 'attendance.admin_clock',
     'calendar.view', 'calendar.create', 'calendar.edit', 'calendar.delete',
     'shifts.manage', 'departments.manage', 'branches.manage', 'holidays.manage',
     'audit.view', 'permissions.manage',
@@ -120,7 +123,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   hr_admin: [
     'employees.view', 'employees.create', 'employees.edit',
     'employees.reset_password', 'employees.toggle_status',
-    'attendance.view', 'attendance.view_live', 'attendance.export',
+    'attendance.view', 'attendance.view_live', 'attendance.export', 'attendance.admin_clock',
     'calendar.view', 'calendar.create', 'calendar.edit',
     'holidays.manage',
   ],

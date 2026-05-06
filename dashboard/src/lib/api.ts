@@ -58,6 +58,12 @@ export const attendanceApi = {
     api.get(`/attendance/report/${employeeId}`, { params: { month, year } }),
   getTermReport: (employeeId: string, termId: string) =>
     api.get(`/attendance/report/${employeeId}/term/${termId}`),
+  adminManualClock: (data: {
+    employeeId: string;
+    type: 'clock_in' | 'clock_out';
+    timestamp?: string;
+    note: string;
+  }) => api.post('/attendance/admin-clock', data),
 };
 
 // ── Holidays ───────────────────────────────────────────────────────────────

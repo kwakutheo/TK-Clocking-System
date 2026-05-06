@@ -22,6 +22,7 @@ import { EmployeesService } from '../employees/employees.service';
 import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
+import { AdminManualClockDto } from './dto/admin-manual-clock.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -121,6 +122,16 @@ export class AttendanceController {
   @ApiOperation({ summary: 'Batch sync offline attendance records' })
   syncOffline(@CurrentUser() user: User, @Body() dto: SyncOfflineDto) {
     return this.service.syncOffline(user.id, dto);
+  }
+
+  @Post('admin-clock')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.admin_clock')
+  @ApiOperation({
+    summary: 'Admin manually clocks in/out an employee (HR Admin and Super Admin only)',
+  })
+  adminManualClock(@CurrentUser() user: User, @Body() dto: AdminManualClockDto) {
+    return this.service.adminManualClock(user.id, user.role, dto);
   }
 
   @Get('home-data')
