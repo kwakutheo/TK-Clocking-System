@@ -53,6 +53,9 @@ export class AttendanceLog {
   @Column({ name: 'admin_note', nullable: true })
   adminNote: string;
 
+  @Column({ name: 'admin_override_name', nullable: true })
+  adminOverrideName: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -36,6 +36,10 @@ class HomeDataEntity extends Equatable {
   /// Shift start time in "HH:mm" format, used for the pre-shift countdown banner.
   final String? shiftStartTime;
 
+  /// When not null, today's clock-in was performed by an admin on behalf of the employee.
+  final String? adminOverrideName;
+  final String? adminOverrideNote;
+
   const HomeDataEntity({
     this.lastActivityType,
     this.lastActivityTime,
@@ -57,6 +61,8 @@ class HomeDataEntity extends Equatable {
     this.vacationName,
     this.noShiftAssigned = false,
     this.shiftStartTime,
+    this.adminOverrideName,
+    this.adminOverrideNote,
   });
 
   @override
@@ -81,5 +87,7 @@ class HomeDataEntity extends Equatable {
         vacationName,
         noShiftAssigned,
         shiftStartTime,
+        adminOverrideName,
+        adminOverrideNote,
       ];
 }

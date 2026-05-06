@@ -11,6 +11,9 @@ import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
 import { AdminManualClockDto } from './dto/admin-manual-clock.dto';
 import { AttendanceType, UserRole } from '../../common/enums';
+import { AuditService } from '../audit/audit.service';
+import { User } from '../users/user.entity';
+
 
 
 
@@ -23,6 +26,8 @@ export class AttendanceService {
     private readonly branches: BranchesService,
     private readonly holidays: HolidaysService,
     private readonly academicCalendar: AcademicCalendarService,
+    private readonly auditService: AuditService,
+
 
   ) {}
 
@@ -263,7 +268,24 @@ export class AttendanceService {
       isOfflineSync: dto.isOfflineSync ?? false,
     });
 
-    return this.repo.save(log);
+    const savedLog = await this.repo.save(log);
+
+    const actingUser = { id: actingUserId, role: actingUserRole } as User;
+    await this.auditService.log({
+      user: actingUser,
+      action: 'ADMIN_MANUAL_CLOCK',
+      module: 'ATTENDANCE',
+      targetId: savedLog.id,
+      newValues: {
+        targetEmployeeId: targetEmployee.id,
+        targetEmployeeName: targetEmployee.user?.fullName,
+        type: dto.type,
+        timestamp: now,
+        note: dto.note,
+      },
+    });
+
+    return savedLog;
   }
 
   // ── Batch offline sync ────────────────────────────────────────────────────
@@ -367,6 +389,9 @@ export class AttendanceService {
     }
 
     // ── Persist the log ──────────────────────────────────────────────────────
+    // Resolve the admin's display name for the employee-facing banner.
+    const adminDisplayName = actingEmployee?.user?.fullName ?? 'An Administrator';
+
     const log = this.repo.create({
       employee: targetEmployee,
       branch: targetEmployee.branch ?? undefined,
@@ -376,9 +401,27 @@ export class AttendanceService {
       isOfflineSync: false,
       isAdminOverride: true,
       adminNote: dto.note,
+      adminOverrideName: adminDisplayName,
     });
 
-    return this.repo.save(log);
+    const savedLog = await this.repo.save(log);
+
+    const actingUser = { id: actingUserId, role: actingUserRole } as User;
+    await this.auditService.log({
+      user: actingUser,
+      action: 'ADMIN_MANUAL_CLOCK',
+      module: 'ATTENDANCE',
+      targetId: savedLog.id,
+      newValues: {
+        targetEmployeeId: targetEmployee.id,
+        targetEmployeeName: targetEmployee.user?.fullName,
+        type: dto.type,
+        timestamp: now,
+        note: dto.note,
+      },
+    });
+
+    return savedLog;
   }
 
   // ── QR code clock-in ──────────────────────────────────────────────────────
@@ -547,7 +590,24 @@ export class AttendanceService {
       isOfflineSync: false,
     });
 
-    return this.repo.save(log);
+    const savedLog = await this.repo.save(log);
+
+    const actingUser = { id: actingUserId, role: actingUserRole } as User;
+    await this.auditService.log({
+      user: actingUser,
+      action: 'ADMIN_MANUAL_CLOCK',
+      module: 'ATTENDANCE',
+      targetId: savedLog.id,
+      newValues: {
+        targetEmployeeId: targetEmployee.id,
+        targetEmployeeName: targetEmployee.user?.fullName,
+        type: dto.type,
+        timestamp: now,
+        note: dto.note,
+      },
+    });
+
+    return savedLog;
   }
 
   // ── History ───────────────────────────────────────────────────────────────
@@ -849,6 +909,19 @@ export class AttendanceService {
       holidayName,
       // Used by mobile app to calculate the pre-shift countdown banner
       shiftStartTime: shift ? shift.startTime : null,
+      // Admin override info — shown as a banner on the mobile app
+      adminOverride: (() => {
+        const overrideLog = todayLogs.find(
+          l => l.isAdminOverride && l.type === AttendanceType.CLOCK_IN,
+        );
+        if (!overrideLog) return null;
+        return {
+          adminName: overrideLog.adminOverrideName ?? 'An Administrator',
+          note: overrideLog.adminNote ?? '',
+          timestamp: overrideLog.timestamp,
+          type: overrideLog.type,
+        };
+      })(),
     };
   }
 

@@ -354,6 +354,14 @@ class _DashboardTabState extends State<_DashboardTab> {
           ),
           const SizedBox(height: 16),
         ],
+        // Show admin override banner when today's clock-in was done by an admin
+        if (data.adminOverrideName != null) ...[
+          _AdminOverrideBanner(
+            adminName: data.adminOverrideName!,
+            note: data.adminOverrideNote,
+          ),
+          const SizedBox(height: 16),
+        ],
         _LiveStatusBanner(
           data: data,
           lateStatusOverride: effectiveLateStatus,
@@ -1020,6 +1028,156 @@ class _StatCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Admin Override Banner ────────────────────────────────────────────────────
+/// Shown on the mobile home screen when an admin manually clocked in
+/// the employee today. Displays the admin's name and their reason note.
+class _AdminOverrideBanner extends StatefulWidget {
+  final String adminName;
+  final String? note;
+
+  const _AdminOverrideBanner({
+    required this.adminName,
+    this.note,
+  });
+
+  @override
+  State<_AdminOverrideBanner> createState() => _AdminOverrideBannerState();
+}
+
+class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  bool _dismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _dismiss() {
+    _ctrl.reverse().then((_) {
+      if (mounted) setState(() => _dismissed = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    const bannerColor = Color(0xFF3B82F6); // blue-500
+
+    return FadeTransition(
+      opacity: _fade,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: bannerColor.withOpacity(0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.admin_panel_settings_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Text block
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Clocked in by Administrator',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: Colors.white.withOpacity(0.75),
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    widget.adminName,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
+                  if (widget.note != null && widget.note!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.note!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Dismiss button
+            GestureDetector(
+              onTap: _dismiss,
+              child: Icon(
+                Icons.close_rounded,
+                color: Colors.white.withOpacity(0.7),
+                size: 18,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

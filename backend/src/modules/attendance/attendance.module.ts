@@ -9,6 +9,8 @@ import { EmployeesModule } from '../employees/employees.module';
 import { BranchesModule } from '../branches/branches.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { AcademicCalendarModule } from '../academic-calendar/academic-calendar.module';
+import { AuditModule } from '../audit/audit.module';
+
 
 
 @Module({
@@ -18,6 +20,7 @@ import { AcademicCalendarModule } from '../academic-calendar/academic-calendar.m
     BranchesModule,
     HolidaysModule,
     AcademicCalendarModule,
+    AuditModule,
 
   ],
   controllers: [AttendanceController],

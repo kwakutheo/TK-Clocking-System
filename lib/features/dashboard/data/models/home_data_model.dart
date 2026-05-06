@@ -23,6 +23,8 @@ class HomeDataModel extends HomeDataEntity {
     super.isOnBreak,
     super.noShiftAssigned,
     super.shiftStartTime,
+    super.adminOverrideName,
+    super.adminOverrideNote,
   });
 
   factory HomeDataModel.fromJson(Map<String, dynamic> json) {
@@ -69,6 +71,12 @@ class HomeDataModel extends HomeDataEntity {
       isVacation: json['isVacation'] as bool? ?? false,
       vacationName: json['vacationName'] as String?,
       shiftStartTime: json['shiftStartTime'] as String?,
+      adminOverrideName: json['adminOverride'] != null
+          ? json['adminOverride']['adminName'] as String?
+          : null,
+      adminOverrideNote: json['adminOverride'] != null
+          ? json['adminOverride']['note'] as String?
+          : null,
     );
   }
 
@@ -98,6 +106,8 @@ class HomeDataModel extends HomeDataEntity {
       'isHoliday': isHoliday,
       'holidayName': holidayName,
       'shiftStartTime': shiftStartTime,
+      'adminOverrideName': adminOverrideName,
+      'adminOverrideNote': adminOverrideNote,
     };
   }
 }
