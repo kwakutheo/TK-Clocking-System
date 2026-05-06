@@ -104,9 +104,10 @@ class _DashboardTabState extends State<_DashboardTab> {
     _initData();
     _checkPending();
 
-    // Auto-refresh every 30 s silently.
+    // Auto-refresh every 30 s — force=true guarantees it fires even
+    // if a visibility-triggered fetch is simultaneously in progress.
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _loadData(silent: true);
+      _loadData(silent: true, force: true);
     });
   }
 
@@ -136,8 +137,8 @@ class _DashboardTabState extends State<_DashboardTab> {
   }
 
   Future<void> _loadData({bool silent = false, bool force = false}) async {
-    // force = true bypasses the guard so pull-to-refresh always fires,
-    // even if a background auto-refresh is already in progress.
+    // force = true bypasses the guard so pull-to-refresh and the timer
+    // always fire, even if a background fetch is already in progress.
     if (!force && _isRefetching) return;
     _isRefetching = true;
 
@@ -145,30 +146,35 @@ class _DashboardTabState extends State<_DashboardTab> {
       setState(() => _isLoading = true);
     }
 
-    final res = await sl<AttendanceRepository>().getHomeData();
+    try {
+      final res = await sl<AttendanceRepository>().getHomeData();
 
-    if (mounted) {
-      res.fold(
-        (f) {
-          if (!silent) {
-            // Optional: show error snackbar if not silent
-          }
-          setState(() => _isLoading = false);
-        },
-        (data) {
-          setState(() {
-            _data = data;
-            _isLoading = false;
-          });
-          // Update Cache
-          if (data is HomeDataModel) {
-            final box = Hive.box(AppConstants.userBox);
-            box.put('home_data_cache', data.toJson());
-          }
-        },
-      );
+      if (mounted) {
+        res.fold(
+          (f) {
+            if (!silent) {
+              // Optional: show error snackbar
+            }
+            setState(() => _isLoading = false);
+          },
+          (data) {
+            setState(() {
+              _data = data;
+              _isLoading = false;
+            });
+            // Update cache
+            if (data is HomeDataModel) {
+              final box = Hive.box(AppConstants.userBox);
+              box.put('home_data_cache', data.toJson());
+            }
+          },
+        );
+      }
+    } finally {
+      // Always reset — prevents the guard getting permanently stuck
+      // if an unexpected exception escapes the repository.
+      _isRefetching = false;
     }
-    _isRefetching = false;
   }
 
   void _checkPending() {
