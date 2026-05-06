@@ -85,11 +85,11 @@ class HomeDataModel extends HomeDataEntity {
       'lastActivity': lastActivityType != null
           ? {
               'type': lastActivityType,
-              'timestamp': lastActivityTime,
+              'timestamp': lastActivityTime?.toIso8601String(),
             }
           : null,
       'isClockedIn': isClockedIn,
-      'clockedInTime': clockedInTime,
+      'clockedInTime': clockedInTime?.toIso8601String(),
       'isOnBreak': isOnBreak,
       'forgotToClockOut': forgotToClockOut,
       'isLateToday': isLateToday,
@@ -106,8 +106,13 @@ class HomeDataModel extends HomeDataEntity {
       'isHoliday': isHoliday,
       'holidayName': holidayName,
       'shiftStartTime': shiftStartTime,
-      'adminOverrideName': adminOverrideName,
-      'adminOverrideNote': adminOverrideNote,
+      // Must match fromJson's nested structure exactly so the cache round-trips correctly
+      'adminOverride': (adminOverrideName != null)
+          ? {
+              'adminName': adminOverrideName,
+              'note': adminOverrideNote ?? '',
+            }
+          : null,
     };
   }
 }

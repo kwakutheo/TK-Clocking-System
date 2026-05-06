@@ -104,8 +104,8 @@ class _DashboardTabState extends State<_DashboardTab> {
     _initData();
     _checkPending();
 
-    // Auto-refresh every 60 s silently.
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+    // Auto-refresh every 30 s silently.
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _loadData(silent: true);
     });
   }
@@ -135,8 +135,10 @@ class _DashboardTabState extends State<_DashboardTab> {
     await _loadData();
   }
 
-  Future<void> _loadData({bool silent = false}) async {
-    if (_isRefetching) return;
+  Future<void> _loadData({bool silent = false, bool force = false}) async {
+    // force = true bypasses the guard so pull-to-refresh always fires,
+    // even if a background auto-refresh is already in progress.
+    if (!force && _isRefetching) return;
     _isRefetching = true;
 
     if (!silent && _data == null) {
@@ -204,8 +206,10 @@ class _DashboardTabState extends State<_DashboardTab> {
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
-              await _loadData(silent: true);
-              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+              await _loadData(silent: true, force: true);
+              if (mounted) {
+                context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+              }
             },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
