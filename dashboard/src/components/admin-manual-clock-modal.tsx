@@ -1,8 +1,19 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { attendanceApi } from '@/lib/api';
 import useSWR from 'swr';
 import { X, UserCheck, Clock, LogIn, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
+
+/** Returns the current local time as "HH:mm" — refreshes every 10 s so the max cap stays accurate. */
+function useCurrentTime() {
+  const [now, setNow] = useState(() => format(new Date(), 'HH:mm'));
+  useEffect(() => {
+    const id = setInterval(() => setNow(format(new Date(), 'HH:mm')), 10_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
 
 interface Props {
   onClose: () => void;
@@ -13,11 +24,12 @@ const clockableFetcher = () => attendanceApi.clockableEmployees().then((r) => r.
 
 export function AdminManualClockModal({ onClose, onSuccess }: Props) {
   const { data: employees } = useSWR('clockable-employees', clockableFetcher);
+  const currentTime = useCurrentTime(); // "HH:mm" — used as max cap on the time input
 
   const [employeeId, setEmployeeId] = useState('');
   const [type, setType] = useState<'clock_in' | 'clock_out'>('clock_in');
   const [useCustomTime, setUseCustomTime] = useState(false);
-  const [customTime, setCustomTime] = useState('');
+  const [customTime, setCustomTime] = useState(''); // stores "HH:mm" only
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,14 +45,19 @@ export function AdminManualClockModal({ onClose, onSuccess }: Props) {
 
     if (!employeeId) { setError('Please select an employee.'); return; }
     if (!note.trim()) { setError('A reason/note is required for the audit trail.'); return; }
-    if (useCustomTime && !customTime) { setError('Please enter a valid date and time.'); return; }
+    if (useCustomTime && !customTime) { setError('Please enter a valid time.'); return; }
 
-    // Build ISO timestamp if custom time is provided
+    // Build ISO timestamp: combine today\'s local date with the chosen HH:mm time.
+    // This guarantees the entry is always anchored to the current working day.
     let timestamp: string | undefined;
     if (useCustomTime && customTime) {
-      const parsed = new Date(customTime);
-      if (isNaN(parsed.getTime())) { setError('Invalid date/time entered.'); return; }
-      timestamp = parsed.toISOString();
+      const [hours, minutes] = customTime.split(':').map(Number);
+      const today = new Date();
+      today.setHours(hours, minutes, 0, 0);
+      if (isNaN(today.getTime())) { setError('Invalid time entered.'); return; }
+      // Reject times that are in the future (belt-and-suspenders guard alongside the input max)
+      if (today > new Date()) { setError('The selected time cannot be in the future.'); return; }
+      timestamp = today.toISOString();
     }
 
     setLoading(true);
@@ -196,16 +213,27 @@ export function AdminManualClockModal({ onClose, onSuccess }: Props) {
               Set a specific time (leave unchecked to use current time)
             </label>
             {useCustomTime && (
-              <input
-                id="manual-clock-custom-time"
-                type="datetime-local"
-                className="form-input"
-                aria-label="Manual clock time"
-                title="Manual clock time"
-                value={customTime}
-                onChange={(e) => setCustomTime(e.target.value)}
-                style={{ marginTop: 8 }}
-              />
+              <div style={{ marginTop: 8 }}>
+                <input
+                  id="manual-clock-custom-time"
+                  type="time"
+                  className="form-input"
+                  aria-label="Manual clock time (today only)"
+                  title="Select a time on today's working day"
+                  value={customTime}
+                  max={currentTime}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Extra guard: reject times beyond the current minute
+                    if (val && val > currentTime) return;
+                    setCustomTime(val);
+                  }}
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Time is applied to <strong>today</strong> ({format(new Date(), 'EEE, MMM d yyyy')}).
+                  Cannot be set in the future or on a different day.
+                </p>
+              </div>
             )}
           </div>
 
