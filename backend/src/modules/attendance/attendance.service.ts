@@ -627,9 +627,14 @@ export class AttendanceService {
       // Track whether the shift window has ended
       isShiftOver = now > shiftEnd;
 
-      // Late alert: only show while shift is still ongoing and employee never clocked in today
-      if (!hasClockedInToday && now > shiftStart && now <= shiftEnd && !dayStatus.isNonWorking) {
-        const minutesLate = (now.getTime() - shiftStart.getTime()) / 60000;
+      // Late alert: only show while shift is still ongoing and employee never clocked in today.
+      // Note: We use the raw shift start (sHours, sMins) for the banner so it appears 
+      // immediately when the countdown hits zero, even if the grace period hasn't ended.
+      const bannerLateStart = new Date(today);
+      bannerLateStart.setHours(sHours, sMins, 0, 0);
+
+      if (!hasClockedInToday && now >= bannerLateStart && now <= shiftEnd && !dayStatus.isNonWorking) {
+        const minutesLate = (now.getTime() - bannerLateStart.getTime()) / 60000;
         lateStatus = minutesLate > 180 ? 'persistent_late' : 'late';
       }
 
@@ -739,6 +744,8 @@ export class AttendanceService {
       daysWorkedThisWeek,
       isHoliday: holidayName !== null,
       holidayName,
+      // Used by mobile app to calculate the pre-shift countdown banner
+      shiftStartTime: shift ? shift.startTime : null,
     };
   }
 

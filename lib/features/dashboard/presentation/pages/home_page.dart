@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_bloc.dar
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_event.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.dart';
 import 'package:tk_clocking_system/features/dashboard/domain/entities/home_data_entity.dart';
+import 'package:tk_clocking_system/features/dashboard/data/models/home_data_model.dart';
 // LateStatus enum is defined in home_data_entity.dart
 import 'package:tk_clocking_system/features/profile/presentation/pages/profile_page.dart';
 import 'package:tk_clocking_system/features/attendance/presentation/pages/history_page.dart';
@@ -90,31 +92,92 @@ class _DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<_DashboardTab> {
-  late Future<HomeDataEntity> _homeDataFuture;
+  HomeDataEntity? _data;
+  bool _isLoading = true;
   int _pendingCount = 0;
+  Timer? _autoRefreshTimer;
+  bool _isRefetching = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initData();
     _checkPending();
+
+    // Auto-refresh every 60 s silently.
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _loadData(silent: true);
+    });
   }
 
-  void _loadData() {
-    _homeDataFuture = sl<AttendanceRepository>().getHomeData().then((res) {
-      return res.fold(
-        (f) => throw Exception(f.message),
-        (data) => data,
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initData() async {
+    // 1. Try to load from cache immediately for "Instant-On"
+    final box = Hive.box(AppConstants.userBox);
+    final cached = box.get('home_data_cache');
+    if (cached != null) {
+      try {
+        setState(() {
+          _data = HomeDataModel.fromJson(Map<String, dynamic>.from(cached));
+          _isLoading = false;
+        });
+      } catch (_) {
+        // Cache corrupted, just move on to network load
+      }
+    }
+
+    // 2. Load from network
+    await _loadData();
+  }
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (_isRefetching) return;
+    _isRefetching = true;
+
+    if (!silent && _data == null) {
+      setState(() => _isLoading = true);
+    }
+
+    final res = await sl<AttendanceRepository>().getHomeData();
+
+    if (mounted) {
+      res.fold(
+        (f) {
+          if (!silent) {
+            // Optional: show error snackbar if not silent
+          }
+          setState(() => _isLoading = false);
+        },
+        (data) {
+          setState(() {
+            _data = data;
+            _isLoading = false;
+          });
+          // Update Cache
+          if (data is HomeDataModel) {
+            final box = Hive.box(AppConstants.userBox);
+            box.put('home_data_cache', data.toJson());
+          }
+        },
       );
-    });
+    }
+    _isRefetching = false;
   }
 
   void _checkPending() {
     final box = Hive.box<Map>(AppConstants.attendanceBox);
     setState(() {
-      _pendingCount = box.values.where((e) => e['sync_status'] == SyncStatus.pending.value).length;
+      _pendingCount = box.values
+          .where((e) => e['sync_status'] == SyncStatus.pending.value)
+          .length;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -126,13 +189,14 @@ class _DashboardTabState extends State<_DashboardTab> {
       listener: (context, state) {
         if (state is AttendanceSynced || state is AttendanceRecorded) {
           _checkPending();
+          _loadData(silent: true);
         }
       },
       child: VisibilityDetector(
         key: const Key('dashboard-tab'),
         onVisibilityChanged: (info) {
           if (info.visibleFraction > 0.5) {
-            _loadData();
+            _loadData(silent: true);
             _checkPending();
             context.read<AuthBloc>().add(const AuthSyncProfileEvent());
           }
@@ -140,110 +204,171 @@ class _DashboardTabState extends State<_DashboardTab> {
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {
-              setState(() {
-                _loadData();
-                _checkPending();
-              });
+              await _loadData(silent: true);
               context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-              await _homeDataFuture;
             },
             child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-              SliverAppBar(
-                floating: true,
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Good ${_greeting()},',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Text(
-                      user?.fullName.split(' ').first ?? 'Employee',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  IconButton(
-                    icon: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: colorScheme.primaryContainer,
-                      child: Text(
-                        user?.initials ?? '?',
-                        style: TextStyle(
-                          color: colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                SliverAppBar(
+                  floating: true,
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Good ${_greeting()},',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                    onPressed: () {},
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    if (_pendingCount > 0)
-                      _OfflineWarningBanner(
-                        count: _pendingCount,
-                        onSync: () {
-                          context
-                              .read<AttendanceBloc>()
-                              .add(const AttendanceSyncEvent());
-                        },
+                      Text(
+                        user?.fullName.split(' ').first ?? 'Employee',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    if (_pendingCount > 0) const SizedBox(height: 16),
-                    FutureBuilder<HomeDataEntity>(
-                      future: _homeDataFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return const Center(
-                              child: Text('Failed to load data.'));
-                        }
-                        final data = snapshot.data;
-                        if (data == null) return const SizedBox.shrink();
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _LiveStatusBanner(data: data),
-                            const SizedBox(height: 16),
-                            _QuickActionsCard(),
-                            const SizedBox(height: 16),
-                            _StatsRow(
-                                todayHours: data.todayHours,
-                                daysWorked: data.daysWorkedThisWeek),
-                            const SizedBox(height: 16),
-                            if (data.lastActivityType != null &&
-                                data.lastActivityTime != null)
-                              _LastActivitySnippet(
-                                  type: data.lastActivityType!,
-                                  time: data.lastActivityTime!),
-                            const SizedBox(height: 16),
-                          ],
-                        );
-                      },
+                    ],
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: colorScheme.primaryContainer,
+                        child: Text(
+                          user?.initials ?? '?',
+                          style: TextStyle(
+                            color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      onPressed: () {},
                     ),
-                  ]),
+                    const SizedBox(width: 8),
+                  ],
                 ),
-              ),
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      if (_pendingCount > 0) ...[
+                        _OfflineWarningBanner(
+                          count: _pendingCount,
+                          onSync: () {
+                            context
+                                .read<AttendanceBloc>()
+                                .add(const AttendanceSyncEvent());
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (_isLoading && _data == null)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 40),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_data == null)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 40),
+                            child: Text('Failed to load data. Pull to retry.'),
+                          ),
+                        )
+                      else
+                        _buildHomeContent(context, _data!),
+                    ]),
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHomeContent(BuildContext context, HomeDataEntity data) {
+    // ── Local Time Override ──────────────────────────────────────────────────
+    // Use the phone's own clock to decide if the shift has started.
+    // This removes the dependency on server timing for the Late banner.
+    bool isPastStartTime = false;
+    LateStatus effectiveLateStatus = data.lateStatus;
+
+    if (data.shiftStartTime != null) {
+      final now = DateTime.now();
+      final parts = data.shiftStartTime!.split(':');
+      if (parts.length == 2) {
+        final shiftStart = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          int.tryParse(parts[0]) ?? 0,
+          int.tryParse(parts[1]) ?? 0,
+        );
+        isPastStartTime = now.isAfter(shiftStart);
+
+        // If the server hasn't caught up yet (still says 'none') but the
+        // phone clock says the shift has started, compute it locally.
+        if (isPastStartTime &&
+            !data.isClockedIn &&
+            !data.forgotToClockOut &&
+            !data.isWeekend &&
+            !data.isHoliday &&
+            !data.isVacation &&
+            effectiveLateStatus == LateStatus.none) {
+          final minutesLate = now.difference(shiftStart).inMinutes;
+          effectiveLateStatus =
+              minutesLate > 180 ? LateStatus.persistentLate : LateStatus.late;
+        }
+      }
+    }
+
+    // Show countdown banner only in the 2-hour pre-shift window
+    // and only when the employee hasn't clocked in / it's a working day.
+    final showCountdown = data.shiftStartTime != null &&
+        !isPastStartTime &&
+        !data.isClockedIn &&
+        !data.forgotToClockOut &&
+        !data.isWeekend &&
+        !data.isHoliday &&
+        !data.isVacation &&
+        !data.noShiftAssigned &&
+        effectiveLateStatus == LateStatus.none;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showCountdown) ...[
+          _ShiftCountdownBanner(
+            shiftStartTime: data.shiftStartTime!,
+            onFinished: () async {
+              // Reset the guard so the forced fetch is never blocked,
+              // then wait 2s for the server clock to catch up before syncing.
+              _isRefetching = false;
+              await Future.delayed(const Duration(seconds: 2));
+              _loadData(silent: true);
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+        _LiveStatusBanner(
+          data: data,
+          lateStatusOverride: effectiveLateStatus,
+        ),
+        const SizedBox(height: 16),
+        _QuickActionsCard(),
+        const SizedBox(height: 16),
+        _StatsRow(
+            todayHours: data.todayHours, daysWorked: data.daysWorkedThisWeek),
+        const SizedBox(height: 16),
+        if (data.lastActivityType != null && data.lastActivityTime != null)
+          _LastActivitySnippet(
+              type: data.lastActivityType!, time: data.lastActivityTime!),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
@@ -280,7 +405,8 @@ class _OfflineWarningBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 'You have $count pending offline record(s). Tap to sync.',
-                style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: Colors.deepOrange, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -290,13 +416,132 @@ class _OfflineWarningBanner extends StatelessWidget {
   }
 }
 
-class _LiveStatusBanner extends StatelessWidget {
-  final HomeDataEntity data;
+// ── Pre-shift countdown banner ─────────────────────────────────────────────────
+/// Shows a live countdown when the employee's shift starts within 2 hours.
+/// Automatically disappears the moment the shift starts.
+class _ShiftCountdownBanner extends StatefulWidget {
+  final String shiftStartTime; // "HH:mm" 24-hour format from backend
+  final VoidCallback? onFinished;
 
-  const _LiveStatusBanner({required this.data});
+  const _ShiftCountdownBanner({
+    required this.shiftStartTime,
+    this.onFinished,
+  });
+
+  @override
+  State<_ShiftCountdownBanner> createState() => _ShiftCountdownBannerState();
+}
+
+class _ShiftCountdownBannerState extends State<_ShiftCountdownBanner> {
+  Timer? _timer;
+  Duration _remaining = Duration.zero;
+  bool _active = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _compute();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _compute());
+  }
+
+  void _compute() {
+    final now = DateTime.now();
+    final parts = widget.shiftStartTime.split(':');
+    if (parts.length < 2) return;
+    final shiftStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      int.tryParse(parts[0]) ?? 0,
+      int.tryParse(parts[1]) ?? 0,
+    );
+    final diff = shiftStart.difference(now);
+    // Active only while shift is 0–2 hours away and hasn't started yet.
+    final isActive = diff.inSeconds > 0 && diff <= const Duration(hours: 2);
+
+    if (mounted) {
+      setState(() {
+        _remaining = diff.isNegative ? Duration.zero : diff;
+        _active = isActive;
+      });
+    }
+
+    // Only stop ticking once the shift has actually started or reached exactly zero.
+    // Keeping the timer alive before the window means it will automatically
+    // "wake up" and show the banner when the 2-hour mark is reached.
+    if (diff.isNegative || diff.inSeconds <= 0) {
+      _timer?.cancel();
+      widget.onFinished?.call();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_active) return const SizedBox.shrink();
+
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes % 60;
+    final s = _remaining.inSeconds % 60;
+
+    final timeStr = h > 0
+        ? '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s'
+        : '${m}m ${s.toString().padLeft(2, '0')}s';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.access_alarm_rounded, color: Colors.blue, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Shift Starting Soon',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.blue.shade700,
+                      ),
+                ),
+                Text(
+                  'Work starts in $timeStr',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.blue.shade600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveStatusBanner extends StatelessWidget {
+  final HomeDataEntity data;
+
+  /// Local override for the late status — used when the phone clock says the
+  /// shift has started but the server hasn't caught up yet.
+  final LateStatus? lateStatusOverride;
+
+  const _LiveStatusBanner({required this.data, this.lateStatusOverride});
+
+  @override
+  Widget build(BuildContext context) {
+    final lateStatus = lateStatusOverride ?? data.lateStatus;
     // ── Forgot to clock out (shift ended > 1h ago, still clocked in) ────────
     if (data.noShiftAssigned) {
       return _buildBanner(
@@ -318,7 +563,8 @@ class _LiveStatusBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 32),
+            const Icon(Icons.warning_amber_rounded,
+                color: Colors.red, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -346,7 +592,7 @@ class _LiveStatusBanner extends StatelessWidget {
     }
 
     // ── Late banners — only shown during active shift hours ──────────────────
-    if (data.lateStatus == LateStatus.persistentLate) {
+    if (lateStatus == LateStatus.persistentLate) {
       // > 3 hours late: escalated, deep-orange urgent alert
       return Container(
         padding: const EdgeInsets.all(16),
@@ -357,7 +603,8 @@ class _LiveStatusBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.running_with_errors_rounded, color: Colors.deepOrange, size: 32),
+            const Icon(Icons.running_with_errors_rounded,
+                color: Colors.deepOrange, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -384,7 +631,7 @@ class _LiveStatusBanner extends StatelessWidget {
       );
     }
 
-    if (data.lateStatus == LateStatus.late) {
+    if (lateStatus == LateStatus.late) {
       // < 3 hours late: standard orange warning
       return Container(
         padding: const EdgeInsets.all(16),
@@ -395,14 +642,15 @@ class _LiveStatusBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.access_time_filled_rounded, color: Colors.orange, size: 32),
+            const Icon(Icons.access_time_filled_rounded,
+                color: Colors.orange, size: 32),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'You are Late!',
+                    'Your shift has started',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: Colors.orange.shade800,
@@ -511,7 +759,11 @@ class _LiveStatusBanner extends StatelessWidget {
     );
   }
 
-  Widget _buildBanner(BuildContext context, {required Color color, required IconData icon, required String title, required String subtitle}) {
+  Widget _buildBanner(BuildContext context,
+      {required Color color,
+      required IconData icon,
+      required String title,
+      required String subtitle}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -609,7 +861,9 @@ class _QuickActionsCard extends StatelessWidget {
                     icon: Icons.history_rounded,
                     color: colorScheme.primary,
                     onTap: () {
-                      context.findAncestorStateOfType<HomePageState>()?.setTab(1);
+                      context
+                          .findAncestorStateOfType<HomePageState>()
+                          ?.setTab(1);
                     },
                   ),
                 ),
@@ -620,7 +874,9 @@ class _QuickActionsCard extends StatelessWidget {
                     icon: Icons.analytics_rounded,
                     color: Colors.orange,
                     onTap: () {
-                      context.findAncestorStateOfType<HomePageState>()?.setTab(2);
+                      context
+                          .findAncestorStateOfType<HomePageState>()
+                          ?.setTab(2);
                     },
                   ),
                 ),
@@ -768,5 +1024,3 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-

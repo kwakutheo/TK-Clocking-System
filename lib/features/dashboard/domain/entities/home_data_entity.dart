@@ -33,6 +33,8 @@ class HomeDataEntity extends Equatable {
   final String? vacationName;
   final bool isOnBreak;
   final bool noShiftAssigned;
+  /// Shift start time in "HH:mm" format, used for the pre-shift countdown banner.
+  final String? shiftStartTime;
 
   const HomeDataEntity({
     this.lastActivityType,
@@ -54,6 +56,7 @@ class HomeDataEntity extends Equatable {
     this.isVacation = false,
     this.vacationName,
     this.noShiftAssigned = false,
+    this.shiftStartTime,
   });
 
   @override
@@ -77,5 +80,6 @@ class HomeDataEntity extends Equatable {
         isVacation,
         vacationName,
         noShiftAssigned,
+        shiftStartTime,
       ];
 }

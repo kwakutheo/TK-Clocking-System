@@ -22,6 +22,7 @@ class HomeDataModel extends HomeDataEntity {
     super.vacationName,
     super.isOnBreak,
     super.noShiftAssigned,
+    super.shiftStartTime,
   });
 
   factory HomeDataModel.fromJson(Map<String, dynamic> json) {
@@ -67,8 +68,36 @@ class HomeDataModel extends HomeDataEntity {
       isWeekend: json['isWeekend'] as bool? ?? false,
       isVacation: json['isVacation'] as bool? ?? false,
       vacationName: json['vacationName'] as String?,
-      noShiftAssigned: json['noShiftAssigned'] as bool? ?? false,
-      isOnBreak: json['isOnBreak'] as bool? ?? false,
+      shiftStartTime: json['shiftStartTime'] as String?,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'lastActivity': lastActivityType != null
+          ? {
+              'type': lastActivityType,
+              'timestamp': lastActivityTime,
+            }
+          : null,
+      'isClockedIn': isClockedIn,
+      'clockedInTime': clockedInTime,
+      'isOnBreak': isOnBreak,
+      'forgotToClockOut': forgotToClockOut,
+      'isLateToday': isLateToday,
+      'lateStatus': lateStatus.name,
+      'isShiftOver': isShiftOver,
+      'isAbsentToday': isAbsentToday,
+      'isWeekend': isWeekend,
+      'isVacation': isVacation,
+      'vacationName': vacationName,
+      'noShiftAssigned': noShiftAssigned,
+      'todayHours': todayHours,
+      'weekHours': weekHours,
+      'daysWorkedThisWeek': daysWorkedThisWeek,
+      'isHoliday': isHoliday,
+      'holidayName': holidayName,
+      'shiftStartTime': shiftStartTime,
+    };
   }
 }
