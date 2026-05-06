@@ -1,5 +1,21 @@
-import { Controller, Get, Post, Body, Query, UseGuards, ParseIntPipe, DefaultValuePipe, Param, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+  DefaultValuePipe,
+  Param,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
 import { AttendanceReportService } from './attendance-report.service';
 import { EmployeesService } from '../employees/employees.service';
@@ -11,7 +27,6 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../users/user.entity';
-import { UserRole } from '../../common/enums';
 
 @ApiTags('Attendance')
 @ApiBearerAuth()
@@ -23,6 +38,20 @@ export class AttendanceController {
     private readonly reportService: AttendanceReportService,
     private readonly employeesService: EmployeesService,
   ) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List attendance records' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'employee_id', required: false, type: String })
+  list(
+    @CurrentUser() user: User,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('employee_id') employeeId?: string,
+  ) {
+    return this.service.getHistory(user.id, user.role, page, limit, employeeId);
+  }
 
   @Get('my-report')
   @ApiOperation({ summary: 'Get own detailed monthly attendance report' })
@@ -50,7 +79,9 @@ export class AttendanceController {
   @Get('report/:employeeId')
   @UseGuards(PermissionsGuard)
   @RequirePermissions('attendance.view')
-  @ApiOperation({ summary: 'Get detailed monthly attendance report for an employee' })
+  @ApiOperation({
+    summary: 'Get detailed monthly attendance report for an employee',
+  })
   getMonthlyReport(
     @Param('employeeId') employeeId: string,
     @Query('month', ParseIntPipe) month: number,
@@ -62,7 +93,9 @@ export class AttendanceController {
   @Get('report/:employeeId/term/:termId')
   @UseGuards(PermissionsGuard)
   @RequirePermissions('attendance.view')
-  @ApiOperation({ summary: 'Get detailed term attendance report for an employee' })
+  @ApiOperation({
+    summary: 'Get detailed term attendance report for an employee',
+  })
   getTermReport(
     @Param('employeeId') employeeId: string,
     @Param('termId') termId: string,
@@ -72,28 +105,21 @@ export class AttendanceController {
 
   @Post('clock-in')
   @ApiOperation({ summary: 'Record a clock-in, clock-out, or break event' })
-  record(
-    @CurrentUser() user: User,
-    @Body() dto: RecordAttendanceDto,
-  ) {
+  record(@CurrentUser() user: User, @Body() dto: RecordAttendanceDto) {
     return this.service.record(user.id, dto);
   }
 
   @Post('qr-clock')
-  @ApiOperation({ summary: 'Record attendance via QR code scan (no GPS required)' })
-  qrClock(
-    @CurrentUser() user: User,
-    @Body() dto: QrClockDto,
-  ) {
+  @ApiOperation({
+    summary: 'Record attendance via QR code scan (no GPS required)',
+  })
+  qrClock(@CurrentUser() user: User, @Body() dto: QrClockDto) {
     return this.service.recordViaQr(user.id, dto);
   }
 
   @Post('sync')
   @ApiOperation({ summary: 'Batch sync offline attendance records' })
-  syncOffline(
-    @CurrentUser() user: User,
-    @Body() dto: SyncOfflineDto,
-  ) {
+  syncOffline(@CurrentUser() user: User, @Body() dto: SyncOfflineDto) {
     return this.service.syncOffline(user.id, dto);
   }
 
@@ -104,7 +130,9 @@ export class AttendanceController {
   }
 
   @Get('history')
-  @ApiOperation({ summary: 'Get attendance history (own for employees, all for admins)' })
+  @ApiOperation({
+    summary: 'Get attendance history (own for employees, all for admins)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   getHistory(

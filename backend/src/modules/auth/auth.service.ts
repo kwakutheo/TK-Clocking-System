@@ -29,8 +29,11 @@ export class AuthService {
   ) {}
 
   // ── Validate credentials (used by LocalStrategy) ──────────────────────────
-  async validateUser(identifier: string, password: string): Promise<User | null> {
-    const user = await this.users.findByUsername(identifier);
+  async validateUser(
+    identifier: string,
+    password: string,
+  ): Promise<User | null> {
+    const user = await this.users.findByIdentifier(identifier);
     if (!user) return null;
 
     const matches = await bcrypt.compare(password, user.passwordHash);
@@ -53,8 +56,10 @@ export class AuthService {
     ]);
 
     const publicUser = this.users.toPublic(user);
-    const employee = await this.employees.findByUserId(user.id).catch(() => null);
-    
+    const employee = await this.employees
+      .findByUserId(user.id)
+      .catch(() => null);
+
     if (employee && employee.status !== 'active') {
       throw new UnauthorizedException(
         `Account disabled or suspended. Status: ${employee.status}. Please contact HR.`,
@@ -108,7 +113,9 @@ export class AuthService {
   // ── Get current user ───────────────────────────────────────────────────────
   async me(user: User) {
     const publicUser = this.users.toPublic(user);
-    const employee = await this.employees.findByUserId(user.id).catch(() => null);
+    const employee = await this.employees
+      .findByUserId(user.id)
+      .catch(() => null);
     if (employee) {
       (publicUser as any).employeeId = employee.id;
     }
@@ -118,16 +125,23 @@ export class AuthService {
   // ── Request Password Reset ──────────────────────────────────────────────────
   async requestPasswordReset(dto: RequestPasswordResetDto) {
     const user = await this.users.findByIdentifier(dto.email);
-    
+
     // We only allow this for dashboard users.
-    if (!user || ![UserRole.SUPER_ADMIN, UserRole.HR_ADMIN, UserRole.SUPERVISOR].includes(user.role)) {
+    if (
+      !user ||
+      ![UserRole.SUPER_ADMIN, UserRole.HR_ADMIN, UserRole.SUPERVISOR].includes(
+        user.role,
+      )
+    ) {
       // Return a successful response anyway to prevent email enumeration.
-      return { message: 'If that email is registered, a reset link has been sent.' };
+      return {
+        message: 'If that email is registered, a reset link has been sent.',
+      };
     }
 
     // Generate 6-digit PIN
     const pin = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Update user in database
     await this.users.update(user.id, {
       resetPin: pin,
@@ -139,11 +153,15 @@ export class AuthService {
 
     if (!hasSmtpConfig) {
       // For local development or when SMTP is not configured, log the PIN
-      console.warn('\n========================================================');
+      console.warn(
+        '\n========================================================',
+      );
       console.warn(`⚠️ SMTP credentials not configured in .env file!`);
       console.warn(`Email would have been sent to: ${user.email}`);
       console.warn(`Password Reset PIN is: ${pin}`);
-      console.warn('========================================================\n');
+      console.warn(
+        '========================================================\n',
+      );
     } else {
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -173,13 +191,18 @@ export class AuthService {
       }
     }
 
-    return { message: 'If that email is registered, a reset link has been sent.' };
+    return {
+      message: 'If that email is registered, a reset link has been sent.',
+    };
   }
 
   // ── Complete Password Reset ────────────────────────────────────────────────
   async completePasswordReset(dto: CompletePasswordResetDto) {
     const user = await this.users.findByUsername(dto.username);
-    if (!user) throw new UnauthorizedException('Username not found. Please check your username and try again.');
+    if (!user)
+      throw new UnauthorizedException(
+        'Username not found. Please check your username and try again.',
+      );
 
     if (!user.requiresPasswordChange || user.resetPin !== dto.pin) {
       throw new UnauthorizedException('Invalid PIN or no reset requested.');

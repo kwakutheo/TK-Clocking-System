@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:visibility_detector/visibility_detector.dart';
-import 'package:tk_clocking_system/core/errors/failures.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
 import 'package:tk_clocking_system/features/attendance/domain/entities/term_report_entity.dart';
 import 'package:tk_clocking_system/features/attendance/domain/repositories/attendance_repository.dart';
@@ -152,14 +151,14 @@ class _SummaryGrid extends StatelessWidget {
         _StatCard(
           label: 'Lateness',
           value: '${summary.daysLate}d',
-          subtitle: '${_formatMins(summary.totalLateMinutes)}',
+          subtitle: _formatMins(summary.totalLateMinutes),
           icon: Icons.warning_rounded,
           color: Colors.orange,
         ),
         _StatCard(
           label: 'Early Outs',
           value: '${summary.daysEarlyDeparture}d',
-          subtitle: '${_formatMins(summary.totalEarlyOutMinutes)}',
+          subtitle: _formatMins(summary.totalEarlyOutMinutes),
           icon: Icons.directions_run_rounded,
           color: Colors.purple,
         ),

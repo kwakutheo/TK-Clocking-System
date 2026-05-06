@@ -1,8 +1,10 @@
 /// Application-wide constants.
 abstract final class AppConstants {
   // ── API ───────────────────────────────────────────────────────────────────
-  static String baseUrl =
-      'http://10.68.129.141:3000/api/v1'; // physical device → host PC
+  static String baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.68.129.141:3000/api/v1',
+  ); // physical device → host PC
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
@@ -31,57 +33,3 @@ abstract final class AppConstants {
   // ── Retry ─────────────────────────────────────────────────────────────────
   static const int maxSyncRetries = 3;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

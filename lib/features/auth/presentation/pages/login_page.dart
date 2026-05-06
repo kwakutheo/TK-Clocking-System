@@ -347,12 +347,14 @@ class _LoginPageState extends State<LoginPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: colorScheme.errorContainer.withOpacity(0.4),
+                          color:
+                              colorScheme.errorContainer.withValues(alpha: 0.4),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                            Icon(Icons.error_outline,
+                                color: colorScheme.error, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -381,7 +383,8 @@ class _LoginPageState extends State<LoginPage> {
                           });
                           try {
                             final api = sl<ApiClient>();
-                            await api.post('/auth/complete-password-reset', data: {
+                            await api
+                                .post('/auth/complete-password-reset', data: {
                               'username': usernameCtrl.text.trim(),
                               'pin': pinCtrl.text.trim(),
                               'newPassword': newPasswordCtrl.text,
@@ -390,7 +393,8 @@ class _LoginPageState extends State<LoginPage> {
                             Navigator.pop(modalContext);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Password updated successfully! You can now log in.'),
+                                content: Text(
+                                    'Password updated successfully! You can now log in.'),
                                 backgroundColor: Colors.green,
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -401,7 +405,8 @@ class _LoginPageState extends State<LoginPage> {
                               isSubmitting = false;
                               errorMessage = msg is List
                                   ? msg.join(', ')
-                                  : msg?.toString() ?? 'Failed to reset password';
+                                  : msg?.toString() ??
+                                      'Failed to reset password';
                             });
                           } catch (e) {
                             setModalState(() {

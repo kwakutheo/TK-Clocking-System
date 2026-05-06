@@ -20,7 +20,9 @@ export class UsersService {
   async findByIdentifier(identifier: string): Promise<User | null> {
     return this.repo
       .createQueryBuilder('user')
-      .where('user.email = :id OR user.phone = :id', { id: identifier })
+      .where('user.username = :id OR user.email = :id OR user.phone = :id', {
+        id: identifier,
+      })
       .getOne();
   }
 
@@ -47,7 +49,10 @@ export class UsersService {
     return this.repo.save(user);
   }
 
-  async update(id: string, data: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User> {
+  async update(
+    id: string,
+    data: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>,
+  ): Promise<User> {
     await this.repo.update(id, data);
     return this.findById(id);
   }

@@ -16,7 +16,6 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
 import { APP_GUARD } from '@nestjs/core';
 
-
 @Module({
   imports: [
     // ── Config ────────────────────────────────────────────────────────────────
@@ -36,7 +35,7 @@ import { APP_GUARD } from '@nestjs/core';
         password: config.get<string>('DB_PASS', 'postgres'),
         database: config.get<string>('DB_NAME', 'tk_clocking'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
+        synchronize: config.get<string>('NODE_ENV') !== 'production',
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),

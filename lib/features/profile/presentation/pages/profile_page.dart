@@ -385,19 +385,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
-  String _roleLabel(UserRole role) {
-    switch (role) {
-      case UserRole.employee:
-        return 'Employee';
-      case UserRole.supervisor:
-        return 'Supervisor';
-      case UserRole.hrAdmin:
-        return 'HR Admin';
-      case UserRole.superAdmin:
-        return 'Super Admin';
-    }
-  }
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────

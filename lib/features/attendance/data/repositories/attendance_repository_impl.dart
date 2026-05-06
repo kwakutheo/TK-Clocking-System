@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -171,7 +170,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
       );
 
       if (reportResponse.data == null) {
-         return const Left(ServerFailure('Empty report data.'));
+        return const Left(ServerFailure('Empty report data.'));
       }
 
       final report = TermReportModel.fromJson(reportResponse.data!);
@@ -191,7 +190,8 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   @override
   Future<Either<Failure, HomeDataEntity>> getHomeData() async {
     try {
-      final response = await _api.get<Map<String, dynamic>>(ApiEndpoints.homeData);
+      final response =
+          await _api.get<Map<String, dynamic>>(ApiEndpoints.homeData);
       if (response.data == null) {
         return const Left(ServerFailure('Empty home data.'));
       }
