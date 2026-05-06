@@ -1008,19 +1008,36 @@ export class AttendanceService {
     }
 
     let absentToday = 0;
+    const absentEmployees: {
+      id: string;
+      fullName: string;
+      employeeCode: string;
+      branch: string | null;
+      shift: string | null;
+    }[] = [];
+
     if (!dayStatus.isNonWorking) {
       const allEmployees = await this.employees.findAll();
       allEmployees.forEach(emp => {
-        if (!employeeLogs[emp.id] || !employeeLogs[emp.id].some(l => l.type === AttendanceType.CLOCK_IN)) {
-          if (emp.shift) {
-            const [sHours, sMins] = emp.shift.startTime.split(':').map(Number);
-            const shiftStart = new Date(startOfDay);
-            shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
-            
-            if (evaluationTime > shiftStart) {
-              absentToday++;
-            }
-          }
+        if (
+          emp.status !== 'active' ||
+          !emp.shift ||
+          (employeeLogs[emp.id] && employeeLogs[emp.id].some(l => l.type === AttendanceType.CLOCK_IN))
+        ) return;
+
+        const [sHours, sMins] = emp.shift.startTime.split(':').map(Number);
+        const shiftStart = new Date(startOfDay);
+        shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
+
+        if (evaluationTime > shiftStart) {
+          absentToday++;
+          absentEmployees.push({
+            id: emp.id,
+            fullName: (emp as any).user?.fullName ?? 'Unknown',
+            employeeCode: emp.employeeCode,
+            branch: (emp as any).branch?.name ?? null,
+            shift: `${emp.shift.startTime} – ${emp.shift.endTime}`,
+          });
         }
       });
     }
@@ -1030,6 +1047,7 @@ export class AttendanceService {
       currentlyOnSite,
       lateArrivals,
       absentToday,
+      absentEmployees,
       earlyOuts,
       forgotClockOut,
       dayStatus,

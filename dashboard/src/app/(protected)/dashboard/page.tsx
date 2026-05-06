@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { attendanceApi, employeesApi, branchesApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { AttendanceChart } from '@/components/attendance-chart';
-import { ActivityFeed } from '@/components/activity-feed';
 import { StatCardSkeleton, TableSkeleton } from '@/components/skeleton';
 import { AdminManualClockModal } from '@/components/admin-manual-clock-modal';
 import {
@@ -248,20 +247,78 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {isToday && (
-          <div className="table-wrap" style={{ padding: '20px 0' }}>
-            <div className="table-header" style={{ padding: '0 24px 12px' }}>
-              <span className="table-title">Recent Activity</span>
-            </div>
-            {isLoading ? (
-              <div className="loading-center" style={{ padding: 40 }}>
-                <div className="spinner" />
-              </div>
-            ) : (
-              <ActivityFeed logs={liveList} />
+        <div className="table-wrap" style={{ padding: '20px 0', display: 'flex', flexDirection: 'column' }}>
+          <div className="table-header" style={{ padding: '0 24px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="table-title">Absent {isToday ? 'Today' : 'This Day'}</span>
+            {!isLoading && !dashboardStats.dayStatus?.isNonWorking && (
+              <span style={{
+                fontSize: 12, fontWeight: 700, padding: '3px 10px',
+                borderRadius: 20, background: 'rgba(245,158,11,0.12)',
+                color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)',
+              }}>
+                {dashboardStats.absentToday ?? 0} missing
+              </span>
             )}
           </div>
-        )}
+
+          {isLoading ? (
+            <div className="loading-center" style={{ padding: 40 }}>
+              <div className="spinner" />
+            </div>
+          ) : dashboardStats.dayStatus?.isNonWorking ? (
+            <div className="empty-state" style={{ padding: '24px 20px' }}>
+              <div className="empty-state-icon"><Calendar size={32} /></div>
+              <p className="empty-state-text" style={{ fontSize: 13 }}>
+                No absences — {dashboardStats.dayStatus.name ?? 'Non-working day'}.
+              </p>
+            </div>
+          ) : (dashboardStats.absentEmployees ?? []).length === 0 ? (
+            <div className="empty-state" style={{ padding: '24px 20px' }}>
+              <div className="empty-state-icon" style={{ color: 'var(--success)' }}>
+                <Users size={32} />
+              </div>
+              <p className="empty-state-text" style={{ fontSize: 13 }}>
+                All active employees have clocked in! 🎉
+              </p>
+            </div>
+          ) : (
+            <div style={{ overflowY: 'auto', maxHeight: 340, padding: '0 4px' }}>
+              {(dashboardStats.absentEmployees ?? []).map((emp: any) => (
+                <div key={emp.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 24px',
+                  borderBottom: '1px solid var(--border)',
+                  transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(245,158,11,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div className="avatar" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', flexShrink: 0 }}>
+                    {emp.fullName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {emp.fullName}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      {emp.employeeCode}
+                      {emp.branch && <span> · {emp.branch}</span>}
+                    </div>
+                  </div>
+                  {emp.shift && (
+                    <div style={{
+                      fontSize: 11, color: '#f59e0b', fontWeight: 600,
+                      background: 'rgba(245,158,11,0.1)', padding: '3px 8px',
+                      borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0,
+                    }}>
+                      {emp.shift}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Live attendance feed */}
