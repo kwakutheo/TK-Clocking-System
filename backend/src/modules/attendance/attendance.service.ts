@@ -331,6 +331,26 @@ export class AttendanceService {
 
     const now = dto.timestamp ? new Date(dto.timestamp) : new Date();
 
+    // ── Non-working day guard ─────────────────────────────────────────────
+    const dayStatus = await this._checkNonWorkingDay(now);
+    if (dayStatus.isNonWorking) {
+      throw new BadRequestException(
+        `Action denied: The selected date is a ${dayStatus.name}. Manual clocking is not allowed on non-working days.`,
+      );
+    }
+
+    // ── Real-Time Ceiling Guard ─────────────────────────────────────────────
+    if (now > new Date()) {
+      throw new BadRequestException('The selected time cannot be in the future.');
+    }
+
+    // ── Shift Boundary Guard ────────────────────────────────────────────────
+    if (targetEmployee.shift && !this._isWithinShiftHours(now, targetEmployee.shift)) {
+      throw new BadRequestException(
+        `Action denied: Manual clocking must be within the employee's assigned shift hours (${targetEmployee.shift.startTime} - ${targetEmployee.shift.endTime}).`,
+      );
+    }
+
     // ── Determine today's boundary relative to the chosen timestamp ──────────
     const dayStart = new Date(now);
     dayStart.setHours(0, 0, 0, 0);
@@ -1122,6 +1142,10 @@ export class AttendanceService {
       }
     }
 
-    return date >= shiftStart && date <= shiftEnd;
+    // Expand the window to start 2 hours before the actual shift time
+    const windowStart = new Date(shiftStart);
+    windowStart.setHours(windowStart.getHours() - 2);
+
+    return date >= windowStart && date <= shiftEnd;
   }
 }

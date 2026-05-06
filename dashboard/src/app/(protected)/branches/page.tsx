@@ -503,7 +503,7 @@ export default function BranchesPage() {
               {error && <div className="alert alert-danger">{error}</div>}
               <div className="form-grid">
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label htmlFor="branchName">Branch Name</label>
+                  <label htmlFor="branchName">Branch Name <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <input
                     id="branchName"
                     className="form-input"
@@ -552,7 +552,7 @@ export default function BranchesPage() {
                   </span>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="latitude">Latitude</label>
+                  <label htmlFor="latitude">Latitude <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <input
                     id="latitude"
                     className="form-input"
@@ -561,10 +561,11 @@ export default function BranchesPage() {
                     value={form.latitude}
                     onChange={(e) => setForm({ ...form, latitude: e.target.value })}
                     placeholder="e.g. 5.6037"
+                    required
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="longitude">Longitude</label>
+                  <label htmlFor="longitude">Longitude <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <input
                     id="longitude"
                     className="form-input"
@@ -573,10 +574,11 @@ export default function BranchesPage() {
                     value={form.longitude}
                     onChange={(e) => setForm({ ...form, longitude: e.target.value })}
                     placeholder="e.g. -0.1870"
+                    required
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="radius">Geofence Radius (meters)</label>
+                  <label htmlFor="radius">Geofence Radius (meters) <span style={{ color: 'var(--danger)' }}>*</span></label>
                   <input
                     id="radius"
                     className="form-input"
@@ -584,6 +586,7 @@ export default function BranchesPage() {
                     value={form.allowedRadius}
                     onChange={(e) => setForm({ ...form, allowedRadius: e.target.value })}
                     placeholder="300"
+                    required
                   />
                 </div>
               </div>

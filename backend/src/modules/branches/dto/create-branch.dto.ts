@@ -4,7 +4,7 @@ import {
   IsOptional,
   IsNumber,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBranchDto {
   @ApiProperty({ example: 'Accra HQ' })
@@ -12,18 +12,18 @@ export class CreateBranchDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiPropertyOptional({ example: 5.6037 })
+  @ApiProperty({ example: 5.6037 })
   @IsNumber()
-  @IsOptional()
-  latitude?: number;
+  @IsNotEmpty()
+  latitude: number;
 
-  @ApiPropertyOptional({ example: -0.1870 })
+  @ApiProperty({ example: -0.1870 })
   @IsNumber()
-  @IsOptional()
-  longitude?: number;
+  @IsNotEmpty()
+  longitude: number;
 
-  @ApiPropertyOptional({ example: 300 })
+  @ApiProperty({ example: 300 })
   @IsNumber()
-  @IsOptional()
-  allowedRadius?: number;
+  @IsNotEmpty()
+  allowedRadius: number;
 }

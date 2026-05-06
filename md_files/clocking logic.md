@@ -1,29 +1,49 @@
-The current clocking logic is **robust and well-thought-out**, particularly for a workforce management system. It isn't just a simple "log a timestamp" system; it’s a strict state machine.
+Ran command: `dir /s /b *attendance.service.ts`
+Listed directory src
+Listed directory attendance
+Viewed attendance.service.ts:1-800
+Viewed attendance.service.ts:801-1128
 
-Here is my engineering perspective on the strengths and potential risks of the current implementation:
+I've gone through the `AttendanceService` (the heart of the clocking logic). Here is a breakdown of the rules **already implemented** and how we can add your new ideas:
 
-### 🌟 The Good (Strengths)
-*   **Logical Integrity**: Using a state machine to prevent "Clock-Out before Clock-In" or "Duplicate Clock-In" is excellent. It ensures the database doesn't end up with "dirty" or impossible data.
-*   **Context Awareness**: The integration with `AcademicCalendar` and `Holidays` is a high-end feature. Most generic systems miss this, but it’s crucial for schools or government-aligned organizations in Ghana.
-*   **UX-Friendly Warnings**: The `EARLY_CLOCK_OUT` logic is smart. Instead of a hard block (which frustrates users in emergencies), it uses a "warn-and-override" approach.
-*   **Offline-First Readiness**: The backend is already built to handle batch syncing, which is vital for areas with unstable internet.
+### 🛡️ Existing Rules (Already in the System)
 
-### ⚠️ The Risks (Potential Issues)
-1.  **The "Overnight Shift" Bug**:
-    *   The code currently defines "Today" as `00:00` to `23:59`. 
-    *   **The Problem**: If a security guard starts at 10:00 PM on Monday and clocks out at 6:00 AM on Tuesday, the system might treat the Tuesday clock-out as an error (because there was no clock-in *on Tuesday*). The `_isWithinShiftHours` tries to handle this, but the "one clock-in per day" rule might still conflict.
-2.  **Geofence Spoofing**:
-    *   The system relies entirely on the coordinates sent by the mobile app. A tech-savvy user could use a "Fake GPS" app to clock in from home. 
-    *   *Improvement*: You might eventually want to add "Device ID" or "Wifi BSSID" checks for higher security.
-3.  **Performance Bottleneck**:
-    *   The `getHomeData` and `getDashboardStats` methods perform many database queries and manual loops. As the number of employees grows to 1,000+, these endpoints will become slow.
-    *   *Improvement*: Pre-calculating a `DailyAttendanceSummary` table would be much faster than calculating it on every request.
+1.  **Non-Working Day Guard:** No clocking is allowed on Weekends, Public Holidays, Academic Breaks, or Vacations.
+2.  **Shift Assignment Guard:** You cannot clock in if HR hasn't assigned you a specific work shift.
+3.  **The "One-Way" State Machine:**
+    - You can only **Clock In** once per day.
+    - You must **Clock In** before you can **Clock Out** or take a **Break**.
+    - You cannot **Clock Out** if you are currently on a **Break**.
+4.  **Geofencing:** You must be within the allowed radius of your assigned branch (e.g., 200m) or the system blocks the action.
+5.  **Strict Shift Hours:** Regular employees are currently **blocked** from Clocking In or taking Breaks if they are outside their shift hours (e.g., if their shift is 8 AM - 5 PM, they can't clock in at 7 AM or 6 PM).
+6.  **Early Out Warning:** If an employee tries to clock out before the shift ends, the system gives a warning but allows them to "Force" it if they have a reason.
+7.  **Admin Override:** Admins can clock in for others, and it bypasses the GPS check, but it currently lacks strict time-window enforcement.
 
-### 🚀 My Recommendations
-*   **Shift-Based Boundaries**: Instead of `00:00` to `23:59`, consider defining "Today" based on the employee's shift schedule. If a shift crosses midnight, "Today" should end when the shift ends.
-*   **Auto Clock-Out**: For employees who forget to clock out, you could implement a "Cron Job" that runs at 2:00 AM and auto-marks them as "Forgot to Clock Out" based on their shift end time.
-*   **Photo Verification**: Given the "Ghana-Ready" context, adding a "Selfie on Clock-In" (stored in S3/Minio) is a common requirement to prevent "buddy punching" (where one person clocks in for everyone).
+---
 
-**Overall Verdict**: The codebase is very professional. It's 90% ready for production; the remaining 10% is just handling those edge cases like night shifts and performance at scale.
+### 🚀 What we can add (Your New Rules)
 
-**What would you like to focus on first?** I can help implement the "Night Shift" fix or perhaps add the "Auto-Clock-Out" cron job.
+Based on our conversation, here is how we can upgrade these rules:
+
+#### 1. The "2-Hour Pre-Shift" Window
+
+- **Current Rule:** You can only clock in exactly when the shift starts.
+- **New Rule:** We allow the "Clock In" button to become active **2 hours before** the shift starts (matching your countdown banner). Any earlier than 2 hours, and the system blocks it.
+
+#### 2. The "Post-Shift" Lockout (with exceptions)
+
+- **Current Rule:** Clock In is blocked after shift end.
+- **New Rule:**
+  - **Clock In / Break:** Hard block after shift ends.
+  - **Clock Out:** Remains allowed **only if** they were already clocked in (to fix a "forgot to clock out" situation).
+
+#### 3. Smart Admin Correction
+
+- **Current Rule:** Admins can pick any time when doing a manual clock.
+- **New Rule:** If an Admin is doing a manual clock after the shift has ended, the system will **force** them to select a time that falls **within** that employee's shift hours.
+
+#### 4. The "Non-Working Day" Consistency
+
+- Ensuring that even if an Admin tries to manually clock someone, the system still checks if it's a working day (unless it's an "emergency override").
+
+**Which of these would you like me to implement first?** I suggest starting with the **Admin Manual Clock validation** since we were just looking at that modal!
