@@ -11,9 +11,46 @@ function QrCodeImage({ text, size = 180 }: { text: string; size?: number }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    QRCode.toDataURL(text, { width: size, margin: 2, color: { dark: '#000', light: '#fff' } })
-      .then(setDataUrl)
-      .catch(() => setDataUrl(null));
+    const generate = async () => {
+      try {
+        const canvas = document.createElement('canvas');
+        // Use High error correction to allow for logo overlay
+        await QRCode.toCanvas(canvas, text, {
+          width: size * 4, // High resolution for printing
+          margin: 1,
+          errorCorrectionLevel: 'H',
+          color: { dark: '#000', light: '#fff' }
+        });
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const logo = new Image();
+          logo.src = '/logo.png';
+          await new Promise((resolve) => {
+            logo.onload = resolve;
+            logo.onerror = resolve;
+          });
+
+          if (logo.complete && logo.naturalWidth > 0) {
+            const qrSize = canvas.width;
+            const logoSize = qrSize * 0.22; // 22% of QR size
+            const x = (qrSize - logoSize) / 2;
+            const y = (qrSize - logoSize) / 2;
+
+            // White border/background for logo
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(x - 5, y - 5, logoSize + 10, logoSize + 10);
+            ctx.drawImage(logo, x, y, logoSize, logoSize);
+          }
+        }
+        setDataUrl(canvas.toDataURL('image/png'));
+      } catch (err) {
+        console.error('QR Generation Error:', err);
+        setDataUrl(null);
+      }
+    };
+
+    generate();
   }, [text, size]);
 
   if (!dataUrl) return <div style={{ width: size, height: size, background: 'rgba(0,0,0,0.1)', borderRadius: 8 }} />;
@@ -211,6 +248,11 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
         </head>
         <body>
           <div class="container">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 60px; padding-top: 40px;">
+              <img src="/logo.png" style="width: 60px; height: 60px; border: none; padding: 0; border-radius: 12px;" />
+              <div style="font-size: 32px; font-weight: 800; letter-spacing: -1px; color: #111827;">TK Clocking System</div>
+            </div>
+
             <img src="${printRef.current.querySelector('img')?.src}" alt="QR Code" />
             <h1>${branch.name}</h1>
             <p>Scan to clock in / out</p>
