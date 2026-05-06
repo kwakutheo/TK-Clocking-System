@@ -58,6 +58,8 @@ export const attendanceApi = {
     api.get(`/attendance/report/${employeeId}`, { params: { month, year } }),
   getTermReport: (employeeId: string, termId: string) =>
     api.get(`/attendance/report/${employeeId}/term/${termId}`),
+  /** Returns all employees the acting admin is allowed to clock (excludes self). */
+  clockableEmployees: () => api.get('/attendance/clockable-employees'),
   adminManualClock: (data: {
     employeeId: string;
     type: 'clock_in' | 'clock_out';

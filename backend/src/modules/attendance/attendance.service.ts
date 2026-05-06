@@ -270,21 +270,6 @@ export class AttendanceService {
 
     const savedLog = await this.repo.save(log);
 
-    const actingUser = { id: actingUserId, role: actingUserRole } as User;
-    await this.auditService.log({
-      user: actingUser,
-      action: 'ADMIN_MANUAL_CLOCK',
-      module: 'ATTENDANCE',
-      targetId: savedLog.id,
-      newValues: {
-        targetEmployeeId: targetEmployee.id,
-        targetEmployeeName: targetEmployee.user?.fullName,
-        type: dto.type,
-        timestamp: now,
-        note: dto.note,
-      },
-    });
-
     return savedLog;
   }
 
@@ -314,6 +299,7 @@ export class AttendanceService {
   async adminManualClock(
     actingUserId: string,
     actingUserRole: UserRole,
+    actingUserFullName: string,
     dto: AdminManualClockDto,
   ): Promise<AttendanceLog> {
     // ── Role guard ──────────────────────────────────────────────────────────
@@ -390,7 +376,10 @@ export class AttendanceService {
 
     // ── Persist the log ──────────────────────────────────────────────────────
     // Resolve the admin's display name for the employee-facing banner.
-    const adminDisplayName = actingEmployee?.user?.fullName ?? 'An Administrator';
+    // Prefer the linked employee profile name, then fall back to the JWT
+    // fullName (covers admins with no employee profile), then a generic label.
+    const adminDisplayName =
+      actingEmployee?.user?.fullName ?? actingUserFullName ?? 'An Administrator';
 
     const log = this.repo.create({
       employee: targetEmployee,
@@ -591,21 +580,6 @@ export class AttendanceService {
     });
 
     const savedLog = await this.repo.save(log);
-
-    const actingUser = { id: actingUserId, role: actingUserRole } as User;
-    await this.auditService.log({
-      user: actingUser,
-      action: 'ADMIN_MANUAL_CLOCK',
-      module: 'ATTENDANCE',
-      targetId: savedLog.id,
-      newValues: {
-        targetEmployeeId: targetEmployee.id,
-        targetEmployeeName: targetEmployee.user?.fullName,
-        type: dto.type,
-        timestamp: now,
-        note: dto.note,
-      },
-    });
 
     return savedLog;
   }

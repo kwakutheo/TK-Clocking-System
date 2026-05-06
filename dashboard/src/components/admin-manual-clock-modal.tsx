@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { attendanceApi, employeesApi } from '@/lib/api';
-import { useAuthStore } from '@/lib/store';
+import { attendanceApi } from '@/lib/api';
 import useSWR from 'swr';
 import { X, UserCheck, Clock, LogIn, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -10,11 +9,10 @@ interface Props {
   onSuccess: () => void;
 }
 
-const employeesFetcher = () => employeesApi.list().then((r) => r.data);
+const clockableFetcher = () => attendanceApi.clockableEmployees().then((r) => r.data);
 
 export function AdminManualClockModal({ onClose, onSuccess }: Props) {
-  const { user } = useAuthStore();
-  const { data: employees } = useSWR('employees-list', employeesFetcher);
+  const { data: employees } = useSWR('clockable-employees', clockableFetcher);
 
   const [employeeId, setEmployeeId] = useState('');
   const [type, setType] = useState<'clock_in' | 'clock_out'>('clock_in');
@@ -25,11 +23,7 @@ export function AdminManualClockModal({ onClose, onSuccess }: Props) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Filter out the acting admin themselves from the list
-  const eligibleEmployees = (employees ?? []).filter(
-    (emp: any) => emp.user?.id !== user?.id,
-  );
-
+  const eligibleEmployees = employees ?? [];
   const selectedEmp = eligibleEmployees.find((e: any) => e.id === employeeId);
 
   const handleSubmit = async (e: React.FormEvent) => {

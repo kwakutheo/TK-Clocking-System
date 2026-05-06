@@ -124,6 +124,16 @@ export class AttendanceController {
     return this.service.syncOffline(user.id, dto);
   }
 
+  @Get('clockable-employees')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.admin_clock')
+  @ApiOperation({ summary: 'List employees the acting admin can manually clock (excludes self)' })
+  async getClockableEmployees(@CurrentUser() user: User) {
+    const all = await this.employeesService.findAll();
+    // Exclude the acting admin from the list (no self-clocking)
+    return all.filter((emp) => emp.user?.id !== user.id);
+  }
+
   @Post('admin-clock')
   @UseGuards(PermissionsGuard)
   @RequirePermissions('attendance.admin_clock')
@@ -131,7 +141,7 @@ export class AttendanceController {
     summary: 'Admin manually clocks in/out an employee (HR Admin and Super Admin only)',
   })
   adminManualClock(@CurrentUser() user: User, @Body() dto: AdminManualClockDto) {
-    return this.service.adminManualClock(user.id, user.role, dto);
+    return this.service.adminManualClock(user.id, user.role, user.fullName, dto);
   }
 
   @Get('home-data')
