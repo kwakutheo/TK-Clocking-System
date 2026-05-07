@@ -339,6 +339,13 @@ export class AttendanceService {
       );
     }
 
+    // ── Current Day Guard (Same Day Enforcement) ────────────────────────────
+    if (now.toDateString() !== new Date().toDateString()) {
+      throw new BadRequestException(
+        'Action denied: Manual clocking can only be performed for the current calendar day.',
+      );
+    }
+
     // ── Real-Time Ceiling Guard ─────────────────────────────────────────────
     if (now > new Date()) {
       throw new BadRequestException('The selected time cannot be in the future.');
