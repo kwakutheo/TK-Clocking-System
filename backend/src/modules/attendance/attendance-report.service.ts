@@ -58,7 +58,7 @@ export class AttendanceReportService {
       if (monthDays.length > 0) {
         const mSummary = monthDays.reduce((acc, day) => {
           acc.totalHours += day.hours;
-          if (day.status === 'PRESENT' || day.status === 'IN PROGRESS') acc.daysWorked++;
+          if (day.status === 'PRESENT' || (day.status === 'IN PROGRESS' && day.clockIn)) acc.daysWorked++;
           if (day.status === 'ABSENT') acc.daysAbsent++;
           if (day.isLate) {
             acc.daysLate++;
@@ -253,7 +253,7 @@ export class AttendanceReportService {
         } else if (!term) {
           status = 'OFF-TERM / VACATION';
         } else {
-          status = isToday ? 'IN PROGRESS' : 'SCHEDULED';
+          status = isToday ? 'AWAITING' : 'SCHEDULED';
         }
       } else if (isWeekEnd) {
         status = 'WEEKEND';
