@@ -136,6 +136,9 @@ export class AttendanceReportService {
     let totalEarlyOutMinutes = 0;
     let daysForgotClockOut = 0;
 
+    const registrationDate = employee.hireDate ? new Date(employee.hireDate) : new Date(employee.createdAt);
+    registrationDate.setHours(0, 0, 0, 0);
+
     const reportDays = daysInRange.map(day => {
       const dayStr = format(day, 'yyyy-MM-dd');
       const dayLogs = logs.filter(l => isSameDay(new Date(l.timestamp), day));
@@ -260,6 +263,8 @@ export class AttendanceReportService {
         status = `BREAK (${breakItem.name})`;
       } else if (!term) {
         status = 'OFF-TERM / VACATION';
+      } else if (day < registrationDate) {
+        status = 'NOT REGISTERED YET';
       } else {
         status = 'ABSENT';
         daysAbsent++;
