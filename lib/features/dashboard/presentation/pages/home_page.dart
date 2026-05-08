@@ -22,6 +22,8 @@ import 'package:tk_clocking_system/features/attendance/presentation/pages/histor
 import 'package:tk_clocking_system/features/attendance/presentation/pages/my_report_page.dart';
 import 'package:tk_clocking_system/shared/enums/attendance_type.dart';
 import 'package:tk_clocking_system/shared/enums/sync_status.dart';
+import 'package:tk_clocking_system/core/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Shell home page with bottom navigation between Attendance, History,
 /// and Profile tabs.
@@ -97,6 +99,8 @@ class _DashboardTabState extends State<_DashboardTab> {
   int _pendingCount = 0;
   Timer? _autoRefreshTimer;
   bool _isRefetching = false;
+  bool _checkingLocation = false;
+  bool? _isInWorkZone;
 
   @override
   void initState() {
@@ -167,6 +171,7 @@ class _DashboardTabState extends State<_DashboardTab> {
               final box = Hive.box(AppConstants.userBox);
               box.put('home_data_cache', data.toJson());
             }
+            _checkGeofence();
           },
         );
       }
@@ -184,6 +189,39 @@ class _DashboardTabState extends State<_DashboardTab> {
           .where((e) => e['sync_status'] == SyncStatus.pending.value)
           .length;
     });
+  }
+
+  Future<void> _checkGeofence() async {
+    if (_data == null || _data!.branchLat == null || _data!.branchLng == null || _data!.branchRadius == null) {
+      return;
+    }
+    if (mounted) {
+      setState(() => _checkingLocation = true);
+    }
+    try {
+      final locService = sl<LocationService>();
+      final position = await locService.getCurrentPosition();
+      final isInside = locService.isWithinGeofence(
+        deviceLat: position.latitude,
+        deviceLng: position.longitude,
+        branchLat: _data!.branchLat!,
+        branchLng: _data!.branchLng!,
+        radiusMeters: _data!.branchRadius!.toInt(),
+      );
+      if (mounted) {
+        setState(() {
+          _isInWorkZone = isInside;
+          _checkingLocation = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isInWorkZone = null;
+          _checkingLocation = false;
+        });
+      }
+    }
   }
 
   @override
@@ -257,6 +295,16 @@ class _DashboardTabState extends State<_DashboardTab> {
                     ),
                     const SizedBox(width: 8),
                   ],
+                  bottom: PreferredSize(
+                    preferredSize: const Size.fromHeight(20),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 16, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildWorkZoneBadge(),
+                      ),
+                    ),
+                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
@@ -379,6 +427,14 @@ class _DashboardTabState extends State<_DashboardTab> {
         const SizedBox(height: 16),
         _QuickActionsCard(),
         const SizedBox(height: 16),
+        if (data.nextShiftStartTime != null || data.upcomingHolidayName != null) ...[
+          _UpcomingScheduleCard(data: data),
+          const SizedBox(height: 16),
+        ],
+        _ShiftProgressCard(data: data),
+        const SizedBox(height: 16),
+        _WeeklyGoalCard(data: data),
+        const SizedBox(height: 16),
         _StatsRow(
             todayHours: data.todayHours, daysWorked: data.daysWorkedThisWeek),
         const SizedBox(height: 16),
@@ -387,6 +443,53 @@ class _DashboardTabState extends State<_DashboardTab> {
               type: data.lastActivityType!, time: data.lastActivityTime!),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildWorkZoneBadge() {
+    if (_checkingLocation) {
+      return const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 6),
+          Text('Checking location...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      );
+    }
+    if (_isInWorkZone == null) return const SizedBox.shrink();
+
+    final isInside = _isInWorkZone!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isInside ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isInside ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isInside ? Icons.location_on_rounded : Icons.location_off_rounded,
+            size: 14,
+            color: isInside ? Colors.green : Colors.red,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isInside ? 'Inside Work Zone' : 'Outside Work Zone',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isInside ? Colors.green.shade700 : Colors.red.shade700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1186,6 +1289,230 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
                 size: 18,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dashboard Feature Cards ──────────────────────────────────────────────────
+
+class _ShiftProgressCard extends StatelessWidget {
+  final HomeDataEntity data;
+
+  const _ShiftProgressCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    final progress = (data.todayHours / data.targetDailyHours).clamp(0.0, 1.0);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 6,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    color: Colors.green,
+                  ),
+                  Center(
+                    child: Text(
+                      '${(progress * 100).toInt()}%',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Daily Shift Progress',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${data.todayHours.toStringAsFixed(1)}h of ${data.targetDailyHours.toStringAsFixed(1)}h completed',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WeeklyGoalCard extends StatelessWidget {
+  final HomeDataEntity data;
+
+  const _WeeklyGoalCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    final progress = (data.weekHours / data.targetWeeklyHours).clamp(0.0, 1.0);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Weekly Target',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '${data.weekHours.toStringAsFixed(1)}h / ${data.targetWeeklyHours.toStringAsFixed(1)}h',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpcomingScheduleCard extends StatelessWidget {
+  final HomeDataEntity data;
+
+  const _UpcomingScheduleCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final formatter = DateFormat('EEE, d MMM');
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.event_note_rounded, color: colorScheme.primary, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  "What's Next",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (data.nextShiftStartTime != null) ...[
+              Row(
+                children: [
+                  Icon(Icons.schedule_rounded, size: 20, color: colorScheme.secondary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Next Shift',
+                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                        Text(
+                          data.nextShiftDate != null 
+                              ? '${data.nextShiftStartTime!} (${formatter.format(data.nextShiftDate!)})'
+                              : data.nextShiftStartTime!,
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (data.upcomingHolidayName != null)
+                const Divider(height: 24),
+            ],
+            if (data.upcomingHolidayName != null && data.upcomingHolidayDate != null)
+              Row(
+                children: [
+                  Icon(Icons.celebration_rounded, size: 20, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Upcoming Holiday',
+                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                        Text(
+                          '${data.upcomingHolidayName} (${formatter.format(data.upcomingHolidayDate!)})',
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),

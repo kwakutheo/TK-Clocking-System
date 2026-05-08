@@ -1,0 +1,24 @@
+FEATURES TO BE ADDED TO THE MOBILE APP HOME PAGE
+
+### 1. Interactive Shift Progress (Visual)
+Since you already have `isClockedIn` and `todayHours`, you can a **Live Shift Progress Bar or Circle**.
+*   **Feature**: A circular progress indicator that fills up as the shift progresses 
+    (e.g., progress towards 8 hours but remember different employees may has different shift time and due to that, they may have different working durations).
+*   **Benefit**: Gives employees an immediate visual sense of how much of their workday is remaining.
+
+
+### 2. "Upcoming" Schedule Section
+Add a horizontal scrolling list or a small card below the stats for "What's Next".
+*   **Feature**: Shows tomorrow's shift start time and any upcoming public holidays (using `holidayName` if the backend can provide future ones).
+*   **Benefit**: Helps employees plan their next day without navigating away from the home screen.
+
+### 3. Weekly Goal Tracker
+Use the `weekHours` data to show a progress bar.
+*   **Feature**: A "Weekly Target" bar (e.g., "32h / 40h completed").
+*   **Benefit**: Encourages employees to meet their contracted hours and provides transparency on their productivity.
+
+### 4. Location/Geofence Validator
+"Work Zone" indicator.
+*   **Feature**: A subtle badge near the greeting that says "📍 Inside Work Zone" or "📍 Outside Work Zone".
+*   **Benefit**: Saves the user from opening the "Clock In" page only to find out they aren't close enough yet.
+

@@ -922,6 +922,59 @@ export class AttendanceService {
       }
     });
 
+    // 4. Determine Upcoming Holiday
+    const allHolidays = await this.holidays.findAll();
+    let upcomingHolidayName: string | null = null;
+    let upcomingHolidayDate: string | null = null;
+    const nowMs = today.getTime();
+
+    const futureHolidays = allHolidays.map(h => {
+      const parts = h.date.split('-');
+      let hDate = new Date(h.date);
+      if (h.isRecurring && hDate.getTime() < nowMs) {
+        hDate.setFullYear(today.getFullYear());
+        if (hDate.getTime() < nowMs) {
+          hDate.setFullYear(today.getFullYear() + 1);
+        }
+      }
+      return { ...h, parsedDate: hDate };
+    })
+    .filter(h => h.parsedDate.getTime() > nowMs)
+    .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
+
+    if (futureHolidays.length > 0) {
+      upcomingHolidayName = futureHolidays[0].name;
+      upcomingHolidayDate = futureHolidays[0].parsedDate.toISOString();
+    }
+
+    // 5. Determine Target Hours
+    let targetDailyHours = 8;
+    if (shift) {
+      const [sHours, sMins] = shift.startTime.split(':').map(Number);
+      const [eHours, eMins] = shift.endTime.split(':').map(Number);
+      targetDailyHours = (eHours + eMins / 60) - (sHours + sMins / 60);
+      if (targetDailyHours < 0) targetDailyHours += 24;
+    }
+    const targetWeeklyHours = targetDailyHours * 5; // Defaulting to 5 days a week
+
+    const fullEmpForBranch = await this.employees.findById(employee.id);
+    const branch = fullEmpForBranch?.branch;
+
+    // 6. Determine Next Shift Date
+    let nextShiftDateStr: string | null = null;
+    if (shift) {
+      let tempDate = new Date(today);
+      tempDate.setDate(tempDate.getDate() + 1); // start checking from tomorrow
+      for (let i = 0; i < 30; i++) { // check up to 30 days ahead
+        const status = await this._checkNonWorkingDay(tempDate);
+        if (!status.isNonWorking) {
+          nextShiftDateStr = tempDate.toISOString();
+          break;
+        }
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+    }
+
     return {
       lastActivity: lastLog ? {
         type: lastLog.type,
@@ -947,6 +1000,15 @@ export class AttendanceService {
       holidayName,
       // Used by mobile app to calculate the pre-shift countdown banner
       shiftStartTime: shift ? shift.startTime : null,
+      nextShiftStartTime: shift ? shift.startTime : null,
+      nextShiftDate: nextShiftDateStr,
+      upcomingHolidayName,
+      upcomingHolidayDate,
+      targetDailyHours: Number(targetDailyHours.toFixed(2)),
+      targetWeeklyHours: Number(targetWeeklyHours.toFixed(2)),
+      branchLat: branch?.latitude ? Number(branch.latitude) : null,
+      branchLng: branch?.longitude ? Number(branch.longitude) : null,
+      branchRadius: branch?.allowedRadius ? Number(branch.allowedRadius) : null,
       // Admin override info — shown as a banner on the mobile app
       adminOverride: (() => {
         const overrideLog = todayLogs.find(

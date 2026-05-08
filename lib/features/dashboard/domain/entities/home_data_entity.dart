@@ -35,6 +35,15 @@ class HomeDataEntity extends Equatable {
   final bool noShiftAssigned;
   /// Shift start time in "HH:mm" format, used for the pre-shift countdown banner.
   final String? shiftStartTime;
+  final String? nextShiftStartTime;
+  final DateTime? nextShiftDate;
+  final String? upcomingHolidayName;
+  final DateTime? upcomingHolidayDate;
+  final double targetWeeklyHours;
+  final double targetDailyHours;
+  final double? branchLat;
+  final double? branchLng;
+  final double? branchRadius;
 
   /// When not null, today's clock-in was performed by an admin on behalf of the employee.
   final String? adminOverrideName;
@@ -61,6 +70,15 @@ class HomeDataEntity extends Equatable {
     this.vacationName,
     this.noShiftAssigned = false,
     this.shiftStartTime,
+    this.nextShiftStartTime,
+    this.nextShiftDate,
+    this.upcomingHolidayName,
+    this.upcomingHolidayDate,
+    this.targetWeeklyHours = 40.0,
+    this.targetDailyHours = 8.0,
+    this.branchLat,
+    this.branchLng,
+    this.branchRadius,
     this.adminOverrideName,
     this.adminOverrideNote,
   });
@@ -87,6 +105,15 @@ class HomeDataEntity extends Equatable {
         vacationName,
         noShiftAssigned,
         shiftStartTime,
+        nextShiftStartTime,
+        nextShiftDate,
+        upcomingHolidayName,
+        upcomingHolidayDate,
+        targetWeeklyHours,
+        targetDailyHours,
+        branchLat,
+        branchLng,
+        branchRadius,
         adminOverrideName,
         adminOverrideNote,
       ];

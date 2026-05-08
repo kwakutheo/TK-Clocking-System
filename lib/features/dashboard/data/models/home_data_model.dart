@@ -23,6 +23,15 @@ class HomeDataModel extends HomeDataEntity {
     super.isOnBreak,
     super.noShiftAssigned,
     super.shiftStartTime,
+    super.nextShiftStartTime,
+    super.nextShiftDate,
+    super.upcomingHolidayName,
+    super.upcomingHolidayDate,
+    super.targetWeeklyHours = 40.0,
+    super.targetDailyHours = 8.0,
+    super.branchLat,
+    super.branchLng,
+    super.branchRadius,
     super.adminOverrideName,
     super.adminOverrideNote,
   });
@@ -71,6 +80,19 @@ class HomeDataModel extends HomeDataEntity {
       isVacation: json['isVacation'] as bool? ?? false,
       vacationName: json['vacationName'] as String?,
       shiftStartTime: json['shiftStartTime'] as String?,
+      nextShiftStartTime: json['nextShiftStartTime'] as String?,
+      nextShiftDate: json['nextShiftDate'] != null 
+          ? DateTime.tryParse(json['nextShiftDate'].toString()) 
+          : null,
+      upcomingHolidayName: json['upcomingHolidayName'] as String?,
+      upcomingHolidayDate: json['upcomingHolidayDate'] != null 
+          ? DateTime.tryParse(json['upcomingHolidayDate'].toString()) 
+          : null,
+      targetWeeklyHours: (json['targetWeeklyHours'] as num?)?.toDouble() ?? 40.0,
+      targetDailyHours: (json['targetDailyHours'] as num?)?.toDouble() ?? 8.0,
+      branchLat: (json['branchLat'] as num?)?.toDouble(),
+      branchLng: (json['branchLng'] as num?)?.toDouble(),
+      branchRadius: (json['branchRadius'] as num?)?.toDouble(),
       adminOverrideName: json['adminOverride'] != null
           ? json['adminOverride']['adminName'] as String?
           : null,
@@ -106,6 +128,15 @@ class HomeDataModel extends HomeDataEntity {
       'isHoliday': isHoliday,
       'holidayName': holidayName,
       'shiftStartTime': shiftStartTime,
+      'nextShiftStartTime': nextShiftStartTime,
+      'nextShiftDate': nextShiftDate?.toIso8601String(),
+      'upcomingHolidayName': upcomingHolidayName,
+      'upcomingHolidayDate': upcomingHolidayDate?.toIso8601String(),
+      'targetWeeklyHours': targetWeeklyHours,
+      'targetDailyHours': targetDailyHours,
+      'branchLat': branchLat,
+      'branchLng': branchLng,
+      'branchRadius': branchRadius,
       // Must match fromJson's nested structure exactly so the cache round-trips correctly
       'adminOverride': (adminOverrideName != null)
           ? {
