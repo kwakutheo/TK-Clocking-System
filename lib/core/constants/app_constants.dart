@@ -25,7 +25,7 @@ abstract final class AppConstants {
 
   // ── GPS ───────────────────────────────────────────────────────────────────
   /// Default geofence radius in meters used when the branch has none set.
-  static const int defaultGeofenceRadius = 100;
+  static const int defaultGeofenceRadius = 50;
 
   // ── Pagination ────────────────────────────────────────────────────────────
   static const int defaultPageSize = 20;
