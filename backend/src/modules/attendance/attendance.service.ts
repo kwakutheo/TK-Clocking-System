@@ -986,6 +986,8 @@ export class AttendanceService {
     const logs = await this.repo
       .createQueryBuilder('log')
       .leftJoinAndSelect('log.employee', 'emp')
+      .leftJoinAndSelect('emp.user', 'user')
+      .leftJoinAndSelect('emp.branch', 'branch')
       .leftJoinAndSelect('emp.shift', 'shift')
       .where('log.timestamp >= :startOfDay', { startOfDay })
       .andWhere('log.timestamp <= :endOfDay', { endOfDay })
@@ -1001,26 +1003,40 @@ export class AttendanceService {
       employeeLogs[log.employee.id].push(log);
     });
 
-    let totalUniqueAttendance = 0;
-    let currentlyOnSite = 0;
-    let lateArrivals = 0;
-    let earlyOuts = 0;
-    let forgotClockOut = 0;
+    const presentEmployees: any[] = [];
+    const lateEmployees: any[] = [];
+    const earlyOutEmployees: any[] = [];
+    const forgotOutEmployees: any[] = [];
 
     Object.values(employeeLogs).forEach(userLogs => {
       const clockIns = userLogs.filter(l => l.type === AttendanceType.CLOCK_IN);
+      
+      let empDetails: any = null;
+      let firstClockIn: any = null;
+      
       if (clockIns.length > 0) {
-        totalUniqueAttendance++;
-        
-        const firstClockIn = clockIns[0];
+        firstClockIn = clockIns[0];
         const emp = firstClockIn.employee;
+        empDetails = {
+          id: emp.id,
+          fullName: (emp as any).user?.fullName ?? 'Unknown',
+          employeeCode: emp.employeeCode,
+          branch: (emp as any).branch?.name ?? null,
+          shift: emp.shift ? `${emp.shift.startTime} – ${emp.shift.endTime}` : null,
+          clockInTime: firstClockIn.timestamp,
+        };
+
         if (emp?.shift) {
           const [sHours, sMins] = emp.shift.startTime.split(':').map(Number);
           const shiftStart = new Date(startOfDay);
           shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
           
           if (firstClockIn.timestamp > shiftStart && !dayStatus.isNonWorking) {
-            lateArrivals++;
+            lateEmployees.push({
+              ...empDetails,
+              shiftStart,
+              minutesLate: Math.round((firstClockIn.timestamp.getTime() - shiftStart.getTime()) / 60000),
+            });
           }
         }
       }
@@ -1036,12 +1052,20 @@ export class AttendanceService {
           if (clockOuts.length > 0) {
             const lastClockOut = clockOuts[clockOuts.length - 1];
             if (lastClockOut.timestamp < shiftEnd) {
-              earlyOuts++;
+              earlyOutEmployees.push({
+                ...empDetails,
+                shiftEnd,
+                clockOutTime: lastClockOut.timestamp,
+                minutesEarly: Math.round((shiftEnd.getTime() - lastClockOut.timestamp.getTime()) / 60000),
+              });
             }
           } else {
             const forgotCutoff = new Date(shiftEnd.getTime() + 60 * 60 * 1000);
             if (evaluationTime > forgotCutoff) {
-              forgotClockOut++;
+              forgotOutEmployees.push({
+                ...empDetails,
+                status: 'Clocked In',
+              });
             }
           }
         }
@@ -1051,23 +1075,31 @@ export class AttendanceService {
       if (!isHistorical) {
         const latestLog = userLogs[userLogs.length - 1];
         if (latestLog.type === AttendanceType.CLOCK_IN || latestLog.type === AttendanceType.BREAK_OUT) {
-          currentlyOnSite++;
+          if (empDetails) {
+            presentEmployees.push({
+              ...empDetails,
+              status: 'Working',
+            });
+          }
         }
+      } else if (empDetails) {
+         presentEmployees.push({
+            ...empDetails,
+            clockOutTime: clockOuts.length > 0 ? clockOuts[clockOuts.length - 1].timestamp : null,
+         });
       }
     });
+
+    const totalUniqueAttendance = Object.values(employeeLogs).filter(userLogs => 
+      userLogs.some(l => l.type === AttendanceType.CLOCK_IN)
+    ).length;
+    let currentlyOnSite = presentEmployees.length;
 
     if (isHistorical) {
       currentlyOnSite = totalUniqueAttendance;
     }
 
-    let absentToday = 0;
-    const absentEmployees: {
-      id: string;
-      fullName: string;
-      employeeCode: string;
-      branch: string | null;
-      shift: string | null;
-    }[] = [];
+    const absentEmployees: any[] = [];
 
     if (!dayStatus.isNonWorking) {
       const allEmployees = await this.employees.findAll();
@@ -1083,7 +1115,6 @@ export class AttendanceService {
         shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
 
         if (evaluationTime > shiftStart) {
-          absentToday++;
           absentEmployees.push({
             id: emp.id,
             fullName: (emp as any).user?.fullName ?? 'Unknown',
@@ -1098,11 +1129,15 @@ export class AttendanceService {
     return {
       totalUniqueAttendance,
       currentlyOnSite,
-      lateArrivals,
-      absentToday,
+      lateArrivals: lateEmployees.length,
+      absentToday: absentEmployees.length,
+      earlyOuts: earlyOutEmployees.length,
+      forgotClockOut: forgotOutEmployees.length,
+      presentEmployees,
+      lateEmployees,
       absentEmployees,
-      earlyOuts,
-      forgotClockOut,
+      earlyOutEmployees,
+      forgotOutEmployees,
       dayStatus,
     };
   }

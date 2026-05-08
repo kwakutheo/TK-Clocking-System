@@ -8,7 +8,7 @@ import { AttendanceChart } from '@/components/attendance-chart';
 import { StatCardSkeleton, TableSkeleton } from '@/components/skeleton';
 import { AdminManualClockModal } from '@/components/admin-manual-clock-modal';
 import {
-  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck,
+  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck, X,
 } from 'lucide-react';
 
 const fetcher = (fn: () => Promise<unknown>) => () => fn().then((r: any) => r.data);
@@ -32,6 +32,7 @@ function StatCard({
   trend,
   trendUp,
   secondary,
+  onClick,
 }: {
   icon: React.ReactNode;
   value: string | number;
@@ -40,9 +41,14 @@ function StatCard({
   trend?: string;
   trendUp?: boolean;
   secondary?: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="stat-card" style={{ ['--stat-color' as any]: color, ['--stat-color-dim' as any]: `${color}15` }}>
+    <div 
+      className="stat-card" 
+      style={{ ['--stat-color' as any]: color, ['--stat-color-dim' as any]: `${color}15`, cursor: onClick ? 'pointer' : 'default' }}
+      onClick={onClick}
+    >
       <div className="stat-card-glow" />
       <div className="stat-card-content">
         <div className="stat-icon-wrapper">
@@ -79,12 +85,21 @@ function typeBadge(type: string) {
   return 'badge-amber';
 }
 
+/** Converts a raw minute count into a human-friendly "Xh Ymin" string. */
+function formatMinutes(totalMinutes: number): string {
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}min`;
+}
+
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'hr_admin' || user?.role === 'super_admin';
 
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [showManualClock, setShowManualClock] = useState(false);
+  const [modalDetails, setModalDetails] = useState<{ title: string; type: string; data: any[] } | null>(null);
   const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
 
   const { data: live, isLoading: liveLoading } = useSWR(
@@ -190,6 +205,11 @@ export default function DashboardPage() {
               color="#10b981"
               trendUp={true}
               secondary={isToday ? "Active clock-ins right now" : "Total employees who clocked in"}
+              onClick={() => setModalDetails({
+                title: isToday ? "Currently at Work" : "Total Present",
+                type: 'present',
+                data: dashboardStats.presentEmployees ?? []
+              })}
             />
             <StatCard
               icon={<TrendingDown size={20} />}
@@ -197,6 +217,11 @@ export default function DashboardPage() {
               label="Late Arrivals"
               color="#f43f5e"
               secondary="Employees who arrived late"
+              onClick={() => setModalDetails({
+                title: "Late Arrivals",
+                type: 'late',
+                data: dashboardStats.lateEmployees ?? []
+              })}
             />
             <StatCard
               icon={<Users size={20} />}
@@ -204,6 +229,11 @@ export default function DashboardPage() {
               label={isToday ? "Absent Today" : "Absent"}
               color="#f59e0b"
               secondary={isToday ? "Expected but not clocked in" : "Expected but didn't clock in"}
+              onClick={() => setModalDetails({
+                title: isToday ? "Absent Today" : "Absent",
+                type: 'absent',
+                data: dashboardStats.absentEmployees ?? []
+              })}
             />
             <StatCard
               icon={<Clock size={20} />}
@@ -211,6 +241,11 @@ export default function DashboardPage() {
               label="Early Outs"
               color="#f97316"
               secondary="Left before shift ended"
+              onClick={() => setModalDetails({
+                title: "Early Outs",
+                type: 'earlyOut',
+                data: dashboardStats.earlyOutEmployees ?? []
+              })}
             />
             <StatCard
               icon={<AlertTriangle size={20} />}
@@ -218,6 +253,11 @@ export default function DashboardPage() {
               label="Forgot Out"
               color="#a1887f"
               secondary="Missing clock-out logs"
+              onClick={() => setModalDetails({
+                title: "Forgot Out",
+                type: 'forgotOut',
+                data: dashboardStats.forgotOutEmployees ?? []
+              })}
             />
             {isToday && (
               <StatCard
@@ -416,6 +456,159 @@ export default function DashboardPage() {
             mutate(['attendance-stats', selectedDate]);
           }}
         />
+      )}
+
+      {/* Details Modal */}
+      {modalDetails && (
+        <>
+          <div
+            onClick={() => setModalDetails(null)}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)', zIndex: 1000,
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100%', maxWidth: 700, maxHeight: '80vh',
+              display: 'flex', flexDirection: 'column',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+              zIndex: 1001,
+            }}
+          >
+            <div style={{ padding: 24, borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, color: 'var(--text-primary)' }}>{modalDetails.title}</h2>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {format(parseLocalDate(selectedDate)!, 'EEEE, MMMM d, yyyy')}
+                </p>
+              </div>
+              <button
+                onClick={() => setModalDetails(null)}
+                title="Close details"
+                aria-label="Close details"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-secondary)', padding: 4, borderRadius: 6,
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div style={{ overflowY: 'auto', padding: 24 }}>
+              {modalDetails.data.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                  No records found.
+                </div>
+              ) : (
+                <table className="data-table" style={{ width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Employee</th>
+                      <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Branch</th>
+                      {modalDetails.type === 'present' && (
+                        <>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Clock In</th>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>{isToday ? 'Status' : 'Clock Out'}</th>
+                        </>
+                      )}
+                      {modalDetails.type === 'late' && (
+                        <>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Shift Start</th>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Minutes Late</th>
+                        </>
+                      )}
+                      {modalDetails.type === 'absent' && (
+                        <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Shift</th>
+                      )}
+                      {modalDetails.type === 'earlyOut' && (
+                        <>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Shift End</th>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Minutes Early</th>
+                        </>
+                      )}
+                      {modalDetails.type === 'forgotOut' && (
+                        <>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Clock In</th>
+                          <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Status</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modalDetails.data.map((emp: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{emp.fullName}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{emp.employeeCode}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{emp.branch || '—'}</td>
+                        
+                        {modalDetails.type === 'present' && (
+                          <>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                              {emp.clockInTime ? format(new Date(emp.clockInTime), 'HH:mm') : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                              {isToday ? (
+                                <span className="status-badge badge-green">{emp.status || 'Working'}</span>
+                              ) : (
+                                emp.clockOutTime ? format(new Date(emp.clockOutTime), 'HH:mm') : '—'
+                              )}
+                            </td>
+                          </>
+                        )}
+
+                        {modalDetails.type === 'late' && (
+                          <>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                              {emp.shiftStart ? format(new Date(emp.shiftStart), 'HH:mm') : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--danger)', fontWeight: 500 }}>
+                              {formatMinutes(emp.minutesLate)}
+                            </td>
+                          </>
+                        )}
+
+                        {modalDetails.type === 'absent' && (
+                          <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{emp.shift || '—'}</td>
+                        )}
+
+                        {modalDetails.type === 'earlyOut' && (
+                          <>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                              {emp.shiftEnd ? format(new Date(emp.shiftEnd), 'HH:mm') : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--warning)', fontWeight: 500 }}>
+                              {formatMinutes(emp.minutesEarly)}
+                            </td>
+                          </>
+                        )}
+
+                        {modalDetails.type === 'forgotOut' && (
+                          <>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                              {emp.clockInTime ? format(new Date(emp.clockInTime), 'HH:mm') : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                              <span className="status-badge badge-amber">{emp.status || 'Unknown'}</span>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
