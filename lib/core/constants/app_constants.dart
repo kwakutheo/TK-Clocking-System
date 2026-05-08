@@ -33,18 +33,3 @@ abstract final class AppConstants {
   // ── Retry ─────────────────────────────────────────────────────────────────
   static const int maxSyncRetries = 3;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
