@@ -403,6 +403,17 @@ export class AttendanceService {
       if (hasClockOutToday) {
         throw new BadRequestException('The employee has already clocked out today.');
       }
+      // Rule: Cannot clock out before the shift has officially started (mirrors mobile app rule).
+      if (targetEmployee.shift) {
+        const [sHours, sMins] = targetEmployee.shift.startTime.split(':').map(Number);
+        const shiftStart = new Date(now);
+        shiftStart.setHours(sHours, sMins, 0, 0);
+        if (now < shiftStart) {
+          throw new BadRequestException(
+            `Action denied: The employee's shift starts at ${targetEmployee.shift.startTime}. A clock-out cannot be recorded until the shift has officially started.`,
+          );
+        }
+      }
     }
 
     // ── Determine isLate for CLOCK_IN ────────────────────────────────────────
