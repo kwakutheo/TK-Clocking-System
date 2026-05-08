@@ -125,6 +125,19 @@ export class AttendanceService {
           );
         }
 
+        // Rule: Cannot clock out before the shift even starts (if clocked in early).
+        if (employee.shift) {
+          const [sHours, sMins] = employee.shift.startTime.split(':').map(Number);
+          const shiftStart = new Date(now);
+          shiftStart.setHours(sHours, sMins, 0, 0);
+
+          if (now < shiftStart) {
+            throw new BadRequestException(
+              `Action denied: Your shift starts at ${employee.shift.startTime}. You cannot clock out until the shift has officially started.`,
+            );
+          }
+        }
+
         // Rule: Early clock-out warning (soft block — user can override with forceEarlyOut).
         if (!dto.forceEarlyOut) {
           const fullEmp = await this.employees.findById(employee.id);
@@ -511,6 +524,19 @@ export class AttendanceService {
         if (hasClockOutToday)   throw new BadRequestException('You have already clocked out today.');
         const last = [...todayLogs].reverse().find(l => [AttendanceType.CLOCK_IN, AttendanceType.CLOCK_OUT, AttendanceType.BREAK_IN, AttendanceType.BREAK_OUT].includes(l.type));
         if (last?.type === AttendanceType.BREAK_IN) throw new BadRequestException('You are currently on a break. Please end your break before clocking out.');
+
+        // Rule: Cannot clock out before the shift even starts (if clocked in early).
+        if (employee.shift) {
+          const [sHours, sMins] = employee.shift.startTime.split(':').map(Number);
+          const shiftStart = new Date(now);
+          shiftStart.setHours(sHours, sMins, 0, 0);
+
+          if (now < shiftStart) {
+            throw new BadRequestException(
+              `Action denied: Your shift starts at ${employee.shift.startTime}. You cannot clock out until the shift has officially started.`,
+            );
+          }
+        }
 
         // Rule: Early clock-out warning (soft block — user can override with forceEarlyOut).
         if (!dto.forceEarlyOut) {
