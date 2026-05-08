@@ -93,11 +93,19 @@ class ClockInPage extends StatelessWidget {
               }
             });
           } else if (state is AttendanceFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                icon: Icon(Icons.error_outline_rounded,
+                    size: 40, color: Theme.of(ctx).colorScheme.error),
+                title: const Text('Action Denied'),
                 content: Text(state.message),
-                backgroundColor: Theme.of(context).colorScheme.error,
-                behavior: SnackBarBehavior.floating,
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
               ),
             );
           }
