@@ -108,8 +108,8 @@ export default function AcademicCalendarPage() {
       const currentStart = new Date(validTerms[i].startDate).getTime();
       const currentEnd = new Date(validTerms[i].endDate).getTime();
       
-      if (currentStart >= currentEnd) {
-        alert(`${validTerms[i].name} cannot end on or before its start date.`);
+      if (currentStart > currentEnd) {
+        alert(`${validTerms[i].name} cannot end before its start date.`);
         setIsSubmitting(false);
         return;
       }
@@ -175,8 +175,8 @@ export default function AcademicCalendarPage() {
       const newStart = new Date(termForm.startDate).getTime();
       const newEnd = new Date(termForm.endDate).getTime();
       
-      if (newStart >= newEnd) {
-        alert(`The term cannot end on or before its start date.`);
+      if (newStart > newEnd) {
+        alert(`The term cannot end before its start date.`);
         setIsSubmitting(false);
         return;
       }
@@ -221,8 +221,8 @@ export default function AcademicCalendarPage() {
     const bStart = new Date(breakForm.startDate).getTime();
     const bEnd = new Date(breakForm.endDate).getTime();
 
-    if (bStart >= bEnd) {
-      alert("The break cannot end on or before its start date.");
+    if (bStart > bEnd) {
+      alert("The break cannot end before its start date.");
       setIsSubmitting(false);
       return;
     }

@@ -28,7 +28,7 @@ if %errorlevel% == 0 (
 :: Start Backend
 echo.
 echo [3/4] Starting Backend API (NestJS)...
-start "TK Clocking Backend" cmd /k "cd /d ""%~dp0backend"" && echo Installing dependencies if needed... && npm install && echo. && echo Starting Backend... && npm run start:dev && pause"
+start "TK Clocking Backend" cmd /k "cd /d ""%~dp0backend"" && if not exist node_modules (echo Installing dependencies... && npm install) else (echo Dependencies found, skipping install) && echo. && echo Starting Backend... && npm run start:dev && pause"
 
 echo     ✓ Backend window opened — compiling...
 timeout /t 8 /nobreak >nul
@@ -36,7 +36,7 @@ timeout /t 8 /nobreak >nul
 :: Start Dashboard
 echo.
 echo [4/4] Starting Admin Dashboard (Next.js)...
-start "TK Clocking Dashboard" cmd /k "cd /d ""%~dp0dashboard"" && echo Installing dependencies if needed... && npm install && echo. && echo Starting Dashboard... && npm run dev && pause"
+start "TK Clocking Dashboard" cmd /k "cd /d ""%~dp0dashboard"" && if not exist node_modules (echo Installing dependencies... && npm install) else (echo Dependencies found, skipping install) && echo. && echo Starting Dashboard... && npm run dev && pause"
 
 echo     ✓ Dashboard window opened — compiling...
 timeout /t 4 /nobreak >nul
