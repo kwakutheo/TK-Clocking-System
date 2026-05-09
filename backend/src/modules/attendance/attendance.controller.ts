@@ -139,6 +139,40 @@ export class AttendanceController {
     res.send(pdfBuffer);
   }
 
+  @Get('export/bulk/pdf/monthly')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.export')
+  @ApiOperation({ summary: 'Export bulk monthly attendance summary as PDF' })
+  async exportBulkMonthlyPdf(
+    @Query('month', ParseIntPipe) month: number,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('branchId') branchId: string,
+    @Query('branchName') branchName: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.exportService.exportBulkMonthlyPdf(month, year, branchId, branchName);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="bulk-attendance-${month}-${year}.pdf"`);
+    res.send(pdfBuffer);
+  }
+
+  @Get('export/bulk/pdf/term/:termId')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.export')
+  @ApiOperation({ summary: 'Export bulk term attendance summary as PDF' })
+  async exportBulkTermPdf(
+    @Param('termId') termId: string,
+    @Query('branchId') branchId: string,
+    @Query('branchName') branchName: string,
+    @Query('termName') termName: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.exportService.exportBulkTermPdf(termId, branchId, branchName, termName);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="bulk-attendance-term.pdf"`);
+    res.send(pdfBuffer);
+  }
+
   @Post('clock-in')
   @ApiOperation({ summary: 'Record a clock-in, clock-out, or break event' })
   record(@CurrentUser() user: User, @Body() dto: RecordAttendanceDto) {

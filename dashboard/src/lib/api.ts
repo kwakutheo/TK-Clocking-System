@@ -70,6 +70,10 @@ export const attendanceApi = {
     api.get(`/attendance/export/pdf/monthly/${employeeId}`, { params: { month, year }, responseType: 'blob' }),
   exportTermPdf: (employeeId: string, termId: string) =>
     api.get(`/attendance/export/pdf/term/${employeeId}/term/${termId}`, { responseType: 'blob' }),
+  exportBulkMonthlyPdf: (month: number, year: number, branchId?: string, branchName?: string) =>
+    api.get(`/attendance/export/bulk/pdf/monthly`, { params: { month, year, branchId, branchName }, responseType: 'blob' }),
+  exportBulkTermPdf: (termId: string, branchId?: string, branchName?: string, termName?: string) =>
+    api.get(`/attendance/export/bulk/pdf/term/${termId}`, { params: { branchId, branchName, termName }, responseType: 'blob' }),
 };
 
 // ── Holidays ───────────────────────────────────────────────────────────────

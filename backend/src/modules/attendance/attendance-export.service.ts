@@ -31,6 +31,105 @@ export class AttendanceExportService {
     return await pdfDoc.getBuffer();
   }
 
+  async exportBulkMonthlyPdf(month: number, year: number, branchId?: string, branchName?: string): Promise<Buffer> {
+    const reports = await this.reportService.getBulkMonthlyReport(month, year, branchId);
+    
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const monthName = monthNames[month - 1];
+    const title = `Bulk Attendance Summary - ${monthName} ${year}`;
+    const subtitle = branchId ? `Branch: ${branchName}` : 'All Branches';
+
+    const docDefinition = this.buildBulkSummaryDocDefinition(reports, title, subtitle);
+    const pdfDoc = pdfmake.createPdf(docDefinition);
+    return await pdfDoc.getBuffer();
+  }
+
+  async exportBulkTermPdf(termId: string, branchId?: string, branchName?: string, termName?: string): Promise<Buffer> {
+    const reports = await this.reportService.getBulkTermReport(termId, branchId);
+    
+    const title = `Bulk Attendance Summary - ${termName || 'Term'}`;
+    const subtitle = branchId ? `Branch: ${branchName}` : 'All Branches';
+
+    const docDefinition = this.buildBulkSummaryDocDefinition(reports, title, subtitle);
+    const pdfDoc = pdfmake.createPdf(docDefinition);
+    return await pdfDoc.getBuffer();
+  }
+
+  private buildBulkSummaryDocDefinition(reports: any[], title: string, subtitle: string): any {
+    const footerFn = function(currentPage: number, pageCount: number) {
+      return {
+        columns: [
+          { 
+            image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), 
+            width: 20, 
+            margin: [0, -2, 5, 0] 
+          },
+          { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 },
+          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+        ],
+        margin: [40, 10, 40, 0]
+      };
+    };
+
+    const tableBody = reports.map(r => [
+      { text: r.employee.fullName, bold: true },
+      `${r.summary.totalHours}h`,
+      r.summary.daysWorked.toString(),
+      r.summary.daysAbsent.toString(),
+      `${r.summary.daysLate} (${this.formatMinutes(r.summary.totalLateMinutes)})`,
+      `${r.summary.daysEarlyDeparture} (${this.formatMinutes(r.summary.totalEarlyOutMinutes)})`,
+      r.summary.daysForgotClockOut.toString()
+    ]);
+
+    tableBody.unshift([
+      { text: 'Employee', style: 'tableHeader' } as any,
+      { text: 'Hrs', style: 'tableHeader' },
+      { text: 'Wrk', style: 'tableHeader' },
+      { text: 'Abs', style: 'tableHeader' },
+      { text: 'Late', style: 'tableHeader' },
+      { text: 'EarlyOut', style: 'tableHeader' },
+      { text: 'MissOut', style: 'tableHeader' }
+    ]);
+
+    return {
+      pageSize: 'A4',
+      pageOrientation: 'landscape',
+      pageMargins: [40, 40, 40, 60],
+      footer: footerFn,
+      defaultStyle: { font: 'Helvetica', fontSize: 10 },
+      content: [
+        { text: title, style: 'coverTitle', alignment: 'center', margin: [0, 10, 0, 5] },
+        { text: subtitle, style: 'coverSub', alignment: 'center', margin: [0, 0, 0, 15] },
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 760, y2: 0, lineWidth: 2, lineColor: '#e5e7eb' }], margin: [0, 0, 0, 20] },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto'],
+            body: tableBody
+          },
+          layout: {
+            fillColor: (rowIndex: number) => (rowIndex !== 0 && rowIndex % 2 === 0) ? '#f8fafc' : null,
+            hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length) ? 2 : 1,
+            vLineWidth: () => 0,
+            hLineColor: () => '#e2e8f0',
+            paddingLeft: () => 10,
+            paddingRight: () => 10,
+            paddingTop: () => 8,
+            paddingBottom: () => 8
+          }
+        }
+      ],
+      styles: {
+        coverTitle: { fontSize: 22, bold: true, color: '#111827' },
+        coverSub: { fontSize: 14, color: '#4b5563' },
+        tableHeader: { bold: true, fillColor: '#2563eb', color: '#ffffff', margin: [0, 4, 0, 4] }
+      }
+    };
+  }
+
   private formatMinutes(mins: number): string {
     if (!mins || mins === 0) return '0m';
     if (mins < 60) return `${mins}m`;

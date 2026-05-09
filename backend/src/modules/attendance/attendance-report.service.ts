@@ -5,7 +5,7 @@ import { AttendanceLog } from '../attendance/attendance-log.entity';
 import { Employee } from '../employees/employee.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
-import { AttendanceType } from '../../common/enums';
+import { EmployeeStatus, AttendanceType } from '../../common/enums';
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -98,16 +98,48 @@ export class AttendanceReportService {
 
     return {
       ...fullReport,
-      term: {
-        id: term.id,
-        name: term.name,
-        academicYear: term.academicYear
-      },
-      months
+      months,
+      term
     };
   }
 
-  async getReportForRange(employeeId: string, startDate: Date, endDate: Date) {
+  async getBulkMonthlyReport(month: number, year: number, branchId?: string) {
+    const query: any = { status: EmployeeStatus.ACTIVE };
+    if (branchId) {
+      query.branch = { id: branchId };
+    }
+    const employees = await this.employeeRepo.find({ where: query });
+    
+    const results = await Promise.all(employees.map(async (emp) => {
+      const report = await this.getMonthlyReport(emp.id, month, year);
+      return {
+        employee: report.employee,
+        summary: report.summary
+      };
+    }));
+
+    return results;
+  }
+
+  async getBulkTermReport(termId: string, branchId?: string) {
+    const query: any = { status: EmployeeStatus.ACTIVE };
+    if (branchId) {
+      query.branch = { id: branchId };
+    }
+    const employees = await this.employeeRepo.find({ where: query });
+    
+    const results = await Promise.all(employees.map(async (emp) => {
+      const report = await this.getTermReport(emp.id, termId);
+      return {
+        employee: report.employee,
+        summary: report.summary
+      };
+    }));
+
+    return results;
+  }
+
+  private async getReportForRange(employeeId: string, startDate: Date, endDate: Date) {
     const employee = await this.employeeRepo.findOne({
       where: { id: employeeId },
       relations: ['user', 'shift'],

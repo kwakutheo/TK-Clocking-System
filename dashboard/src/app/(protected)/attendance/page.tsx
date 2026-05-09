@@ -1,7 +1,7 @@
 'use client';
 import useSWR from 'swr';
 import { useState, useEffect, useMemo } from 'react';
-import { attendanceApi, employeesApi, calendarApi } from '@/lib/api';
+import { attendanceApi, employeesApi, calendarApi, branchesApi } from '@/lib/api';
 import { format, parseISO, eachMonthOfInterval, isSameMonth } from 'date-fns';
 import { Clock, User, Calendar, AlertTriangle, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { can } from '@/lib/permissions';
@@ -9,6 +9,7 @@ import { useAuthStore } from '@/lib/store';
 
 const employeesFetcher = () => employeesApi.list().then(r => r.data);
 const termsFetcher = () => calendarApi.listTerms().then((r) => r.data);
+const branchesFetcher = () => branchesApi.list().then((r) => r.data);
 
 const formatMinutes = (mins: number) => {
   if (mins < 60) return `${mins}m`;
@@ -20,8 +21,10 @@ const formatMinutes = (mins: number) => {
 export default function AttendanceReportPage() {
   const { data: employees } = useSWR('employees-list', employeesFetcher);
   const { data: terms } = useSWR('academic-calendar-terms', termsFetcher);
+  const { data: branches } = useSWR('branches-list', branchesFetcher);
 
   const [selectedEmp, setSelectedEmp] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedTermId, setSelectedTermId] = useState('');
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [month, setMonth] = useState<number | null>(null);
@@ -133,9 +136,39 @@ export default function AttendanceReportPage() {
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      link.parentNode?.removeChild(link);
+      link.remove();
     } catch (err) {
       alert('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportBulkPdf = async () => {
+    setExporting(true);
+    try {
+      let res;
+      let filename = 'bulk-attendance.pdf';
+      const branchName = selectedBranch ? branches?.find((b: any) => b.id === selectedBranch)?.name : undefined;
+      const termName = viewMode === 'term' ? selectedTerm?.name : undefined;
+
+      if (viewMode === 'month') {
+        res = await attendanceApi.exportBulkMonthlyPdf(month!, year!, selectedBranch || undefined, branchName);
+        filename = `bulk-attendance-${month}-${year}.pdf`;
+      } else {
+        res = await attendanceApi.exportBulkTermPdf(selectedTermId, selectedBranch || undefined, branchName, termName);
+        filename = `bulk-attendance-term.pdf`;
+      }
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert('Failed to export Bulk PDF');
     } finally {
       setExporting(false);
     }
@@ -189,24 +222,63 @@ export default function AttendanceReportPage() {
         <p className="page-subtitle">Detailed tracking of days worked, absences, lateness, and early departures</p>
       </div>
 
-      <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16, gap: 10 }}>
+      <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 24, gap: 12 }}>
           {can(user?.role, 'attendance.export') && (
-            <button 
-              className="btn btn-secondary" 
-              onClick={handleExportPdf} 
-              disabled={exporting || loading || !selectedEmp || (viewMode === 'month' && (month === null || year === null))}
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <FileText size={16} />
-              {exporting ? 'Exporting...' : 'Export to PDF'}
-            </button>
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', background: 'var(--bg-card-alt)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8 }}>
+                <label htmlFor="bulkBranchFilter" style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Bulk Export Filter:</label>
+                <select 
+                  id="bulkBranchFilter"
+                  className="form-input" 
+                  aria-label="Bulk Export Filter"
+                  style={{ width: 220, padding: '4px 10px', minHeight: 0, height: 32, border: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', borderRadius: 6 }}
+                  value={selectedBranch} 
+                  onChange={e => setSelectedBranch(e.target.value)}
+                >
+                  <option value="">— All Branches —</option>
+                  {(branches ?? []).map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleExportBulkPdf} 
+                disabled={exporting || loading || (viewMode === 'month' && (month === null || year === null))}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}
+                title="Export summary for all employees"
+              >
+                <FileText size={16} />
+                {exporting ? 'Exporting...' : 'Bulk Export All'}
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleExportPdf} 
+                disabled={exporting || loading || !selectedEmp || (viewMode === 'month' && (month === null || year === null))}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}
+                title="Export report for selected employee"
+              >
+                <FileText size={16} />
+                {exporting ? 'Exporting...' : 'Export Individual Report'}
+              </button>
+            </>
           )}
-          <button className="btn btn-primary" onClick={fetchReport} disabled={loading || !selectedEmp || (viewMode === 'month' && (month === null || year === null))}>
+          <button className="btn btn-primary" onClick={fetchReport} disabled={loading || !selectedEmp || (viewMode === 'month' && (month === null || year === null))} style={{ fontWeight: 500 }}>
             {loading ? '...' : 'Refresh Report'}
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, alignItems: 'flex-end' }}>
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: 20, 
+          alignItems: 'flex-end',
+          background: 'var(--bg-card-alt)',
+          padding: 20,
+          borderRadius: 12,
+          border: '1px solid var(--border)'
+        }}>
           <div className="form-group">
             <label htmlFor="selectEmployee">Select Employee</label>
             <select id="selectEmployee" className="form-input" value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)}>

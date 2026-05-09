@@ -676,6 +676,25 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
 
+.btn-secondary {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-secondary:hover:not(:disabled) { 
+  background: var(--bg-surface); 
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  border-color: var(--border-focus);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-ghost {
   background: var(--bg-card);
   border: 1px solid var(--border);
