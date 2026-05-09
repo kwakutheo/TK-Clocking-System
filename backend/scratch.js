@@ -1,5 +1,6 @@
 const pdfmake = require('pdfmake');
 const fs = require('fs');
+const path = require('path');
 
 async function test() {
   try {
@@ -13,16 +14,22 @@ async function test() {
     };
     pdfmake.setFonts(fonts);
     
+    const imagePath = path.join(__dirname, '../dashboard/public/logo.png');
+    console.log('Image path:', imagePath);
+
     const docDefinition = {
       defaultStyle: { font: 'Helvetica' },
-      content: ['Hello PDF from new API']
+      content: [
+        'Hello PDF from new API',
+        { image: imagePath, width: 50 }
+      ]
     };
     
     const pdfDoc = pdfmake.createPdf(docDefinition);
     const buffer = await pdfDoc.getBuffer();
     
-    fs.writeFileSync('test2.pdf', buffer);
-    console.log('PDF created successfully (test2.pdf)');
+    fs.writeFileSync('test3.pdf', buffer);
+    console.log('PDF created successfully (test3.pdf)');
   } catch (e) {
     console.error('Error:', e);
   }

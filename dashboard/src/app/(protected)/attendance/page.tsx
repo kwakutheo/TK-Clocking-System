@@ -112,15 +112,19 @@ export default function AttendanceReportPage() {
     if (!selectedEmp) return;
     setExporting(true);
     try {
+      const emp = employees?.find((e: any) => e.id === selectedEmp);
+      const rawName = emp?.user?.fullName || emp?.fullName || 'Employee';
+      const empName = rawName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      
       let res;
-      let filename = 'attendance-report.pdf';
+      let filename = `${empName}-attendance.pdf`;
       
       if (viewMode === 'month') {
         res = await attendanceApi.exportMonthlyPdf(selectedEmp, month!, year!);
-        filename = `attendance-${month}-${year}.pdf`;
+        filename = `${empName}-attendance-${month}-${year}.pdf`;
       } else {
         res = await attendanceApi.exportTermPdf(selectedEmp, selectedTermId);
-        filename = `attendance-term.pdf`;
+        filename = `${empName}-attendance-term.pdf`;
       }
 
       const url = window.URL.createObjectURL(new Blob([res.data]));
