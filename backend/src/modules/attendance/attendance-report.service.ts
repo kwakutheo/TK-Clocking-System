@@ -185,7 +185,7 @@ export class AttendanceReportService {
       });
 
       const term = terms.find(t => dayStr >= t.startDate && dayStr <= t.endDate);
-      const breakItem = term?.breaks?.find(b => dayStr >= b.startDate && b.endDate);
+      const breakItem = term?.breaks?.find(b => dayStr >= b.startDate && dayStr <= b.endDate);
 
       const clockIn = dayLogs.find(l => l.type === AttendanceType.CLOCK_IN);
       const clockOut = dayLogs.find(l => l.type === AttendanceType.CLOCK_OUT);

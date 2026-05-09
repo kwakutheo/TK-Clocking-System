@@ -250,7 +250,7 @@ export default function EmployeesPage() {
           <h1 className="page-title">Employees</h1>
           <p className="page-subtitle">Manage your workforce — {filtered.length} matching</p>
         </div>
-        <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: 4, borderRadius: 8, gap: 4, border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', background: 'var(--bg-secondary)', padding: 4, borderRadius: 8, gap: 4, border: '1px solid var(--border)' }}>
           <button 
             className={`btn btn-sm ${activeRoleView === 'all' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setActiveRoleView('all')}

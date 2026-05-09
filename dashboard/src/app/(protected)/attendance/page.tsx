@@ -68,8 +68,18 @@ export default function AttendanceReportPage() {
   useEffect(() => {
     if (!termList.length || selectedTermId) return;
 
+    const now = new Date();
+    const currentTerm = termList.find((term: any) => {
+      if (!term.startDate || !term.endDate) return false;
+      const start = parseISO(term.startDate);
+      const end = parseISO(term.endDate);
+      end.setHours(23, 59, 59, 999);
+      return now >= start && now <= end;
+    });
+
     const activeTerm = termList.find((term: any) => term.isActive);
-    const fallbackTerm = activeTerm ?? termList[0];
+    const fallbackTerm = currentTerm ?? activeTerm ?? termList[0];
+    
     setSelectedAcademicYear(fallbackTerm.academicYear);
     setSelectedTermId(fallbackTerm.id);
   }, [termList, selectedTermId]);
@@ -223,10 +233,10 @@ export default function AttendanceReportPage() {
       </div>
 
       <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 24, gap: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 24, gap: 12 }}>
           {can(user?.role, 'attendance.export') && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', background: 'var(--bg-card-alt)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginRight: 'auto', background: 'var(--bg-card-alt)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8 }}>
                 <label htmlFor="bulkBranchFilter" style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>Bulk Export Filter:</label>
                 <select 
                   id="bulkBranchFilter"
@@ -359,7 +369,7 @@ export default function AttendanceReportPage() {
       {report && (
         <>
           <div className="report-controls">
-            <div className="tabs" style={{ display: 'flex', gap: 8 }}>
+            <div className="tabs" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {viewMode === 'term' && (
                 <>
                   <button 

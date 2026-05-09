@@ -532,6 +532,16 @@ input, select, textarea { font-family: inherit; }
 }
 
 /* ── Dashboard Specific ───────────────────────────────────────────────────── */
+.dashboard-date-picker {
+  margin-right: 80px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-date-picker {
+    margin-right: 0;
+  }
+}
+
 .dashboard-content-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;

@@ -146,7 +146,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-container">
-      <div className="page-header dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">
             {greeting}, <span className="text-gradient">{user?.fullName.split(' ')[0]}</span>
@@ -163,7 +163,7 @@ export default function DashboardPage() {
             )} Workforce Overview
           </p>
         </div>
-        <div style={{ marginRight: '80px', display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <div className="dashboard-date-picker" style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <button
             onClick={handlePrevDate}
             style={{ transition: 'background 0.2s ease', background: 'transparent', border: 'none', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', borderRight: '1px solid var(--border-color)' }}

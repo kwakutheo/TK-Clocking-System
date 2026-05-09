@@ -5,6 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
+// Force the Node process to a specific timezone to prevent cloud deployment bugs.
+// Defaults to Africa/Accra (Ghana) as per project requirements unless overridden.
+process.env.TZ = process.env.APP_TIMEZONE || 'Africa/Accra';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
