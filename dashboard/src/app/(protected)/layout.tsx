@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthStore, initials, roleLabel } from '@/lib/store';
-import { fetchAndCachePermissions } from '@/lib/permissions';
+import { fetchAndCachePermissions, can, type Permission } from '@/lib/permissions';
 import { 
   LayoutDashboard, 
   Clock, 
@@ -22,17 +22,24 @@ import {
   Moon
 } from 'lucide-react';
 
-const NAV = [
+interface NavItem {
+  href: string;
+  icon: any;
+  label: string;
+  permission?: Permission;
+}
+
+const NAV: NavItem[] = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Overview'    },
-  { href: '/attendance',  icon: Clock,            label: 'Attendance'   },
-  { href: '/employees',   icon: Users,            label: 'Employees'    },
-  { href: '/shifts',      icon: Clock,            label: 'Shifts'       },
-  { href: '/holidays',    icon: Calendar,         label: 'Holidays'     },
-  { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', roles: ['hr_admin', 'super_admin'] },
-  { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',    roles: ['super_admin'] },
-  { href: '/permissions', icon: ShieldAlert,      label: 'Permissions',   roles: ['super_admin'] },
-  { href: '/departments', icon: Building2,        label: 'Departments'  },
-  { href: '/branches',    icon: MapPin,           label: 'Branches'     },
+  { href: '/attendance',  icon: Clock,            label: 'Attendance',     permission: 'attendance.view' },
+  { href: '/employees',   icon: Users,            label: 'Employees',      permission: 'employees.view'  },
+  { href: '/shifts',      icon: Clock,            label: 'Shifts',         permission: 'shifts.manage'   },
+  { href: '/holidays',    icon: Calendar,         label: 'Holidays',       permission: 'holidays.manage' },
+  { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', permission: 'calendar.view' },
+  { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',     permission: 'audit.view'      },
+  { href: '/permissions', icon: ShieldAlert,      label: 'Permissions',    permission: 'permissions.manage' },
+  { href: '/departments', icon: Building2,        label: 'Departments',    permission: 'departments.manage' },
+  { href: '/branches',    icon: MapPin,           label: 'Branches',       permission: 'branches.manage' },
   { href: '/profile',     icon: UserCircle,       label: 'My Profile'   },
 ];
 
@@ -44,10 +51,18 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
+  const [permissionsTick, setPermissionsTick] = useState(0);
+
   useEffect(() => { 
     hydrate(); 
     fetchAndCachePermissions();
   }, [hydrate]);
+
+  useEffect(() => {
+    const handlePermissionsUpdated = () => setPermissionsTick(prev => prev + 1);
+    window.addEventListener('permissionsUpdated', handlePermissionsUpdated);
+    return () => window.removeEventListener('permissionsUpdated', handlePermissionsUpdated);
+  }, []);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -162,7 +177,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         <div className="sidebar-nav">
           <span className="nav-section-label">Main Menu</span>
           <nav>
-            {NAV.filter(item => !item.roles || item.roles.includes(user?.role || '')).map((item) => {
+            {NAV.filter(item => !item.permission || can(user?.role, item.permission)).map((item) => {
               const Icon = item.icon;
               
               return (

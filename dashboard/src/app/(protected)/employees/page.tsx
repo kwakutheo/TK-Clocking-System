@@ -427,15 +427,17 @@ export default function EmployeesPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                              className="btn btn-sm"
-                              style={{ padding: '4px 8px', fontSize: 12 }}
-                              onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
-                              title="Edit"
-                              aria-label="Edit Employee"
-                            >
-                              ✏️
-                            </button>
+                            {can(userRole, 'employees.edit') && (
+                              <button
+                                className="btn btn-sm"
+                                style={{ padding: '4px 8px', fontSize: 12 }}
+                                onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
+                                title="Edit"
+                                aria-label="Edit Employee"
+                              >
+                                ✏️
+                              </button>
+                            )}
                             {can(userRole, 'employees.reset_password') && (
                               <button
                                 className="btn btn-sm"

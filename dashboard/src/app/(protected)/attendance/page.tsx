@@ -3,7 +3,9 @@ import useSWR from 'swr';
 import { useState, useEffect, useMemo } from 'react';
 import { attendanceApi, employeesApi, calendarApi } from '@/lib/api';
 import { format, parseISO, eachMonthOfInterval, isSameMonth } from 'date-fns';
-import { Clock, User, Calendar, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, User, Calendar, AlertTriangle, CheckCircle, XCircle, FileText } from 'lucide-react';
+import { can } from '@/lib/permissions';
+import { useAuthStore } from '@/lib/store';
 
 const employeesFetcher = () => employeesApi.list().then(r => r.data);
 const termsFetcher = () => calendarApi.listTerms().then((r) => r.data);
@@ -29,6 +31,9 @@ export default function AttendanceReportPage() {
   const [viewMode, setViewMode] = useState<'month' | 'term'>('month');
   const [showExceptionsOnly, setShowExceptionsOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<string | 'summary'>('summary');
+  const [exporting, setExporting] = useState(false);
+
+  const { user } = useAuthStore();
 
   const termList: any[] = terms ?? [];
   const selectedTerm = termList.find((term: any) => term.id === selectedTermId);
@@ -103,6 +108,35 @@ export default function AttendanceReportPage() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!selectedEmp) return;
+    setExporting(true);
+    try {
+      let res;
+      let filename = 'attendance-report.pdf';
+      
+      if (viewMode === 'month') {
+        res = await attendanceApi.exportMonthlyPdf(selectedEmp, month!, year!);
+        filename = `attendance-${month}-${year}.pdf`;
+      } else {
+        res = await attendanceApi.exportTermPdf(selectedEmp, selectedTermId);
+        filename = `attendance-term.pdf`;
+      }
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (err) {
+      alert('Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedEmp) fetchReport();
   }, [selectedEmp, month, year, selectedTermId, viewMode]);
@@ -152,7 +186,18 @@ export default function AttendanceReportPage() {
       </div>
 
       <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16, gap: 10 }}>
+          {can(user?.role, 'attendance.export') && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleExportPdf} 
+              disabled={exporting || loading || !selectedEmp || (viewMode === 'month' && (month === null || year === null))}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <FileText size={16} />
+              {exporting ? 'Exporting...' : 'Export to PDF'}
+            </button>
+          )}
           <button className="btn btn-primary" onClick={fetchReport} disabled={loading || !selectedEmp || (viewMode === 'month' && (month === null || year === null))}>
             {loading ? '...' : 'Refresh Report'}
           </button>

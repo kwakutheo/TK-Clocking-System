@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useState, useMemo } from 'react';
 import { calendarApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
-import { Calendar, Plus, Trash2, Edit2, Coffee, ChevronRight, ChevronDown, GraduationCap } from 'lucide-react';
+import { Calendar, Plus, Trash2, Edit2, Coffee, ChevronRight, ChevronDown, GraduationCap, ShieldAlert } from 'lucide-react';
 import { can } from '@/lib/permissions';
 
 const fetcher = () => calendarApi.listTerms().then((r) => r.data);
@@ -264,6 +264,15 @@ export default function AcademicCalendarPage() {
     });
     setShowTermModal(true);
   };
+
+  if (!can(userRole, 'calendar.view')) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ color: 'var(--danger)' }}><ShieldAlert size={48} /></div>
+        <p className="empty-state-text">Access Denied. You do not have permission to view the Academic Calendar.</p>
+      </div>
+    );
+  }
 
   return (
     <>

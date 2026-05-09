@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
@@ -67,7 +67,7 @@ export class BranchesService {
     const user = await this.users.findById(userId);
     const matches = await bcrypt.compare(password, user.passwordHash);
     if (!matches) {
-      throw new UnauthorizedException('Incorrect password. QR code was not regenerated.');
+      throw new BadRequestException('Incorrect password. QR code was not regenerated.');
     }
 
     const branch = await this.findById(id);

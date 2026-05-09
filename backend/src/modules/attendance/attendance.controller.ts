@@ -9,7 +9,9 @@ import {
   DefaultValuePipe,
   Param,
   NotFoundException,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -18,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { AttendanceService } from './attendance.service';
 import { AttendanceReportService } from './attendance-report.service';
+import { AttendanceExportService } from './attendance-export.service';
 import { EmployeesService } from '../employees/employees.service';
 import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
@@ -37,6 +40,7 @@ export class AttendanceController {
   constructor(
     private readonly service: AttendanceService,
     private readonly reportService: AttendanceReportService,
+    private readonly exportService: AttendanceExportService,
     private readonly employeesService: EmployeesService,
   ) {}
 
@@ -102,6 +106,37 @@ export class AttendanceController {
     @Param('termId') termId: string,
   ) {
     return this.reportService.getTermReport(employeeId, termId);
+  }
+
+  @Get('export/pdf/monthly/:employeeId')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.export')
+  @ApiOperation({ summary: 'Export monthly attendance report as PDF' })
+  async exportMonthlyPdf(
+    @Param('employeeId') employeeId: string,
+    @Query('month', ParseIntPipe) month: number,
+    @Query('year', ParseIntPipe) year: number,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.exportService.exportMonthlyPdf(employeeId, month, year);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="attendance-report-${month}-${year}.pdf"`);
+    res.send(pdfBuffer);
+  }
+
+  @Get('export/pdf/term/:employeeId/term/:termId')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('attendance.export')
+  @ApiOperation({ summary: 'Export term attendance report as PDF' })
+  async exportTermPdf(
+    @Param('employeeId') employeeId: string,
+    @Param('termId') termId: string,
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.exportService.exportTermPdf(employeeId, termId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="attendance-report-term.pdf"`);
+    res.send(pdfBuffer);
   }
 
   @Post('clock-in')

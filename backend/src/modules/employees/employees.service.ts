@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -162,9 +162,7 @@ export class EmployeesService {
   ): Promise<Employee> {
     const emp = await this.findById(id);
 
-    if (data.status && adminUser?.role !== UserRole.SUPER_ADMIN) {
-      throw new UnauthorizedException('Only Super Admins can change employee status.');
-    }
+
 
     const oldValues = {
       position: emp.position,
@@ -278,7 +276,7 @@ export class EmployeesService {
     const adminUser = await this.users.findById(adminUserPayload.id);
     const isValidAdminPassword = await bcrypt.compare(adminPassword, adminUser.passwordHash);
     if (!isValidAdminPassword) {
-      throw new UnauthorizedException('Invalid admin password. Action not authorized.');
+      throw new BadRequestException('Invalid admin password. Action not authorized.');
     }
 
     const emp = await this.findById(id);

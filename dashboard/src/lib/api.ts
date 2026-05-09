@@ -66,6 +66,10 @@ export const attendanceApi = {
     timestamp?: string;
     note: string;
   }) => api.post('/attendance/admin-clock', data),
+  exportMonthlyPdf: (employeeId: string, month: number, year: number) =>
+    api.get(`/attendance/export/pdf/monthly/${employeeId}`, { params: { month, year }, responseType: 'blob' }),
+  exportTermPdf: (employeeId: string, termId: string) =>
+    api.get(`/attendance/export/pdf/term/${employeeId}/term/${termId}`, { responseType: 'blob' }),
 };
 
 // ── Holidays ───────────────────────────────────────────────────────────────

@@ -3,17 +3,34 @@ import useSWR from 'swr';
 import { useState } from 'react';
 import { holidaysApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
-import { Calendar, Plus, Trash2, Edit } from 'lucide-react';
+import { Calendar, Plus, Trash2, Edit, ShieldAlert } from 'lucide-react';
+import { can } from '@/lib/permissions';
+import { useAuthStore } from '@/lib/store';
+import { useMemo } from 'react';
 
 const fetcher = () => holidaysApi.list().then((r) => r.data);
 
 export default function HolidaysPage() {
   const { data, isLoading, mutate } = useSWR('holidays-list', fetcher);
+  const { user } = useAuthStore();
   const holidays: any[] = data ?? [];
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', date: '', isRecurring: true });
+
+  const userRole = useMemo(() => user?.role, [user]);
+
+  if (!can(userRole, 'holidays.manage')) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ color: 'var(--danger)' }}><ShieldAlert size={48} /></div>
+        <p className="empty-state-text">Access Denied. You do not have permission to manage holidays.</p>
+      </div>
+    );
+  }
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +78,12 @@ export default function HolidaysPage() {
           <h1 className="page-title">Holidays & Non-Working Days</h1>
           <p className="page-subtitle">Manage public holidays to ensure accurate absence tracking</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={18} style={{ marginRight: 8 }} />
-          Add Holiday
-        </button>
+        {can(userRole, 'holidays.manage') && (
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={18} style={{ marginRight: 8 }} />
+            Add Holiday
+          </button>
+        )}
       </div>
 
       <div className="table-wrap">

@@ -73,6 +73,15 @@ export default function DepartmentsPage() {
     }
   };
 
+  if (!can(userRole, 'departments.manage')) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ color: 'var(--danger)' }}>🚫</div>
+        <p className="empty-state-text">Access Denied. You do not have permission to manage departments.</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="page-header">
@@ -80,7 +89,9 @@ export default function DepartmentsPage() {
           <h1 className="page-title">Departments</h1>
           <p className="page-subtitle">Manage company departments</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>+ Add Department</button>
+        {can(userRole, 'departments.manage') && (
+          <button className="btn btn-primary" onClick={openCreate}>+ Add Department</button>
+        )}
       </div>
 
       {isLoading ? (

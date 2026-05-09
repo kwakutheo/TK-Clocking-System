@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useState } from 'react';
 import { shiftsApi, calendarApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { Clock, Plus, Trash2, Save, Edit } from 'lucide-react';
+import { Clock, Plus, Trash2, Save, Edit, ShieldAlert } from 'lucide-react';
 import { can } from '@/lib/permissions';
 
 const fetcher = () => shiftsApi.list().then((r) => r.data);
@@ -23,6 +23,17 @@ export default function ShiftsPage() {
     endTime: '17:00',
     graceMinutes: 15,
   });
+
+  if (!canManage) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ color: 'var(--danger)' }}><ShieldAlert size={48} /></div>
+        <p className="empty-state-text">Access Denied. You do not have permission to manage shifts.</p>
+      </div>
+    );
+  }
+
+
 
   const handleOpenEdit = (shift: any) => {
     setEditingId(shift.id);

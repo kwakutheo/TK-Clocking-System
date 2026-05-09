@@ -24,13 +24,15 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
 };
 
 export default function PermissionsPage() {
-  const { data: serverMatrix, isLoading } = useSWR('settings-permissions', () =>
-    settingsApi.getPermissions().then((r) => r.data).catch(() => null)
+  const { data: serverMatrix, isLoading, mutate } = useSWR('settings-permissions', () =>
+    settingsApi.getPermissions().then((r) => r.data).catch(() => null),
+    { revalidateOnFocus: false }
   );
 
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => loadPermissions());
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const hasUnsavedChanges = React.useRef(false);
 
   // Sync server data into local state + cache once loaded
   useEffect(() => {
@@ -43,6 +45,7 @@ export default function PermissionsPage() {
 
   const toggle = useCallback((role: Role, perm: Permission) => {
     if (role === 'super_admin') return; // Super Admin is immutable
+    hasUnsavedChanges.current = true;
     setMatrix(prev => {
       const current = prev[role] ?? [];
       const updated = current.includes(perm)
@@ -53,11 +56,13 @@ export default function PermissionsPage() {
     setSaved(false);
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (matrixToSave: PermissionMatrix = matrix) => {
+    hasUnsavedChanges.current = false;
     setSaving(true);
     try {
-      await settingsApi.updatePermissions(matrix as unknown as Record<string, string[]>);
-      savePermissions(matrix); // update local cache too
+      await settingsApi.updatePermissions(matrixToSave as unknown as Record<string, string[]>);
+      savePermissions(matrixToSave); // update local cache too
+      mutate(matrixToSave, false); // sync SWR cache instantly without re-fetching
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -67,6 +72,18 @@ export default function PermissionsPage() {
     }
   };
 
+  // Auto-save debouncer
+  useEffect(() => {
+    if (!hasUnsavedChanges.current) return;
+
+    const timer = setTimeout(() => {
+      hasUnsavedChanges.current = false;
+      handleSave(matrix);
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [matrix]);
+
   const handleReset = async () => {
     if (!confirm('Reset all permissions to their default values?')) return;
     setSaving(true);
@@ -74,6 +91,7 @@ export default function PermissionsPage() {
       await settingsApi.updatePermissions(DEFAULT_PERMISSIONS as unknown as Record<string, string[]>);
       setMatrix(DEFAULT_PERMISSIONS);
       savePermissions(DEFAULT_PERMISSIONS);
+      mutate(DEFAULT_PERMISSIONS, false); // sync SWR cache instantly without re-fetching
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
@@ -102,7 +120,7 @@ export default function PermissionsPage() {
           </button>
           <button
             className="btn btn-primary"
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving}
             style={{ minWidth: 120, transition: 'background 0.3s' }}
           >
@@ -270,21 +288,7 @@ export default function PermissionsPage() {
         </table>
       </div>
 
-      {/* ── Footer Note ─────────────────────────────────────────────────────── */}
-      <div style={{
-        marginTop: 20, padding: '12px 16px',
-        background: 'rgba(99,102,241,0.08)',
-        border: '1px solid rgba(99,102,241,0.2)',
-        borderRadius: 10,
-        display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'var(--text-secondary)'
-      }}>
-        <ShieldCheck size={18} style={{ color: '#818cf8', flexShrink: 0, marginTop: 1 }} />
-        <span>
-          Permissions are stored locally and enforced in the dashboard UI.
-          For full backend enforcement, ensure your API applies role-based guards on every endpoint.
-          <strong style={{ color: 'var(--text-primary)' }}> Super Admin always retains full access and cannot be restricted.</strong>
-        </span>
-      </div>
+
     </>
   );
 }

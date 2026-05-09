@@ -457,6 +457,15 @@ export default function BranchesPage() {
       : ''
   , []);
 
+  if (!can(userRole, 'branches.manage')) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ color: 'var(--danger)' }}>🚫</div>
+        <p className="empty-state-text">Access Denied. You do not have permission to manage branches.</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="page-header">

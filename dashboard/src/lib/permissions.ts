@@ -150,6 +150,7 @@ export function loadPermissions(): PermissionMatrix {
 export function savePermissions(matrix: PermissionMatrix): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(matrix));
+  window.dispatchEvent(new Event('permissionsUpdated'));
 }
 
 // ── API-backed load: fetches from server, updates cache ───────────────────

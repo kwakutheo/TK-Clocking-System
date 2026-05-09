@@ -2,13 +2,25 @@
 import useSWR from 'swr';
 import { auditApi } from '@/lib/api';
 import { format } from 'date-fns';
-import { ShieldCheck, User, Info, Calendar } from 'lucide-react';
+import { ShieldCheck, User, Info, Calendar, ShieldAlert } from 'lucide-react';
+import { can } from '@/lib/permissions';
+import { useAuthStore } from '@/lib/store';
 
 const fetcher = () => auditApi.list().then((r) => r.data);
 
 export default function AuditLogsPage() {
-  const { data, isLoading } = useSWR('audit-logs', fetcher);
+  const { user } = useAuthStore();
+  const { data, isLoading } = useSWR(can(user?.role, 'audit.view') ? 'audit-logs' : null, fetcher);
   const logs: any[] = data ?? [];
+
+  if (!can(user?.role, 'audit.view')) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ color: 'var(--danger)' }}><ShieldAlert size={48} /></div>
+        <p className="empty-state-text">Access Denied. You do not have permission to view Audit Logs.</p>
+      </div>
+    );
+  }
 
   const formatJson = (val: any) => {
     if (!val) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
