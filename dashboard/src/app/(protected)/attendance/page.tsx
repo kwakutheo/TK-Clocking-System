@@ -575,7 +575,7 @@ export default function AttendanceReportPage() {
                               Missing Out
                             </span>
                           )}
-                          {day.status === 'PRESENT' && !day.isLate && !day.isEarlyOut && (
+                          {day.status === 'PRESENT' && !day.isLate && !day.isEarlyOut && !day.missingClockIn && !day.missingClockOut && (
                             <span
                               title="Perfect Shift"
                               className="badge badge-green"

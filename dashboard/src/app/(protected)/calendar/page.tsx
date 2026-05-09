@@ -1,6 +1,6 @@
 'use client';
 import useSWR from 'swr';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { calendarApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
 import { Calendar, Plus, Trash2, Edit2, Coffee, ChevronRight, ChevronDown, GraduationCap, ShieldAlert } from 'lucide-react';
@@ -23,6 +23,7 @@ export default function AcademicCalendarPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTerm, setEditingTerm] = useState<any>(null);
   const [expandedYears, setExpandedYears] = useState<Record<string, boolean>>({});
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const [termForm, setTermForm] = useState({
     name: '',
@@ -58,6 +59,43 @@ export default function AcademicCalendarPage() {
 
   // Sort years descending (e.g., "2025/2026" before "2024/2025")
   const sortedYears = Object.keys(groupedTerms).sort((a, b) => b.localeCompare(a));
+
+  const currentAcademicYear = useMemo(() => {
+    if (!terms.length) return null;
+    const now = new Date();
+    let currentYear = null;
+
+    // 1. Try to find the year that contains the current date
+    for (const term of terms) {
+      if (!term.startDate || !term.endDate) continue;
+      const start = parseISO(term.startDate);
+      const end = parseISO(term.endDate);
+      end.setHours(23, 59, 59, 999);
+      if (now >= start && now <= end) {
+        currentYear = term.academicYear;
+        break;
+      }
+    }
+
+    // 2. Fallback to the active term
+    if (!currentYear) {
+      const activeTerm = terms.find((t: any) => t.isActive);
+      currentYear = activeTerm?.academicYear;
+    }
+
+    // 3. Fallback to the newest year
+    if (!currentYear && sortedYears.length > 0) {
+      currentYear = sortedYears[0];
+    }
+    
+    return currentYear;
+  }, [terms, sortedYears]);
+
+  useEffect(() => {
+    if (hasInitialized || !currentAcademicYear) return;
+    setExpandedYears({ [currentAcademicYear]: true });
+    setHasInitialized(true);
+  }, [currentAcademicYear, hasInitialized]);
 
   const handleYearSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,13 +339,12 @@ export default function AcademicCalendarPage() {
             // Sort terms within the year by start date ascending (e.g. Term 1 -> Term 2 -> Term 3)
             const yearTerms = groupedTerms[year].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
             
-            // First year is expanded by default if not set in state
-            const isExpanded = expandedYears[year] !== undefined ? expandedYears[year] : index === 0;
+            const isExpanded = expandedYears[year] || false;
             
             return (
               <div key={year} style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div 
-                  onClick={() => setExpandedYears(prev => ({ ...prev, [year]: !isExpanded }))}
+                  onClick={() => setExpandedYears({ [year]: !isExpanded })}
                   style={{ 
                     padding: '16px 20px', 
                     background: 'rgba(255,255,255,0.02)', 
@@ -316,7 +353,7 @@ export default function AcademicCalendarPage() {
                     alignItems: 'center',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    borderBottom: isExpanded ? '1px solid var(--border)' : 'none'
+                    transition: 'background 0.2s ease'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -324,6 +361,9 @@ export default function AcademicCalendarPage() {
                     <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
                       Academic Year: <span style={{ color: 'var(--primary)' }}>{year}</span>
                     </h2>
+                    {year === currentAcademicYear && (
+                      <span className="badge badge-green" style={{ marginLeft: 8, fontSize: 11, padding: '3px 8px' }}>Current Year</span>
+                    )}
                     <span className="badge badge-gray" style={{ marginLeft: 8 }}>{yearTerms.length} terms</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -337,13 +377,26 @@ export default function AcademicCalendarPage() {
                       </button>
                     )}
                     <div style={{ color: 'var(--text-secondary)' }}>
-                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                      <ChevronRight 
+                        size={20} 
+                        style={{ 
+                          transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', 
+                          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' 
+                        }} 
+                      />
                     </div>
                   </div>
                 </div>
                 
-                {isExpanded && (
-                  <div style={{ padding: 20, background: 'var(--bg-secondary)' }}>
+                <div 
+                  style={{
+                    display: 'grid',
+                    gridTemplateRows: isExpanded ? '1fr' : '0fr',
+                    transition: 'grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  <div style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: 20, background: 'var(--bg-secondary)', borderTop: '1px solid var(--border)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'start' }}>
                       {yearTerms.map((term) => {
                         const today = new Date();
@@ -447,8 +500,9 @@ export default function AcademicCalendarPage() {
                         );
                       })}
                     </div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
