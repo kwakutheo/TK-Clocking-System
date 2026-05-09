@@ -106,7 +106,7 @@ class HomeDataModel extends HomeDataEntity {
     return {
       'lastActivity': lastActivityType != null
           ? {
-              'type': lastActivityType,
+              'type': lastActivityType!.name,
               'timestamp': lastActivityTime?.toIso8601String(),
             }
           : null,

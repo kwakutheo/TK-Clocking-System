@@ -272,7 +272,6 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{branch.name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, fontFamily: 'monospace' }}>ID: {branch.id}</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="btn btn-sm btn-ghost" onClick={onEdit} aria-label="Edit Branch">✏️</button>

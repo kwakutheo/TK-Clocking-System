@@ -102,7 +102,7 @@ abstract final class AppTheme {
           color: textColor,
         ),
         labelSmall: TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w500,
           color: textColor.withValues(alpha: 0.6),
           letterSpacing: 0.5,
@@ -118,8 +118,9 @@ abstract final class AppTheme {
         backgroundColor: brightness == Brightness.light
             ? Colors.white
             : const Color(0xFF161B22),
-        foregroundColor:
-            brightness == Brightness.light ? const Color(0xFF0D1117) : Colors.white,
+        foregroundColor: brightness == Brightness.light
+            ? const Color(0xFF0D1117)
+            : Colors.white,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black.withValues(alpha: 0.08),
       );

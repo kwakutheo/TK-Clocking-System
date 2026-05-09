@@ -101,6 +101,7 @@ class _DashboardTabState extends State<_DashboardTab> {
   bool _isRefetching = false;
   bool _checkingLocation = false;
   bool? _isInWorkZone;
+  String? _locationError;
 
   @override
   void initState() {
@@ -131,6 +132,7 @@ class _DashboardTabState extends State<_DashboardTab> {
           _data = HomeDataModel.fromJson(Map<String, dynamic>.from(cached));
           _isLoading = false;
         });
+        _checkGeofence();
       } catch (_) {
         // Cache corrupted, just move on to network load
       }
@@ -166,12 +168,18 @@ class _DashboardTabState extends State<_DashboardTab> {
               _data = data;
               _isLoading = false;
             });
-            // Update cache
-            if (data is HomeDataModel) {
-              final box = Hive.box(AppConstants.userBox);
-              box.put('home_data_cache', data.toJson());
-            }
+            // Run geofence check before saving to cache
             _checkGeofence();
+
+            // Update cache safely
+            if (data is HomeDataModel) {
+              try {
+                final box = Hive.box(AppConstants.userBox);
+                box.put('home_data_cache', data.toJson());
+              } catch (e) {
+                debugPrint('Failed to save cache: $e');
+              }
+            }
           },
         );
       }
@@ -192,11 +200,17 @@ class _DashboardTabState extends State<_DashboardTab> {
   }
 
   Future<void> _checkGeofence() async {
-    if (_data == null || _data!.branchLat == null || _data!.branchLng == null || _data!.branchRadius == null) {
+    if (_data == null ||
+        _data!.branchLat == null ||
+        _data!.branchLng == null ||
+        _data!.branchRadius == null) {
       return;
     }
     if (mounted) {
-      setState(() => _checkingLocation = true);
+      setState(() {
+        _checkingLocation = true;
+        _locationError = null;
+      });
     }
     try {
       final locService = sl<LocationService>();
@@ -210,7 +224,14 @@ class _DashboardTabState extends State<_DashboardTab> {
       );
       if (mounted) {
         setState(() {
-          _isInWorkZone = isInside;
+          // If accuracy is > 40m and it says outside, assume a false negative due to being indoors.
+          if (!isInside && position.accuracy > 40) {
+            _isInWorkZone = null;
+            _locationError = 'Poor GPS Signal';
+          } else {
+            _isInWorkZone = isInside;
+            _locationError = null;
+          }
           _checkingLocation = false;
         });
       }
@@ -218,6 +239,7 @@ class _DashboardTabState extends State<_DashboardTab> {
       if (mounted) {
         setState(() {
           _isInWorkZone = null;
+          _locationError = 'GPS Error';
           _checkingLocation = false;
         });
       }
@@ -427,7 +449,8 @@ class _DashboardTabState extends State<_DashboardTab> {
         const SizedBox(height: 16),
         _QuickActionsCard(),
         const SizedBox(height: 16),
-        if (data.nextShiftStartTime != null || data.upcomingHolidayName != null) ...[
+        if (data.nextShiftStartTime != null ||
+            data.upcomingHolidayName != null) ...[
           _UpcomingScheduleCard(data: data),
           const SizedBox(height: 16),
         ],
@@ -457,38 +480,137 @@ class _DashboardTabState extends State<_DashboardTab> {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           SizedBox(width: 6),
-          Text('Checking location...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Checking location...',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       );
     }
-    if (_isInWorkZone == null) return const SizedBox.shrink();
+
+    if (_data?.branchLat == null ||
+        _data?.branchLng == null ||
+        _data?.branchRadius == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.location_disabled_rounded,
+                size: 14, color: Colors.grey),
+            const SizedBox(width: 4),
+            Text(
+              'No Work Zone Assigned',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_locationError != null && _isInWorkZone == null) {
+      return GestureDetector(
+        onTap: _checkGeofence,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.gps_off_rounded, size: 14, color: Colors.orange),
+              const SizedBox(width: 4),
+              Text(
+                '$_locationError • Step outside to retry',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange.shade800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_isInWorkZone == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.help_outline_rounded,
+                size: 14, color: Colors.grey),
+            const SizedBox(width: 4),
+            Text(
+              'Location Unknown',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     final isInside = _isInWorkZone!;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isInside ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isInside ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isInside ? Icons.location_on_rounded : Icons.location_off_rounded,
-            size: 14,
-            color: isInside ? Colors.green : Colors.red,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            isInside ? 'Inside Work Zone' : 'Outside Work Zone',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isInside ? Colors.green.shade700 : Colors.red.shade700,
+    return GestureDetector(
+      onTap: _checkGeofence,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isInside
+              ? Colors.green.withValues(alpha: 0.1)
+              : Colors.red.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: isInside
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.red.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isInside ? Icons.location_on_rounded : Icons.location_off_rounded,
+              size: 14,
+              color: isInside ? Colors.green : Colors.red,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              isInside
+                  ? 'Inside Work Zone'
+                  : (_locationError ?? 'Outside Work Zone'),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isInside ? Colors.green.shade700 : Colors.red.shade700,
+              ),
+            ),
+            if (!isInside) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.refresh_rounded, size: 12, color: Colors.red.shade700),
+            ]
+          ],
+        ),
       ),
     );
   }
@@ -1307,14 +1429,15 @@ class _ShiftProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     final progress = (data.todayHours / data.targetDailyHours).clamp(0.0, 1.0);
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1380,14 +1503,15 @@ class _WeeklyGoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     final progress = (data.weekHours / data.targetWeeklyHours).clamp(0.0, 1.0);
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1444,7 +1568,8 @@ class _UpcomingScheduleCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1453,7 +1578,8 @@ class _UpcomingScheduleCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.event_note_rounded, color: colorScheme.primary, size: 24),
+                Icon(Icons.event_note_rounded,
+                    color: colorScheme.primary, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   "What's Next",
@@ -1467,7 +1593,8 @@ class _UpcomingScheduleCard extends StatelessWidget {
             if (data.nextShiftStartTime != null) ...[
               Row(
                 children: [
-                  Icon(Icons.schedule_rounded, size: 20, color: colorScheme.secondary),
+                  Icon(Icons.schedule_rounded,
+                      size: 20, color: colorScheme.secondary),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1475,26 +1602,29 @@ class _UpcomingScheduleCard extends StatelessWidget {
                       children: [
                         Text(
                           'Next Shift',
-                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                         Text(
-                          data.nextShiftDate != null 
+                          data.nextShiftDate != null
                               ? '${data.nextShiftStartTime!} (${formatter.format(data.nextShiftDate!)})'
                               : data.nextShiftStartTime!,
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              if (data.upcomingHolidayName != null)
-                const Divider(height: 24),
+              if (data.upcomingHolidayName != null) const Divider(height: 24),
             ],
-            if (data.upcomingHolidayName != null && data.upcomingHolidayDate != null)
+            if (data.upcomingHolidayName != null &&
+                data.upcomingHolidayDate != null)
               Row(
                 children: [
-                  Icon(Icons.celebration_rounded, size: 20, color: Colors.orange),
+                  Icon(Icons.celebration_rounded,
+                      size: 20, color: Colors.orange),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1502,11 +1632,13 @@ class _UpcomingScheduleCard extends StatelessWidget {
                       children: [
                         Text(
                           'Upcoming Holiday',
-                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                         Text(
                           '${data.upcomingHolidayName} (${formatter.format(data.upcomingHolidayDate!)})',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),

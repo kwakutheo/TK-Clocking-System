@@ -8,7 +8,7 @@ import { AttendanceChart } from '@/components/attendance-chart';
 import { StatCardSkeleton, TableSkeleton } from '@/components/skeleton';
 import { AdminManualClockModal } from '@/components/admin-manual-clock-modal';
 import {
-  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck, X,
+  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const fetcher = (fn: () => Promise<unknown>) => () => fn().then((r: any) => r.data);
@@ -127,6 +127,23 @@ export default function DashboardPage() {
 
   const activeBranchNames = branchList.slice(0, 2).map(b => b.name).join(' & ') + (branchList.length > 2 ? ` + ${branchList.length - 2} more` : '');
 
+  const handlePrevDate = () => {
+    const d = parseLocalDate(selectedDate);
+    if (!d) return;
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(format(d, 'yyyy-MM-dd'));
+  };
+
+  const handleNextDate = () => {
+    const d = parseLocalDate(selectedDate);
+    if (!d) return;
+    d.setDate(d.getDate() + 1);
+    const today = parseLocalDate(format(new Date(), 'yyyy-MM-dd'))!;
+    if (d <= today) {
+      setSelectedDate(format(d, 'yyyy-MM-dd'));
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <div className="page-header dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -146,7 +163,17 @@ export default function DashboardPage() {
             )} Workforce Overview
           </p>
         </div>
-        <div style={{ marginRight: '80px' }}>
+        <div style={{ marginRight: '80px', display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+          <button
+            onClick={handlePrevDate}
+            style={{ transition: 'background 0.2s ease', background: 'transparent', border: 'none', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', borderRight: '1px solid var(--border-color)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(128, 128, 128, 0.15)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            title="Previous day"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          
           <input 
             type="date" 
             value={selectedDate} 
@@ -162,8 +189,44 @@ export default function DashboardPage() {
             className="input-field"
             aria-label="Select date for attendance history"
             title="Select date for attendance history"
-            style={{ width: 'auto', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontFamily: 'inherit' }}
+            style={{ 
+              transition: 'background 0.2s ease',
+              width: 'auto', 
+              padding: '10px 16px', 
+              border: 'none', 
+              background: 'transparent', 
+              color: 'var(--text-primary)', 
+              fontFamily: 'inherit',
+              fontWeight: 500,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(128, 128, 128, 0.08)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           />
+
+          <button
+            onClick={handleNextDate}
+            disabled={isToday}
+            style={{ 
+              transition: 'background 0.2s ease',
+              background: 'transparent', 
+              border: 'none', 
+              padding: '10px 14px', 
+              cursor: isToday ? 'not-allowed' : 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: isToday ? 'var(--text-muted)' : 'var(--text-secondary)', 
+              borderLeft: '1px solid var(--border-color)',
+              opacity: isToday ? 0.5 : 1
+            }}
+            onMouseEnter={(e) => { if(!isToday) e.currentTarget.style.background = 'rgba(128, 128, 128, 0.15)'}}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            title="Next day"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       </div>
 
@@ -372,7 +435,7 @@ export default function DashboardPage() {
               {isToday ? 'Live Attendance Feed' : 'Attendance Log'}
             </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {isToday && isAdmin && (
+              {isToday && isAdmin && !dashboardStats.dayStatus?.isNonWorking && (
                 <button
                   id="manual-clock-open-btn"
                   className="btn btn-primary"
