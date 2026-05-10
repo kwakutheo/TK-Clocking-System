@@ -59,7 +59,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (e.type == DioExceptionType.connectionError) {
         return await _tryOfflineLogin(username, password);
       }
-      return Left(ServerFailure(e.message ?? 'Server error.'));
+      return const Left(ServerFailure('Unable to connect to the server. Please check your network or server IP.'));
     } catch (_) {
       return const Left(ServerFailure());
     }
