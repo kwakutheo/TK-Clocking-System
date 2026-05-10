@@ -1180,6 +1180,8 @@ export class AttendanceService {
         if (
           emp.status !== 'active' ||
           !emp.shift ||
+          // Exclude employees who weren't registered yet on the queried date
+          new Date(emp.createdAt) > endOfDay ||
           (employeeLogs[emp.id] && employeeLogs[emp.id].some(l => l.type === AttendanceType.CLOCK_IN))
         ) return;
 
