@@ -146,7 +146,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-container">
-      <div className="page-header dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="page-header dashboard-header" style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">
             {greeting}, <span className="text-gradient">{user?.fullName.split(' ')[0]}</span>
@@ -237,7 +237,7 @@ export default function DashboardPage() {
           background: 'var(--primary-color-dim)',
           border: '1px solid var(--primary-color)',
           borderRadius: 12,
-          marginBottom: 24,
+          marginBottom: 16,
           color: 'var(--primary-color)',
           fontWeight: 600,
           display: 'flex',
