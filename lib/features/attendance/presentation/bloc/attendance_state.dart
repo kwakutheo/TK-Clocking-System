@@ -56,6 +56,15 @@ class AttendanceFailure extends AttendanceState {
   List<Object?> get props => [message];
 }
 
+class AttendanceSyncFailure extends AttendanceState {
+  const AttendanceSyncFailure(this.message);
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
 /// Emitted when the user tries to clock out before their shift ends.
 /// The UI should show a confirmation dialog; on confirm it re-dispatches
 /// with [AttendanceRecordEvent.forceEarlyOut] = true.

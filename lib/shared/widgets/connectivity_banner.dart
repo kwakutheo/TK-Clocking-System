@@ -19,10 +19,7 @@ class ConnectivityBanner extends StatefulWidget {
   State<ConnectivityBanner> createState() => _ConnectivityBannerState();
 }
 
-class _ConnectivityBannerState extends State<ConnectivityBanner>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _slideAnimation;
+class _ConnectivityBannerState extends State<ConnectivityBanner> {
   bool _isOnline = true;
 
   @override
@@ -30,45 +27,17 @@ class _ConnectivityBannerState extends State<ConnectivityBanner>
     super.initState();
     _isOnline = widget.connectivityService.isOnline;
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
     widget.connectivityService.onConnectivityChanged.listen((isOnline) {
       if (!mounted) return;
       setState(() => _isOnline = isOnline);
-      if (!isOnline) {
-        _controller.forward();
-      } else {
-        // Show "back online" briefly then hide.
-        _controller.reverse().then((_) {});
-      }
     });
-
-    // Show banner immediately if already offline at startup.
-    if (!_isOnline) _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SlideTransition(
-          position: _slideAnimation,
-          child: _BannerBar(isOnline: _isOnline),
-        ),
+        _BannerBar(isOnline: _isOnline),
         Expanded(child: widget.child),
       ],
     );
@@ -95,22 +64,24 @@ class _BannerBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-            color: Colors.white,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            isOnline
-                ? 'Back online — syncing records…'
-                : 'No internet connection — working offline',
-            style: const TextStyle(
+          if (!isOnline) ...[
+            const Icon(
+              Icons.wifi_off_rounded,
               color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              size: 16,
             ),
-          ),
+            const SizedBox(width: 8),
+            const Text(
+              'No internet connection — working offline',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 16), // Maintains the same height
+          ],
         ],
       ),
     );

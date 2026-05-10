@@ -255,9 +255,47 @@ class _DashboardTabState extends State<_DashboardTab> {
 
     return BlocListener<AttendanceBloc, AttendanceState>(
       listener: (context, state) {
-        if (state is AttendanceSynced || state is AttendanceRecorded) {
+        if (state is AttendanceRecorded) {
           _checkPending();
           _loadData(silent: true);
+        } else if (state is AttendanceSynced) {
+          _checkPending();
+          _loadData(silent: true);
+          if (state.count > 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(
+                            'Successfully synced ${state.count} offline record(s).')),
+                  ],
+                ),
+                backgroundColor: Colors.green.shade700,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        } else if (state is AttendanceSyncFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(
+                          'Failed to sync offline records: ${state.message}')),
+                ],
+              ),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
         }
       },
       child: VisibilityDetector(

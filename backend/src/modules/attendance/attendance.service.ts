@@ -287,17 +287,26 @@ export class AttendanceService {
   }
 
   // ── Batch offline sync ────────────────────────────────────────────────────
-  async syncOffline(userId: string, dto: SyncOfflineDto): Promise<{ synced: number }> {
+  async syncOffline(userId: string, dto: SyncOfflineDto): Promise<{ synced: number; errors?: string[] }> {
     let synced = 0;
+    const errors: string[] = [];
+    
     for (const record of dto.records) {
       try {
         await this.record(userId, { ...record, isOfflineSync: true });
         synced++;
-      } catch {
-        // Skip duplicates / validation errors in batch; continue the rest.
+      } catch (e: any) {
+        errors.push(e.message || 'Unknown validation error');
       }
     }
-    return { synced };
+    
+    // If all records in the batch failed (which is always true for the app's 1-by-1 sync when it fails)
+    // we throw the error so the client receives a 400 Bad Request with the actual reason.
+    if (errors.length > 0 && synced === 0) {
+      throw new BadRequestException(errors.join(', '));
+    }
+
+    return { synced, errors: errors.length > 0 ? errors : undefined };
   }
 
   // ── Admin Manual Clock Override ───────────────────────────────────────────

@@ -213,8 +213,11 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   @override
   Future<Either<Failure, int>> syncPendingRecords() async {
     var synced = 0;
+    String? firstError;
 
-    for (final key in _box.keys) {
+    final keys = _box.keys.toList();
+
+    for (final key in keys) {
       final raw = _box.get(key);
       if (raw == null) continue;
 
@@ -230,9 +233,38 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
         );
         await _box.delete(key);
         synced++;
-      } catch (_) {
-        // Leave it as pending; retry on next sync.
+      } on DioException catch (e) {
+        if (e.type == DioExceptionType.connectionError ||
+            e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          // Network error, leave it pending and stop syncing
+          firstError ??= 'Network error while syncing.';
+          break;
+        }
+
+        final rawMsg = e.response?.data?['message'];
+        final serverMsg = rawMsg is String
+            ? rawMsg
+            : rawMsg is List
+                ? rawMsg.join(', ')
+                : e.message ?? 'Server error.';
+
+        firstError ??= serverMsg;
+
+        // If it's a 4xx error (business rule rejection like weekend clocking),
+        // delete it from local storage so it doesn't get stuck forever.
+        if (e.response?.statusCode != null &&
+            e.response!.statusCode! >= 400 &&
+            e.response!.statusCode! < 500) {
+          await _box.delete(key);
+        }
+      } catch (e) {
+        firstError ??= e.toString();
       }
+    }
+
+    if (firstError != null) {
+      return Left(ServerFailure(firstError));
     }
 
     return Right(synced);

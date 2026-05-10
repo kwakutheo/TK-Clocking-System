@@ -116,7 +116,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   ) async {
     final result = await _sync();
     result.fold(
-      (failure) => emit(AttendanceFailure(_mapFailure(failure))),
+      (failure) => emit(AttendanceSyncFailure(_mapFailure(failure))),
       (count) => emit(AttendanceSynced(count)),
     );
   }
