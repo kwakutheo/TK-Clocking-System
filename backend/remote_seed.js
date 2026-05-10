@@ -5,8 +5,8 @@ const ds = new DataSource({
   type: 'postgres',
   host: 'dpg-d802fgu7r5hc73b85qcg-a.frankfurt-postgres.render.com',
   port: 5432,
-  username: 'admin',
-  password: '[PASSWORD]',
+  username: 'theo',
+  password: 'Tbxtx3at4yicnVKPZksGEdTCLSn92GC5',
   database: 'tk_clocking',
   ssl: { rejectUnauthorized: false },
   entities: [__dirname + '/dist/**/*.entity.js'],
@@ -24,16 +24,16 @@ async function run() {
   if (!existing) {
     const hashedPassword = await bcrypt.hash('112233', 12);
     const superAdmin = userRepo.create({
-      username: 'admin', // The user entity uses 'username'
-      fullName: 'admin superadmin', // The user entity uses 'fullName'
+      username: 'theo', // The user entity uses 'username'
+      fullName: 'Theophilus Kwaku', // The user entity uses 'fullName'
       passwordHash: hashedPassword, // The user entity uses 'passwordHash'
       role: 'super_admin',
     });
     await userRepo.save(superAdmin);
-    console.log('Seeded Super Admin user: admin / 112233');
+    console.log('Seeded Super Admin user: theo / 112233');
   } else {
-    console.log('Superadmin already exists. Updating credentials to admin / 112233 just in case...');
-    existing.username = 'admin';
+    console.log('Superadmin already exists. Updating credentials to theo / 112233 just in case...');
+    existing.username = 'theo';
     existing.passwordHash = await bcrypt.hash('112233', 12);
     await userRepo.save(existing);
     console.log('Updated Super Admin user credentials.');
