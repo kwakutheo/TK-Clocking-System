@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
+import 'package:tk_clocking_system/core/network/api_client.dart';
 import 'package:tk_clocking_system/core/router/app_router.dart';
 import 'package:tk_clocking_system/core/services/connectivity_service.dart';
 import 'package:tk_clocking_system/core/theme/app_theme.dart';
@@ -25,6 +26,7 @@ class _AppState extends State<App> {
   late final AttendanceBloc _attendanceBloc;
   late final ConnectivityService _connectivity;
   late final StreamSubscription<bool> _connectivitySub;
+  late final StreamSubscription<void> _unauthorizedSub;
 
   @override
   void initState() {
@@ -40,10 +42,16 @@ class _AppState extends State<App> {
         _attendanceBloc.add(const AttendanceSyncEvent());
       }
     });
+
+    // Listen for 401 Unauthorized errors from ApiClient and force logout
+    _unauthorizedSub = sl<ApiClient>().onUnauthorized.listen((_) {
+      _authBloc.add(const AuthLogoutEvent());
+    });
   }
 
   @override
   void dispose() {
+    _unauthorizedSub.cancel();
     _connectivitySub.cancel();
     _authBloc.close();
     _attendanceBloc.close();

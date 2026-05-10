@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:tk_clocking_system/core/constants/app_constants.dart';
@@ -31,8 +33,11 @@ class ApiClient {
 
   late final Dio _dio;
   final StorageService _storage;
+  final _unauthorizedController = StreamController<void>.broadcast();
 
   Dio get dio => _dio;
+
+  Stream<void> get onUnauthorized => _unauthorizedController.stream;
 
   void updateBaseUrl(String newUrl) {
     _dio.options.baseUrl = newUrl;
@@ -49,7 +54,51 @@ class ApiClient {
         },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
+            // Prevent infinite loop if the refresh token endpoint itself returns 401
+            if (error.requestOptions.path.contains('/auth/refresh')) {
+              await _storage.clearSession();
+              _unauthorizedController.add(null);
+              return handler.next(error);
+            }
+
+            final refreshToken = await _storage.getRefreshToken();
+            if (refreshToken != null) {
+              try {
+                // Attempt to get a new access token using the refresh token
+                final refreshResponse = await Dio(
+                  BaseOptions(baseUrl: _dio.options.baseUrl),
+                ).post(
+                  '/auth/refresh',
+                  data: {'refreshToken': refreshToken},
+                );
+
+                final newAccessToken = refreshResponse.data['access_token'];
+                final newRefreshToken = refreshResponse.data['refresh_token'];
+
+                if (newAccessToken != null) {
+                  // Save the new tokens
+                  await _storage.saveAccessToken(newAccessToken);
+                  if (newRefreshToken != null) {
+                    await _storage.saveRefreshToken(newRefreshToken);
+                  }
+
+                  // Retry the original request with the new token
+                  final retryOptions = error.requestOptions;
+                  retryOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+                  
+                  // Use a new Dio instance to avoid interceptor loops if needed, 
+                  // or just use _dio.fetch
+                  final retryResponse = await _dio.fetch(retryOptions);
+                  return handler.resolve(retryResponse);
+                }
+              } catch (_) {
+                // If refresh fails, fall through to logout
+              }
+            }
+
+            // If we have no refresh token or it failed, clear session and logout
             await _storage.clearSession();
+            _unauthorizedController.add(null);
           }
           handler.next(error);
         },

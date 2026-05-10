@@ -77,6 +77,27 @@ export class AuthService {
     };
   }
 
+  // ── Refresh Token ──────────────────────────────────────────────────────────
+  async refresh(refreshToken: string) {
+    try {
+      // Verify the refresh token
+      const payload = await this.jwt.verifyAsync(refreshToken, {
+        secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      // Find the user
+      const user = await this.users.findById(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('User not found.');
+      }
+
+      // Re-issue tokens
+      return this.login(user);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired refresh token.');
+    }
+  }
+
   // ── Register ───────────────────────────────────────────────────────────────
   async register(dto: RegisterDto) {
     if (!dto.username && !dto.email && !dto.phone) {

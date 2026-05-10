@@ -39,6 +39,14 @@ export class AuthController {
     return this.auth.login(user);
   }
 
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh the access token' })
+  @ApiResponse({ status: 200, description: 'Returns new access + refresh tokens' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  refresh(@Body('refreshToken') token: string) {
+    return this.auth.refresh(token);
+  }
+
   @Post('register')
   @ApiOperation({ summary: 'Create a new user account' })
   @ApiResponse({ status: 201, description: 'Account created; tokens returned' })
