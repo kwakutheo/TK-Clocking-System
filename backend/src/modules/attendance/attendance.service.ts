@@ -1180,8 +1180,14 @@ export class AttendanceService {
         if (
           emp.status !== 'active' ||
           !emp.shift ||
-          // Exclude employees who weren't registered yet on the queried date
-          new Date(emp.createdAt) > endOfDay ||
+          // Exclude employees who weren't registered yet on the queried date.
+          // Use hireDate as the registration date (matching the attendance report logic),
+          // falling back to createdAt if hireDate is not set.
+          (() => {
+            const regDate = emp.hireDate ? new Date(emp.hireDate) : new Date(emp.createdAt);
+            regDate.setHours(0, 0, 0, 0);
+            return regDate > startOfDay;
+          })() ||
           (employeeLogs[emp.id] && employeeLogs[emp.id].some(l => l.type === AttendanceType.CLOCK_IN))
         ) return;
 
