@@ -169,7 +169,7 @@ class _DashboardTabState extends State<_DashboardTab> {
               _isLoading = false;
             });
             // Run geofence check before saving to cache
-            _checkGeofence();
+            _checkGeofence(silent: silent);
 
             // Update cache safely
             if (data is HomeDataModel) {
@@ -199,14 +199,14 @@ class _DashboardTabState extends State<_DashboardTab> {
     });
   }
 
-  Future<void> _checkGeofence() async {
+  Future<void> _checkGeofence({bool silent = false}) async {
     if (_data == null ||
         _data!.branchLat == null ||
         _data!.branchLng == null ||
         _data!.branchRadius == null) {
       return;
     }
-    if (mounted) {
+    if (mounted && !silent) {
       setState(() {
         _checkingLocation = true;
         _locationError = null;
@@ -282,45 +282,66 @@ class _DashboardTabState extends State<_DashboardTab> {
               slivers: [
                 SliverAppBar(
                   floating: true,
+                  snap: true,
+                  elevation: 0,
+                  scrolledUnderElevation: 1,
+                  toolbarHeight: 72,
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Good ${_greeting()},',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                        '${DateFormat('EEE, d MMM').format(DateTime.now())} • ${_greeting()}'.toUpperCase(),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        user?.fullName.split(' ').first ?? 'Employee',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        'Hi, ${user?.fullName.split(' ').first ?? 'Employee'}',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.onSurface,
+                          letterSpacing: -0.5,
                         ),
                       ),
                     ],
                   ),
                   actions: [
-                    IconButton(
-                      icon: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: Text(
-                          user?.initials ?? '?',
-                          style: TextStyle(
-                            color: colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                    GestureDetector(
+                      onTap: () {
+                        final homeState = context.findAncestorStateOfType<HomePageState>();
+                        homeState?.setTab(3);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            width: 2,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: colorScheme.primaryContainer,
+                          child: Text(
+                            user?.initials ?? '?',
+                            style: TextStyle(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
-                      onPressed: () {},
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 16),
                   ],
                   bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(20),
+                    preferredSize: const Size.fromHeight(32),
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 16, bottom: 8),
+                      padding: const EdgeInsets.only(left: 16, bottom: 12),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: _buildWorkZoneBadge(),
@@ -1430,7 +1451,9 @@ class _ShiftProgressCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final progress = (data.todayHours / data.targetDailyHours).clamp(0.0, 1.0);
+    final progress = data.targetDailyHours > 0
+        ? (data.todayHours / data.targetDailyHours).clamp(0.0, 1.0)
+        : 0.0;
 
     return Card(
       elevation: 0,
@@ -1504,7 +1527,9 @@ class _WeeklyGoalCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final progress = (data.weekHours / data.targetWeeklyHours).clamp(0.0, 1.0);
+    final progress = data.targetWeeklyHours > 0
+        ? (data.weekHours / data.targetWeeklyHours).clamp(0.0, 1.0)
+        : 0.0;
 
     return Card(
       elevation: 0,
