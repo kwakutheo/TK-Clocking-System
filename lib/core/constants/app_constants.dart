@@ -3,8 +3,8 @@ abstract final class AppConstants {
   // ── API ───────────────────────────────────────────────────────────────────
   static String baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.21.117.141:3000/api/v1',
-  ); // physical device → host PC
+    defaultValue: 'https://tk-clocking-api.onrender.com/api/v1',
+  ); // Cloud backend
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
