@@ -14,6 +14,7 @@ import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.da
 import 'package:tk_clocking_system/shared/enums/user_role.dart';
 import 'package:tk_clocking_system/shared/widgets/app_text_field.dart';
 import 'package:tk_clocking_system/shared/widgets/primary_button.dart';
+import 'package:tk_clocking_system/core/constants/app_constants.dart';
 
 /// Profile tab — shows user info and allows editing.
 class ProfilePage extends StatefulWidget {
@@ -312,6 +313,13 @@ class _ProfilePageState extends State<ProfilePage> {
                               trailing: const Icon(Icons.check_circle_rounded,
                                   color: Colors.green, size: 20),
                             ),
+                            _InfoItem(
+                              icon: Icons.dns_outlined,
+                              label: 'Server Network IP',
+                              value: AppConstants.baseUrl,
+                              trailing: const Icon(Icons.edit_outlined, size: 20),
+                              onTap: () => _showServerConfigDialog(context),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -380,6 +388,48 @@ class _ProfilePageState extends State<ProfilePage> {
               context.read<AuthBloc>().add(const AuthLogoutEvent());
             },
             child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServerConfigDialog(BuildContext context) {
+    final urlCtrl = TextEditingController(text: AppConstants.baseUrl);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Server Configuration'),
+        content: TextField(
+          controller: urlCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Server Base URL',
+            hintText: 'http://192.168.1.X:3000/api/v1',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newUrl = urlCtrl.text.trim();
+              if (newUrl.isNotEmpty) {
+                AppConstants.baseUrl = newUrl;
+                sl<ApiClient>().updateBaseUrl(newUrl);
+                await sl<StorageService>().saveServerUrl(newUrl);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  setState(() {}); // refresh the UI to show the new IP
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Server URL updated successfully')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -591,46 +641,51 @@ class _InfoItem extends StatelessWidget {
     required this.label,
     required this.value,
     this.trailing,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: cs.primary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: cs.primary),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (trailing != null) trailing!,
-        ],
+            if (trailing != null) trailing!,
+          ],
+        ),
       ),
     );
   }

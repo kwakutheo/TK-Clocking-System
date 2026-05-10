@@ -18,8 +18,6 @@ export class AcademicCalendarController {
   constructor(private readonly service: AcademicCalendarService) {}
 
   @Get('terms')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('calendar.view')
   @ApiOperation({ summary: 'List all academic terms' })
   findAllTerms() {
     return this.service.findAllTerms();
