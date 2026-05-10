@@ -71,17 +71,7 @@ class _HistoryPageState extends State<HistoryPage> {
           child: BlocListener<AttendanceBloc, AttendanceState>(
             listener: (context, state) {
               if (state is AttendanceSynced) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      state.count > 0
-                          ? '${state.count} record(s) synced successfully!'
-                          : 'No pending records to sync.',
-                    ),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                // The global sync notification is already handled by the Dashboard tab.
                 // Re-load history after sync to show fresh data
                 final authState = context.read<AuthBloc>().state;
                 if (authState is AuthAuthenticated) {

@@ -262,38 +262,44 @@ class _DashboardTabState extends State<_DashboardTab> {
           _checkPending();
           _loadData(silent: true);
           if (state.count > 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Row(
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: Colors.white),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: Text(
-                            'Successfully synced ${state.count} offline record(s).')),
+                    Icon(Icons.check_circle_rounded, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Sync Successful'),
                   ],
                 ),
-                backgroundColor: Colors.green.shade700,
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 4),
+                content: Text('Successfully synced ${state.count} offline record(s).'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
               ),
             );
           }
         } else if (state is AttendanceSyncFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Row(
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Expanded(
-                      child: Text(
-                          'Failed to sync offline records: ${state.message}')),
+                  Icon(Icons.error_outline_rounded, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Sync Failed'),
                 ],
               ),
-              backgroundColor: Colors.red.shade700,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 4),
+              content: Text('Failed to sync offline records:\n\n${state.message}'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
             ),
           );
         }
