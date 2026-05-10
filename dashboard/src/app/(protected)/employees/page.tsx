@@ -112,7 +112,7 @@ export default function EmployeesPage() {
       shiftId: '',
       position: '',
       phone: '',
-      hireDate: '',
+      hireDate: format(new Date(), 'yyyy-MM-dd'), // default to today
       role: 'employee',
       status: 'active',
     });
@@ -589,6 +589,7 @@ export default function EmployeesPage() {
                     className="form-input"
                     type="date"
                     value={form.hireDate}
+                    max={format(new Date(), 'yyyy-MM-dd')}
                     onChange={(e) => setForm({ ...form, hireDate: e.target.value })}
                   />
                 </div>
