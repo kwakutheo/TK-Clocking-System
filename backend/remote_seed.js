@@ -10,30 +10,33 @@ const ds = new DataSource({
   database: 'tk_clocking',
   ssl: { rejectUnauthorized: false },
   entities: [__dirname + '/dist/**/*.entity.js'],
-  synchronize: true, // This will create the tables!
+  synchronize: true, // This will create the tables if they don't exist
 });
 
 async function run() {
   await ds.initialize();
-  console.log('Database initialized, tables created.');
+  console.log('Database initialized.');
 
   // Check if superadmin exists
   const userRepo = ds.getRepository('User');
   const existing = await userRepo.findOne({ where: { role: 'super_admin' } });
   
   if (!existing) {
-    const hashedPassword = await bcrypt.hash('Admin@1234', 12);
+    const hashedPassword = await bcrypt.hash('112233', 12);
     const superAdmin = userRepo.create({
-      identifier: 'kwame@tkclocking.dev',
-      full_name: 'Super Admin Kwame',
-      phone_number: '0550000000',
-      password: hashedPassword,
+      username: 'theo', // The user entity uses 'username'
+      fullName: 'Theophilus Kwaku', // The user entity uses 'fullName'
+      passwordHash: hashedPassword, // The user entity uses 'passwordHash'
       role: 'super_admin',
     });
     await userRepo.save(superAdmin);
-    console.log('Seeded Super Admin user: kwame@tkclocking.dev / Admin@1234');
+    console.log('Seeded Super Admin user: theo / 112233');
   } else {
-    console.log('Superadmin already exists.');
+    console.log('Superadmin already exists. Updating credentials to theo / 112233 just in case...');
+    existing.username = 'theo';
+    existing.passwordHash = await bcrypt.hash('112233', 12);
+    await userRepo.save(existing);
+    console.log('Updated Super Admin user credentials.');
   }
 
   process.exit(0);
