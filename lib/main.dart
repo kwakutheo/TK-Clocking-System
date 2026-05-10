@@ -8,19 +8,19 @@ import 'package:tk_clocking_system/core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize dependency injection
   await di.init();
-  
+
   // Initialize notification service
   final notificationService = di.sl<NotificationService>();
   await notificationService.init();
-  
+
   final storage = di.sl<StorageService>();
   final savedUrl = storage.getServerUrl();
   if (savedUrl != null && savedUrl.isNotEmpty) {
     AppConstants.baseUrl = savedUrl;
   }
-  
+
   runApp(const App());
 }

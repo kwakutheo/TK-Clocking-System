@@ -270,7 +270,9 @@ class _DashboardTabState extends State<_DashboardTab> {
           }
         },
         child: SafeArea(
+          top: false,
           child: RefreshIndicator(
+            edgeOffset: 40,
             onRefresh: () async {
               await _loadData(silent: true, force: true);
               if (mounted) {
@@ -285,12 +287,13 @@ class _DashboardTabState extends State<_DashboardTab> {
                   snap: true,
                   elevation: 0,
                   scrolledUnderElevation: 1,
-                  toolbarHeight: 72,
+                  toolbarHeight: 64,
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${DateFormat('EEE, d MMM').format(DateTime.now())} • ${_greeting()}'.toUpperCase(),
+                        '${DateFormat('EEE, d MMM').format(DateTime.now())} • ${_greeting()}'
+                            .toUpperCase(),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.w800,
@@ -311,14 +314,16 @@ class _DashboardTabState extends State<_DashboardTab> {
                   actions: [
                     GestureDetector(
                       onTap: () {
-                        final homeState = context.findAncestorStateOfType<HomePageState>();
+                        final homeState =
+                            context.findAncestorStateOfType<HomePageState>();
                         homeState?.setTab(3);
                       },
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            color: colorScheme.outlineVariant
+                                .withValues(alpha: 0.5),
                             width: 2,
                           ),
                         ),
