@@ -173,7 +173,7 @@ export class AttendanceExportService {
       ],
       styles: {
         header: { fontSize: 18, bold: true, margin: [0, 0, 0, 5] },
-        subheader: { fontSize: 12, color: '#4b5563', margin: [0, 0, 0, 5] },
+        subheader: { fontSize: 12, color: '#000000ff', margin: [0, 0, 0, 5] },
         sectionHeader: { fontSize: 14, bold: true },
         tableHeader: { bold: true, fillColor: '#f3f4f6', color: '#374151' }
       }
