@@ -296,7 +296,7 @@ export class AttendanceReportService {
       } else if (!term) {
         status = 'OFF-TERM / VACATION';
       } else if (day < registrationDate) {
-        status = 'NOT REGISTERED YET';
+        status = 'NOT REGISTERED';
       } else {
         status = 'ABSENT';
         daysAbsent++;
