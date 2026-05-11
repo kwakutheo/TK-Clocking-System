@@ -183,7 +183,7 @@ export class AttendanceExportService {
   private buildTermDocDefinition(report: any): any {
     const content: any[] = [
       { text: 'Academic Term Attendance Report', style: 'coverTitle', alignment: 'center', margin: [0, 60, 0, 10] },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#222323ff' }], margin: [0, 0, 0, 20] },
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#00000038' }], margin: [0, 0, 0, 20] },
       { text: report.employee.fullName, style: 'coverName', alignment: 'center' },
       { text: ``, alignment: 'center', margin: [0, 5, 0, 20] },
       { text: `Term: ${report.term.name}`, style: 'coverSub', alignment: 'center' },
