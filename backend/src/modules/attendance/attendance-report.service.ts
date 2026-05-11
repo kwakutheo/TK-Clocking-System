@@ -285,8 +285,54 @@ export class AttendanceReportService {
         } else if (!term) {
           status = 'OFF-TERM / VACATION';
         } else {
-          status = isToday ? 'AWAITING' : 'SCHEDULED';
-        }
+  const now = new Date();
+
+  // TODAY
+  if (isToday) {
+
+    // Employee has a shift
+    if (employee.shift) {
+      const [eHours, eMins] = employee.shift.endTime
+        .split(':')
+        .map(Number);
+
+      const shiftEnd = new Date(day);
+      shiftEnd.setHours(eHours, eMins, 0, 0);
+
+      // Handle overnight shifts
+      const [sHours, sMins] = employee.shift.startTime
+        .split(':')
+        .map(Number);
+
+      const shiftStart = new Date(day);
+      shiftStart.setHours(sHours, sMins, 0, 0);
+
+      if (shiftEnd <= shiftStart) {
+        shiftEnd.setDate(shiftEnd.getDate() + 1);
+      }
+
+      // Optional grace period
+      const graceMinutes = employee.shift.graceMinutes || 0;
+      shiftEnd.setMinutes(shiftEnd.getMinutes() + graceMinutes);
+
+      // Shift has ended and still no attendance
+      if (now > shiftEnd) {
+        status = 'ABSENT';
+        daysAbsent++;
+      } else {
+        status = 'AWAITING';
+      }
+
+    } else {
+      // No shift assigned
+      status = 'AWAITING';
+    }
+
+  // FUTURE DATE
+  } else {
+    status = 'SCHEDULED';
+  }
+}
       } else if (isWeekEnd) {
         status = 'WEEKEND';
       } else if (holiday) {
