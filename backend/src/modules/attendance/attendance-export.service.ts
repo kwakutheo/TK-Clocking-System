@@ -185,7 +185,6 @@ export class AttendanceExportService {
       { text: 'Academic Term Attendance Report', style: 'coverTitle', alignment: 'center', margin: [0, 60, 0, 10] },
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#e5e7eb' }], margin: [0, 0, 0, 20] },
       { text: report.employee.fullName, style: 'coverName', alignment: 'center' },
-      { text: `Employee ID: ${report.employee.code}`, style: 'coverSub', alignment: 'center', margin: [0, 5, 0, 20] },
       { text: `Term: ${report.term.name}`, style: 'coverSub', alignment: 'center' },
       { text: `Academic Year: ${report.term.academicYear}`, style: 'coverSub', alignment: 'center', margin: [0, 5, 0, 40] },
       { text: 'Term Summary Overview', style: 'sectionHeader', alignment: 'center', margin: [0, 0, 0, 15] },
