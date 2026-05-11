@@ -165,7 +165,7 @@ export class AttendanceExportService {
       defaultStyle: { font: 'Helvetica', fontSize: 10 },
       content: [
         { text: 'Monthly Attendance Report', style: 'header' },
-        { text: `Employee: ${report.employee.fullName} (${report.employee.code})`, style: 'subheader' },
+        { text: `Employee: ${report.employee.fullName}`, style: 'subheader' },
         { text: `Period: ${monthName} ${year}`, style: 'subheader', margin: [0, 0, 0, 15] },
         this.buildSummaryTable(report.summary),
         { text: 'Daily Log', style: 'sectionHeader', margin: [0, 20, 0, 10] },
