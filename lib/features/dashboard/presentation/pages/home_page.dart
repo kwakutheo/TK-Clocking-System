@@ -272,7 +272,8 @@ class _DashboardTabState extends State<_DashboardTab> {
                     Text('Sync Successful'),
                   ],
                 ),
-                content: Text('Successfully synced ${state.count} offline record(s).'),
+                content: Text(
+                    'Successfully synced ${state.count} offline record(s).'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
@@ -293,7 +294,8 @@ class _DashboardTabState extends State<_DashboardTab> {
                   Text('Sync Failed'),
                 ],
               ),
-              content: Text('Failed to sync offline records:\n\n${state.message}'),
+              content:
+                  Text('Failed to sync offline records:\n\n${state.message}'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
@@ -1152,48 +1154,54 @@ class _QuickActionsCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Card(
+      elevation: 4,
+      clipBehavior: Clip.none,
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickAction(
-                    label: 'Clock In',
-                    icon: Icons.login_rounded,
-                    color: Colors.green,
-                    onTap: () => context.go('/home/clock-in'),
-                  ),
+            Expanded(
+              child: Material(
+                elevation: 5,
+                borderRadius: BorderRadius.circular(12),
+                child: _QuickAction(
+                  label: 'Time Clock',
+                  icon: Icons.access_time_rounded,
+                  color: Colors.green,
+                  onTap: () => context.go('/home/clock-in'),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickAction(
-                    label: 'History',
-                    icon: Icons.history_rounded,
-                    color: colorScheme.primary,
-                    onTap: () {
-                      context
-                          .findAncestorStateOfType<HomePageState>()
-                          ?.setTab(1);
-                    },
-                  ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Material(
+                elevation: 5,
+                borderRadius: BorderRadius.circular(12),
+                child: _QuickAction(
+                  label: 'History',
+                  icon: Icons.history_rounded,
+                  color: colorScheme.primary,
+                  onTap: () {
+                    context.findAncestorStateOfType<HomePageState>()?.setTab(1);
+                  },
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickAction(
-                    label: 'Report',
-                    icon: Icons.analytics_rounded,
-                    color: Colors.orange,
-                    onTap: () {
-                      context
-                          .findAncestorStateOfType<HomePageState>()
-                          ?.setTab(2);
-                    },
-                  ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Material(
+                elevation: 5,
+                borderRadius: BorderRadius.circular(12),
+                child: _QuickAction(
+                  label: 'Report',
+                  icon: Icons.analytics_rounded,
+                  color: Colors.orange,
+                  onTap: () {
+                    context.findAncestorStateOfType<HomePageState>()?.setTab(2);
+                  },
                 ),
-              ],
+              ),
             ),
           ],
         ),
@@ -1217,28 +1225,40 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 8,
+            spreadRadius: 1,
+            offset: const Offset(2, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                Icon(icon, color: Colors.white, size: 28),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1402,8 +1422,9 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: bannerColor.withOpacity(0.35),
-              blurRadius: 16,
+              color: Colors.black,
+              blurRadius: 10,
+              spreadRadius: 3,
               offset: const Offset(0, 6),
             ),
           ],

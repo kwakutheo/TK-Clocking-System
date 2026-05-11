@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -147,24 +148,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = authState is AuthAuthenticated ? authState.user : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => setState(() => _isEditing = true),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => setState(() {
-                _isEditing = false;
-                _isChangingPassword = false;
-              }),
-            ),
-        ],
-      ),
       body: VisibilityDetector(
         key: const Key('profile-page'),
         onVisibilityChanged: (info) {
@@ -172,20 +155,110 @@ class _ProfilePageState extends State<ProfilePage> {
             context.read<AuthBloc>().add(const AuthSyncProfileEvent());
           }
         },
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-              await Future.delayed(const Duration(seconds: 1));
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  _ProfileHeader(user: user, theme: theme, cs: cs),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+            await Future.delayed(const Duration(seconds: 1));
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 180,
+                pinned: true,
+                stretch: true,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                backgroundColor: cs.primary,
+                actions: [
+                  if (!_isEditing)
+                    IconButton(
+                      icon:
+                          const Icon(Icons.edit_outlined, color: Colors.white),
+                      onPressed: () => setState(() => _isEditing = true),
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => setState(() {
+                        _isEditing = false;
+                        _isChangingPassword = false;
+                      }),
+                    ),
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  stretchModes: const [StretchMode.zoomBackground],
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _AnimatedMeshBackground(colorScheme: cs),
+                      if (user != null)
+                        Align(
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                  height:
+                                      24), // Push down to avoid app bar overlap
+                              Text(
+                                user.fullName,
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                  shadows: [
+                                    Shadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.15),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: BackdropFilter(
+                                  filter:
+                                      ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.15),
+                                      border: Border.all(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.25)),
+                                    ),
+                                    child: Text(
+                                      _roleLabel(user.role).toUpperCase(),
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
                     child: Column(
                       children: [
                         if (user != null) ...[
@@ -281,6 +354,25 @@ class _ProfilePageState extends State<ProfilePage> {
                                     icon: Icons.numbers_outlined,
                                     label: 'Employee Code',
                                     value: user.employeeCode!,
+                                    trailing: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: cs.primaryContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(Icons.copy_rounded,
+                                          size: 16,
+                                          color: cs.onPrimaryContainer),
+                                    ),
+                                    onTap: () {
+                                      // TODO: Implement copy to clipboard
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Employee code copied to clipboard')),
+                                      );
+                                    },
                                   ),
                               ],
                             ),
@@ -290,6 +382,16 @@ class _ProfilePageState extends State<ProfilePage> {
                         _InfoSection(
                           title: 'App Settings',
                           items: [
+                            _InfoItem(
+                              icon: Icons.fingerprint_rounded,
+                              label: 'Require Biometrics',
+                              value: 'For Clocking In/Out',
+                              trailing: Switch(
+                                value: true,
+                                onChanged: (_) {},
+                                activeColor: cs.primary,
+                              ),
+                            ),
                             _InfoItem(
                               icon: Icons.notifications_outlined,
                               label: 'Notifications',
@@ -306,66 +408,64 @@ class _ProfilePageState extends State<ProfilePage> {
                               trailing: const Icon(Icons.check_circle_rounded,
                                   color: Colors.green, size: 20),
                             ),
-                            _InfoItem(
-                              icon: Icons.wifi_off_outlined,
-                              label: 'Offline Mode',
-                              value: 'Auto-sync when reconnected',
-                              trailing: const Icon(Icons.check_circle_rounded,
-                                  color: Colors.green, size: 20),
-                            ),
-                            _InfoItem(
-                              icon: Icons.dns_outlined,
-                              label: 'Server Network IP',
-                              value: AppConstants.baseUrl,
-                              trailing: const Icon(Icons.edit_outlined, size: 20),
-                              onTap: () => _showServerConfigDialog(context),
-                            ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        _InfoSection(
-                          title: 'About',
-                          items: [
-                            _InfoItem(
-                              icon: Icons.info_outlined,
-                              label: 'App Version',
-                              value: '1.0.0',
-                            ),
-                            _InfoItem(
-                              icon: Icons.business_outlined,
-                              label: 'Organisation',
-                              value: 'TK Clocking System',
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: cs.error,
-                              side: BorderSide(color: cs.error),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            onPressed: () => _confirmSignOut(context),
-                            icon: const Icon(Icons.logout_rounded),
-                            label: const Text(
-                              'Sign Out',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                          child: InkWell(
+                            onTap: () => _confirmSignOut(context),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Ink(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: cs.error.withValues(alpha: 0.1),
+                                border: Border.all(
+                                    color: cs.error.withValues(alpha: 0.3)),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.logout_rounded, color: cs.error),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Sign Out',
+                                    style: TextStyle(
+                                      color: cs.error,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 48),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  String _roleLabel(UserRole role) {
+    switch (role) {
+      case UserRole.employee:
+        return 'Employee';
+      case UserRole.supervisor:
+        return 'Supervisor';
+      case UserRole.hrAdmin:
+        return 'HR Admin';
+      case UserRole.superAdmin:
+        return 'Super Admin';
+    }
   }
 
   void _confirmSignOut(BuildContext context) {
@@ -393,148 +493,106 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
-  void _showServerConfigDialog(BuildContext context) {
-    final urlCtrl = TextEditingController(text: AppConstants.baseUrl);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Server Configuration'),
-        content: TextField(
-          controller: urlCtrl,
-          decoration: const InputDecoration(
-            labelText: 'Server Base URL',
-            hintText: 'http://192.168.1.X:3000/api/v1',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final newUrl = urlCtrl.text.trim();
-              if (newUrl.isNotEmpty) {
-                AppConstants.baseUrl = newUrl;
-                sl<ApiClient>().updateBaseUrl(newUrl);
-                await sl<StorageService>().saveServerUrl(newUrl);
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  setState(() {}); // refresh the UI to show the new IP
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Server URL updated successfully')),
-                  );
-                }
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({
-    required this.user,
-    required this.theme,
-    required this.cs,
-  });
+// ── Header Components ──────────────────────────────────────────────────────────
 
-  final UserEntity? user;
-  final ThemeData theme;
-  final ColorScheme cs;
+class _AnimatedMeshBackground extends StatefulWidget {
+  const _AnimatedMeshBackground({required this.colorScheme});
+  final ColorScheme colorScheme;
+
+  @override
+  State<_AnimatedMeshBackground> createState() =>
+      _AnimatedMeshBackgroundState();
+}
+
+class _AnimatedMeshBackgroundState extends State<_AnimatedMeshBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat(reverse: true);
+    _animation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            cs.primary,
-            cs.primary.withValues(alpha: 0.7),
-          ],
-        ),
-      ),
-      child: Column(
-        children: [
-          // Avatar
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cs.onPrimary.withValues(alpha: 0.2),
-              border: Border.all(color: cs.onPrimary, width: 2.5),
+    final cs = widget.colorScheme;
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        // Shift stops and alignment based on animation
+        final value = _animation.value;
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin:
+                  Alignment(0.0, -1.0 + (value * 0.2)), // Shift vertical focus
+              end: Alignment(0.0, 1.0 + (value * 0.1)),
+              colors: [
+                cs.primary,
+                Color.lerp(cs.primary, cs.tertiary, 0.4 + (value * 0.3)) ??
+                    cs.primary,
+                cs.primary.withValues(alpha: 0.8),
+              ],
+              stops: const [0.0, 0.5, 1.0],
             ),
-            child: Center(
-              child: Text(
-                user?.initials ?? '?',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: cs.onPrimary,
-                  fontWeight: FontWeight.w800,
+          ),
+          child: Stack(
+            children: [
+              // Add a subtle radial overlay that moves
+              Positioned(
+                top: -50 + (value * 100),
+                left: -100 + (value * 50),
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.15),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            user?.fullName ?? 'Loading…',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: cs.onPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: cs.onPrimary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              user != null ? _roleLabel(user!.role) : '',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onPrimary,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
+              Positioned(
+                bottom: -80 - (value * 50),
+                right: -50 + (value * 100),
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.1),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          if (user?.employeeCode != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              user!.employeeCode!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onPrimary.withValues(alpha: 0.7),
-                fontFamily: 'monospace',
-              ),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
-  }
-
-  String _roleLabel(UserRole role) {
-    switch (role) {
-      case UserRole.employee:
-        return 'Employee';
-      case UserRole.supervisor:
-        return 'Supervisor';
-      case UserRole.hrAdmin:
-        return 'HR Admin';
-      case UserRole.superAdmin:
-        return 'Super Admin';
-    }
   }
 }
 
@@ -657,6 +715,7 @@ class _InfoItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(

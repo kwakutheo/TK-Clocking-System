@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:tk_clocking_system/features/attendance/presentation/bloc/attendance_bloc.dart';
@@ -14,13 +17,33 @@ import 'package:tk_clocking_system/core/services/biometric_service.dart';
 import 'package:tk_clocking_system/core/services/notification_service.dart';
 
 /// The main clock-in / clock-out screen for employees.
-class ClockInPage extends StatelessWidget {
+class ClockInPage extends StatefulWidget {
   const ClockInPage({super.key});
+
+  @override
+  State<ClockInPage> createState() => _ClockInPageState();
+}
+
+class _ClockInPageState extends State<ClockInPage> {
+  bool _biometricEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final available = await sl<BiometricService>().isBiometricAvailable();
+    if (mounted) {
+      setState(() => _biometricEnabled = available);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance')),
+      appBar: AppBar(title: const Text('Time Clock')),
       body: BlocConsumer<AttendanceBloc, AttendanceState>(
         listener: (context, state) {
           if (state is AttendanceRecorded) {
@@ -62,8 +85,8 @@ class ClockInPage extends StatelessWidget {
                     child: const Text('Cancel'),
                   ),
                   FilledButton(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: Colors.orange),
+                    style:
+                        FilledButton.styleFrom(backgroundColor: Colors.orange),
                     onPressed: () => Navigator.of(ctx).pop(true),
                     child: const Text('Clock Out Anyway'),
                   ),
@@ -115,39 +138,74 @@ class ClockInPage extends StatelessWidget {
           final user = authState is AuthAuthenticated ? authState.user : null;
           final isLoading = state is AttendanceLoading;
 
-          return Stack(
-            children: [
-              SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _ClockDisplay(),
-                      const SizedBox(height: 40),
-                      _StatusCard(userName: user?.fullName ?? ''),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Actions',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      _ActionGrid(
-                        employeeId: user?.id ?? '',
-                        isLoading: isLoading,
-                      ),
-                      const SizedBox(height: 24),
-                      _QrScanButton(
-                        isLoading: isLoading,
-                      ),
-                    ],
+          final disableButtons = isLoading;
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).colorScheme.surface,
+                  Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withValues(alpha: 0.1),
+                  Theme.of(context).colorScheme.surface,
+                ],
+              ),
+            ),
+            child: Stack(
+              children: [
+                SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _StaggeredEntry(index: 0, child: _ClockDisplay()),
+                        const SizedBox(height: 10),
+                        _StaggeredEntry(
+                          index: 1,
+                          child: _StatusCard(userName: user?.fullName ?? ''),
+                        ),
+                        const SizedBox(height: 16),
+                        _StaggeredEntry(
+                          index: 3,
+                          child: Text(
+                            'Actions',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _StaggeredEntry(
+                          index: 4,
+                          child: _ActionGrid(
+                            employeeId: user?.id ?? '',
+                            isDisabled: disableButtons,
+                            isBiometricEnabled: _biometricEnabled,
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _StaggeredEntry(
+                          index: 5,
+                          child: _QrScanButton(
+                            isLoading: isLoading,
+                            isDisabled: disableButtons,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              if (isLoading) const _LoadingOverlay(),
-            ],
+                if (isLoading) const _LoadingOverlay(),
+              ],
+            ),
           );
         },
       ),
@@ -162,14 +220,19 @@ class ClockInPage extends StatelessWidget {
       };
 }
 
-// ── Live clock display ────────────────────────────────────────────────────────
+// ── Live clock display (Glassmorphism) ──────────────────────────────────────
 class _ClockDisplay extends StatefulWidget {
+  const _ClockDisplay();
+
   @override
   State<_ClockDisplay> createState() => _ClockDisplayState();
 }
 
-class _ClockDisplayState extends State<_ClockDisplay> {
+class _ClockDisplayState extends State<_ClockDisplay>
+    with SingleTickerProviderStateMixin {
   late final Stream<DateTime> _clock;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -178,39 +241,126 @@ class _ClockDisplayState extends State<_ClockDisplay> {
       const Duration(seconds: 1),
       (_) => DateTime.now(),
     );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return StreamBuilder<DateTime>(
       stream: _clock,
       initialData: DateTime.now(),
       builder: (context, snapshot) {
         final now = snapshot.data!;
-        final timeStr =
-            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+        // Trigger pulse on every second change
+        _pulseController
+            .forward(from: 0)
+            .then((_) => _pulseController.reverse());
+
+        final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
+        final amPm = now.hour < 12 ? 'AM' : 'PM';
+        final hhmm =
+            '${hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        final ss = now.second.toString().padLeft(2, '0');
         final dateStr =
             '${_weekday(now.weekday)}, ${now.day} ${_month(now.month)} ${now.year}';
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              timeStr,
-              style: theme.textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -2,
-                color: theme.colorScheme.primary,
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: colorScheme.surface.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    spreadRadius: -5,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        hhmm,
+                        style: theme.textTheme.displayMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1.5,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      ScaleTransition(
+                        scale: _pulseAnimation,
+                        child: Text(
+                          ':$ss',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.primary.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        amPm,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.primary.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        dateStr.toUpperCase(),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              dateStr,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -250,40 +400,66 @@ class _StatusCard extends StatelessWidget {
 
   final String userName;
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning,';
+    if (hour < 17) return 'Good Afternoon,';
+    return 'Good Evening,';
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: colorScheme.primaryContainer,
-              child: Text(
-                userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-                style: TextStyle(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
+            child: Text(
+              userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+              style: TextStyle(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
               ),
             ),
-            const SizedBox(width: 16),
-            Column(
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  _getGreeting(),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                Text(
                   userName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
                       ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -291,10 +467,15 @@ class _StatusCard extends StatelessWidget {
 
 // ── Action grid ───────────────────────────────────────────────────────────────
 class _ActionGrid extends StatelessWidget {
-  const _ActionGrid({required this.employeeId, required this.isLoading});
+  const _ActionGrid({
+    required this.employeeId,
+    required this.isDisabled,
+    required this.isBiometricEnabled,
+  });
 
   final String employeeId;
-  final bool isLoading;
+  final bool isDisabled;
+  final bool isBiometricEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -310,22 +491,30 @@ class _ActionGrid extends StatelessWidget {
       (AttendanceType.breakOut, Icons.replay_rounded, 'Break End', Colors.blue),
     ];
 
-    return GridView.count(
-      crossAxisCount: 2,
+    return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        mainAxisExtent: 85,
+      ),
       children: actions.map((action) {
         final (type, icon, label, color) = action;
-        return _ActionTile(
-          type: type,
-          icon: icon,
-          label: label,
-          color: color,
-          employeeId: employeeId,
-          isLoading: isLoading,
+
+        return Material(
+          elevation: 5,
+          borderRadius: BorderRadius.circular(12),
+          child: _ActionTile(
+            type: type,
+            icon: icon,
+            label: label,
+            color: color,
+            employeeId: employeeId,
+            isDisabled: isDisabled,
+            isBiometricEnabled: isBiometricEnabled,
+          ),
         );
       }).toList(),
     );
@@ -339,7 +528,8 @@ class _ActionTile extends StatelessWidget {
     required this.label,
     required this.color,
     required this.employeeId,
-    required this.isLoading,
+    required this.isDisabled,
+    required this.isBiometricEnabled,
   });
 
   final AttendanceType type;
@@ -347,16 +537,20 @@ class _ActionTile extends StatelessWidget {
   final String label;
   final Color color;
   final String employeeId;
-  final bool isLoading;
+  final bool isDisabled;
+  final bool isBiometricEnabled;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: isLoading
+    return _BouncingWidget(
+      onTap: isDisabled
           ? null
           : () async {
-              final confirmed = await _showConfirmDialog(context, label, icon, color);
+              HapticFeedback.lightImpact();
+              final confirmed =
+                  await _showConfirmDialog(context, label, icon, color);
               if (confirmed == true && context.mounted) {
+                HapticFeedback.mediumImpact();
                 // Biometric/PIN Verification
                 final biometricService = sl<BiometricService>();
                 if (await biometricService.isBiometricAvailable()) {
@@ -376,25 +570,50 @@ class _ActionTile extends StatelessWidget {
                 }
               }
             },
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: Opacity(
+        opacity: isDisabled ? 0.4 : 1.0,
+        child: Stack(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
+            Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                    offset: const Offset(2, 6),
                   ),
+                ],
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: Colors.white, size: 28),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
             ),
+            if (isBiometricEnabled && !isDisabled)
+              Positioned(
+                top: 8,
+                right: 10,
+                child: Icon(
+                  Icons.fingerprint_rounded,
+                  size: 14,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
           ],
         ),
       ),
@@ -404,18 +623,20 @@ class _ActionTile extends StatelessWidget {
 
 // ── QR Scan Button ──────────────────────────────────────────────────────────
 class _QrScanButton extends StatelessWidget {
-  const _QrScanButton({required this.isLoading});
+  const _QrScanButton({required this.isLoading, required this.isDisabled});
 
   final bool isLoading;
+  final bool isDisabled;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return InkWell(
-      onTap: isLoading
+    return _BouncingWidget(
+      onTap: (isLoading || isDisabled)
           ? null
           : () async {
+              HapticFeedback.lightImpact();
               final qrCode = await Navigator.of(context).push<String>(
                 MaterialPageRoute(
                   builder: (_) => const QrScanPage(),
@@ -425,31 +646,33 @@ class _QrScanButton extends StatelessWidget {
                 _showTypeSelector(context, qrCode);
               }
             },
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: colorScheme.primaryContainer,
-          border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
+      child: Opacity(
+        opacity: isDisabled ? 0.4 : 1.0,
+        child: Material(
+          color: Colors.deepPurpleAccent,
           borderRadius: BorderRadius.circular(16),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.qr_code_scanner_rounded,
-              color: colorScheme.primary,
-              size: 24,
+          elevation: 5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.qr_code_scanner_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Scan QR Code',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Text(
-              'Scan QR Code',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -491,12 +714,14 @@ class _QrScanButton extends StatelessWidget {
                   label: 'Clock In',
                   color: Colors.green,
                   onTap: () async {
-                    final confirmed = await _showConfirmDialog(ctx, 'Clock In', Icons.login_rounded, Colors.green);
+                    final confirmed = await _showConfirmDialog(
+                        ctx, 'Clock In', Icons.login_rounded, Colors.green);
                     if (confirmed == true && context.mounted) {
                       // Biometric/PIN Verification
                       final biometricService = sl<BiometricService>();
                       if (await biometricService.isBiometricAvailable()) {
-                        final authenticated = await biometricService.authenticate(
+                        final authenticated =
+                            await biometricService.authenticate(
                           'Please verify your identity to Clock In',
                         );
                         if (!authenticated) return;
@@ -520,12 +745,14 @@ class _QrScanButton extends StatelessWidget {
                   label: 'Clock Out',
                   color: Colors.red,
                   onTap: () async {
-                    final confirmed = await _showConfirmDialog(ctx, 'Clock Out', Icons.logout_rounded, Colors.red);
+                    final confirmed = await _showConfirmDialog(
+                        ctx, 'Clock Out', Icons.logout_rounded, Colors.red);
                     if (confirmed == true && context.mounted) {
                       // Biometric/PIN Verification
                       final biometricService = sl<BiometricService>();
                       if (await biometricService.isBiometricAvailable()) {
-                        final authenticated = await biometricService.authenticate(
+                        final authenticated =
+                            await biometricService.authenticate(
                           'Please verify your identity to Clock Out',
                         );
                         if (!authenticated) return;
@@ -549,12 +776,17 @@ class _QrScanButton extends StatelessWidget {
                   label: 'Break Start',
                   color: Colors.orange,
                   onTap: () async {
-                    final confirmed = await _showConfirmDialog(ctx, 'Break Start', Icons.free_breakfast_rounded, Colors.orange);
+                    final confirmed = await _showConfirmDialog(
+                        ctx,
+                        'Break Start',
+                        Icons.free_breakfast_rounded,
+                        Colors.orange);
                     if (confirmed == true && context.mounted) {
                       // Biometric/PIN Verification
                       final biometricService = sl<BiometricService>();
                       if (await biometricService.isBiometricAvailable()) {
-                        final authenticated = await biometricService.authenticate(
+                        final authenticated =
+                            await biometricService.authenticate(
                           'Please verify your identity to record Break Start',
                         );
                         if (!authenticated) return;
@@ -578,12 +810,14 @@ class _QrScanButton extends StatelessWidget {
                   label: 'Break End',
                   color: Colors.blue,
                   onTap: () async {
-                    final confirmed = await _showConfirmDialog(ctx, 'Break End', Icons.replay_rounded, Colors.blue);
+                    final confirmed = await _showConfirmDialog(
+                        ctx, 'Break End', Icons.replay_rounded, Colors.blue);
                     if (confirmed == true && context.mounted) {
                       // Biometric/PIN Verification
                       final biometricService = sl<BiometricService>();
                       if (await biometricService.isBiometricAvailable()) {
-                        final authenticated = await biometricService.authenticate(
+                        final authenticated =
+                            await biometricService.authenticate(
                           'Please verify your identity to record Break End',
                         );
                         if (!authenticated) return;
@@ -656,6 +890,7 @@ class _QrTypeTile extends StatelessWidget {
     );
   }
 }
+
 // ── Helper Methods ─────────────────────────────────────────────────────────
 Future<bool?> _showConfirmDialog(
   BuildContext context,
@@ -682,6 +917,84 @@ Future<bool?> _showConfirmDialog(
       ],
     ),
   );
+}
+
+// ── Interactive UI Helpers ──────────────────────────────────────────────────
+
+/// Provides a "bouncing" scale effect when tapped, along with haptics.
+class _BouncingWidget extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _BouncingWidget({required this.child, this.onTap});
+
+  @override
+  State<_BouncingWidget> createState() => _BouncingWidgetState();
+}
+
+class _BouncingWidgetState extends State<_BouncingWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => widget.onTap != null ? _controller.forward() : null,
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      onTap: widget.onTap,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Animates its child by sliding and fading it in, staggered by [index].
+class _StaggeredEntry extends StatelessWidget {
+  final Widget child;
+  final int index;
+
+  const _StaggeredEntry({required this.child, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 400 + (index * 100)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
 }
 
 // ── Loading Overlay ─────────────────────────────────────────────────────────
