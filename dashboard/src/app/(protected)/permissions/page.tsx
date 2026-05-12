@@ -226,7 +226,7 @@ export default function PermissionsPage() {
                 </tr>
 
                 {/* Permission Rows */}
-                {group.permissions.map((perm, pi) => (
+                {group.permissions.filter(p => p !== 'attendance.edit').map((perm, pi) => (
                   <tr
                     key={perm}
                     style={{
