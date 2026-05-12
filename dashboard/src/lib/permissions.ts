@@ -74,7 +74,6 @@ export const PERMISSION_GROUPS: { label: string; icon: string; permissions: Perm
     permissions: [
       'attendance.view',
       'attendance.view_live',
-      'attendance.edit',
       'attendance.export',
       'attendance.admin_clock',
     ],
