@@ -132,7 +132,25 @@ class AuthRepositoryImpl implements AuthRepository {
         ApiEndpoints.employeeMe,
       );
       final data = response.data!;
-      final user = UserModel.fromJson(data['user'] as Map<String, dynamic>? ?? data);
+
+      // /employees/me returns the Employee entity directly.
+      // The user details live under data['user'], and employment details
+      // (branch, department, position, hireDate) are at the top level.
+      final userMap = (data['user'] as Map<String, dynamic>?) ?? data;
+
+      // Merge employee-level fields into the user map so UserModel.fromJson
+      // can pick up branch/department names, position, and hire date.
+      final merged = <String, dynamic>{
+        ...userMap,
+        'employee_id': data['id'] ?? userMap['employee_id'],
+        'employee_code': data['employeeCode'] ?? userMap['employee_code'],
+        'branch': data['branch'],
+        'department': data['department'],
+        'position': data['position'],
+        'hire_date': data['hireDate'],
+      };
+
+      final user = UserModel.fromJson(merged);
       await _storage.saveUserJson(user.toJsonString());
       return Right(user);
     } on DioException catch (e) {

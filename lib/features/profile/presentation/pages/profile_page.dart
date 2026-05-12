@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
+import 'package:tk_clocking_system/core/router/app_router.dart';
 import 'package:tk_clocking_system/core/network/api_client.dart';
 import 'package:tk_clocking_system/core/network/api_endpoints.dart';
 import 'package:tk_clocking_system/core/services/storage_service.dart';
@@ -147,7 +148,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final authState = context.watch<AuthBloc>().state;
     final user = authState is AuthAuthenticated ? authState.user : null;
 
-    return Scaffold(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          AppRouter.router.go('/login');
+        }
+      },
+      child: Scaffold(
       body: VisibilityDetector(
         key: const Key('profile-page'),
         onVisibilityChanged: (info) {
@@ -164,28 +171,22 @@ class _ProfilePageState extends State<ProfilePage> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverAppBar(
-                expandedHeight: 180,
+                expandedHeight: 240,
                 pinned: true,
                 stretch: true,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                backgroundColor: cs.primary,
-                actions: [
-                  if (!_isEditing)
-                    IconButton(
-                      icon:
-                          const Icon(Icons.edit_outlined, color: Colors.white),
-                      onPressed: () => setState(() => _isEditing = true),
-                    )
-                  else
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => setState(() {
-                        _isEditing = false;
-                        _isChangingPassword = false;
-                      }),
-                    ),
-                ],
+                elevation: 4,
+                scrolledUnderElevation: 4,
+                backgroundColor: const Color(0xFFF602E2),
+                title: const Text(
+                  'Profile',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                centerTitle: false,
+                actions: const [],
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [StretchMode.zoomBackground],
                   background: Stack(
@@ -193,54 +194,94 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: [
                       _AnimatedMeshBackground(colorScheme: cs),
                       if (user != null)
-                        Align(
-                          alignment: Alignment.center,
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.2),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.3),
+                              ],
+                            ),
+                          ),
                           child: Column(
-                            mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(
-                                  height:
-                                      24), // Push down to avoid app bar overlap
+                              const SizedBox(height: 30),
+                              // ── Avatar ──────────────────────────────────
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Hero(
+                                  tag: 'profile-avatar',
+                                  child: CircleAvatar(
+                                    radius: 42,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.2),
+                                    child: Text(
+                                      user.initials,
+                                      style: theme.textTheme.headlineLarge
+                                          ?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // ── Name ────────────────────────────────────
                               Text(
                                 user.fullName,
-                                style: theme.textTheme.headlineMedium?.copyWith(
+                                style: theme.textTheme.headlineSmall?.copyWith(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w900,
                                   letterSpacing: -0.5,
                                   shadows: [
                                     Shadow(
                                       color:
-                                          Colors.black.withValues(alpha: 0.15),
-                                      blurRadius: 10,
+                                          Colors.black.withValues(alpha: 0.3),
+                                      blurRadius: 15,
                                       offset: const Offset(0, 4),
                                     )
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
+                              // ── Role Badge ──────────────────────────────
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
+                                borderRadius: BorderRadius.circular(12),
                                 child: BackdropFilter(
-                                  filter:
-                                      ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                                  filter: ui.ImageFilter.blur(
+                                      sigmaX: 10, sigmaY: 10),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 6),
+                                        horizontal: 14, vertical: 4),
                                     decoration: BoxDecoration(
                                       color:
                                           Colors.white.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                           color: Colors.white
-                                              .withValues(alpha: 0.25)),
+                                              .withValues(alpha: 0.2)),
                                     ),
                                     child: Text(
                                       _roleLabel(user.role).toUpperCase(),
                                       style:
                                           theme.textTheme.labelSmall?.copyWith(
                                         color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.2,
+                                        fontSize: 10,
                                       ),
                                     ),
                                   ),
@@ -272,6 +313,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                     controller: _usernameController,
                                     label: 'Username',
                                     prefixIcon: Icons.alternate_email_outlined,
+                                    suffixIcon: IconButton(
+                                      icon: const Icon(Icons.close_rounded),
+                                      onPressed: () => setState(() {
+                                        _isEditing = false;
+                                        _isChangingPassword = false;
+                                      }),
+                                    ),
                                     validator: (v) => v == null || v.isEmpty
                                         ? 'Username is required'
                                         : null,
@@ -348,6 +396,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                   value: user.username.isNotEmpty
                                       ? user.username
                                       : '—',
+                                  trailing: IconButton(
+                                    icon: Icon(Icons.edit_outlined,
+                                        size: 20, color: cs.primary),
+                                    onPressed: () => _confirmEdit(context),
+                                  ),
                                 ),
                                 if (user.employeeCode != null)
                                   _InfoItem(
@@ -377,6 +430,41 @@ class _ProfilePageState extends State<ProfilePage> {
                               ],
                             ),
                             const SizedBox(height: 16),
+                            // ── Work & Employment ──────────────────────
+                            if (user.branchName != null ||
+                                user.departmentName != null ||
+                                user.position != null ||
+                                user.hireDate != null)
+                              _InfoSection(
+                                title: 'Work & Employment',
+                                items: [
+                                  if (user.branchName != null)
+                                    _InfoItem(
+                                      icon: Icons.business_outlined,
+                                      label: 'Designated Branch',
+                                      value: user.branchName!,
+                                    ),
+                                  if (user.departmentName != null ||
+                                      user.position != null)
+                                    _InfoItem(
+                                      icon: Icons.work_outline_rounded,
+                                      label: 'Role & Department',
+                                      value: [
+                                        if (user.position != null)
+                                          user.position!,
+                                        if (user.departmentName != null)
+                                          user.departmentName!,
+                                      ].join(' • '),
+                                    ),
+                                  if (user.hireDate != null)
+                                    _InfoItem(
+                                      icon: Icons.calendar_month_outlined,
+                                      label: 'Member Since',
+                                      value: _formatHireDate(user.hireDate!),
+                                    ),
+                                ],
+                              ),
+                            const SizedBox(height: 16),
                           ],
                         ],
                         _InfoSection(
@@ -386,20 +474,15 @@ class _ProfilePageState extends State<ProfilePage> {
                               icon: Icons.fingerprint_rounded,
                               label: 'Require Biometrics',
                               value: 'For Clocking In/Out',
-                              trailing: Switch(
-                                value: true,
-                                onChanged: (_) {},
-                                activeColor: cs.primary,
-                              ),
+                              trailing: const Icon(Icons.check_circle_rounded,
+                                  color: Colors.green, size: 20),
                             ),
                             _InfoItem(
                               icon: Icons.notifications_outlined,
                               label: 'Notifications',
                               value: 'Enabled',
-                              trailing: Switch(
-                                value: true,
-                                onChanged: (_) {},
-                              ),
+                              trailing: const Icon(Icons.check_circle_rounded,
+                                  color: Colors.green, size: 20),
                             ),
                             _InfoItem(
                               icon: Icons.gps_fixed_outlined,
@@ -452,6 +535,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -466,6 +550,25 @@ class _ProfilePageState extends State<ProfilePage> {
       case UserRole.superAdmin:
         return 'Super Admin';
     }
+  }
+
+  String _formatHireDate(DateTime date) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${months[date.month]} ${date.year}';
   }
 
   void _confirmSignOut(BuildContext context) {
@@ -488,6 +591,32 @@ class _ProfilePageState extends State<ProfilePage> {
               context.read<AuthBloc>().add(const AuthLogoutEvent());
             },
             child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmEdit(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.edit_outlined,
+            color: Theme.of(context).colorScheme.primary),
+        title: const Text('Edit Profile'),
+        content: const Text(
+            'Are you sure you want to change you username or password?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() => _isEditing = true);
+            },
+            child: const Text('Continue'),
           ),
         ],
       ),
@@ -536,47 +665,51 @@ class _AnimatedMeshBackgroundState extends State<_AnimatedMeshBackground>
       builder: (context, child) {
         // Shift stops and alignment based on animation
         final value = _animation.value;
+        const deepMagenta = Color(0xFF700166);
+        const vibrantMagenta = Color(0xFFF602E2);
+        const lightMagenta = Color(0xFFFF71F3);
+
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin:
-                  Alignment(0.0, -1.0 + (value * 0.2)), // Shift vertical focus
-              end: Alignment(0.0, 1.0 + (value * 0.1)),
+              begin: Alignment(-1.0 + (value * 0.2), -1.0 + (value * 0.2)),
+              end: Alignment(1.0 - (value * 0.2), 1.0 - (value * 0.2)),
               colors: [
-                cs.primary,
-                Color.lerp(cs.primary, cs.tertiary, 0.4 + (value * 0.3)) ??
-                    cs.primary,
-                cs.primary.withValues(alpha: 0.8),
+                vibrantMagenta,
+                Color.lerp(vibrantMagenta, deepMagenta, 0.5 + (value * 0.2)) ??
+                    deepMagenta,
+                deepMagenta,
               ],
-              stops: const [0.0, 0.5, 1.0],
+              stops: const [0.0, 0.6, 1.0],
             ),
           ),
           child: Stack(
             children: [
-              // Add a subtle radial overlay that moves
+              // ── Top Light ───────────────────────────────────────────────
               Positioned(
-                top: -50 + (value * 100),
-                left: -100 + (value * 50),
+                top: -100 + (value * 50),
+                right: -50 + (value * 100),
                 child: Container(
-                  width: 300,
-                  height: 300,
+                  width: 350,
+                  height: 350,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        Colors.white.withValues(alpha: 0.15),
+                        lightMagenta.withValues(alpha: 0.15),
                         Colors.transparent,
                       ],
                     ),
                   ),
                 ),
               ),
+              // ── Bottom Light ────────────────────────────────────────────
               Positioned(
-                bottom: -80 - (value * 50),
-                right: -50 + (value * 100),
+                bottom: -150 + (value * 120),
+                left: -100 + (value * 60),
                 child: Container(
-                  width: 250,
-                  height: 250,
+                  width: 400,
+                  height: 400,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(

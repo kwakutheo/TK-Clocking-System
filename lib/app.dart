@@ -72,16 +72,9 @@ class _AppState extends State<App> {
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,
         routerConfig: AppRouter.router,
-        builder: (context, child) => BlocListener<AuthBloc, AuthState>(
-          listener: (context, state) {
-            if (state is AuthUnauthenticated) {
-              AppRouter.router.go('/login');
-            }
-          },
-          child: ConnectivityBanner(
-            connectivityService: _connectivity,
-            child: child!,
-          ),
+        builder: (context, child) => ConnectivityBanner(
+          connectivityService: _connectivity,
+          child: child!,
         ),
       ),
     );

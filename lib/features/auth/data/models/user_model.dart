@@ -17,23 +17,38 @@ class UserModel extends UserEntity {
     super.photoUrl,
     super.departmentId,
     super.branchId,
+    super.branchName,
+    super.departmentName,
+    super.position,
+    super.hireDate,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-        id: json['id'] as String,
-        employeeId: (json['employee_id'] ?? json['employeeId']) as String?,
-        fullName: (json['full_name'] ?? json['fullName']) as String,
-        email: (json['email'] as String?) ?? '',
-        phone: (json['phone'] as String?) ?? '',
-        username: (json['username'] as String?) ?? '',
-        role: UserRole.fromValue(json['role'] as String),
-        employeeCode:
-            (json['employee_code'] ?? json['employeeCode']) as String?,
-        photoUrl: (json['photo_url'] ?? json['photoUrl']) as String?,
-        departmentId:
-            (json['department_id'] ?? json['departmentId']) as String?,
-        branchId: (json['branch_id'] ?? json['branchId']) as String?,
-      );
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    // The /employees/me endpoint returns nested objects for branch & department.
+    final branchObj = json['branch'] as Map<String, dynamic>?;
+    final deptObj = json['department'] as Map<String, dynamic>?;
+    final hireDateRaw = json['hire_date'] ?? json['hireDate'];
+
+    return UserModel(
+      id: json['id'] as String,
+      employeeId: (json['employee_id'] ?? json['employeeId']) as String?,
+      fullName: (json['full_name'] ?? json['fullName']) as String,
+      email: (json['email'] as String?) ?? '',
+      phone: (json['phone'] as String?) ?? '',
+      username: (json['username'] as String?) ?? '',
+      role: UserRole.fromValue(json['role'] as String),
+      employeeCode:
+          (json['employee_code'] ?? json['employeeCode']) as String?,
+      photoUrl: (json['photo_url'] ?? json['photoUrl']) as String?,
+      departmentId:
+          (json['department_id'] ?? json['departmentId']) as String?,
+      branchId: (json['branch_id'] ?? json['branchId']) as String?,
+      branchName: (branchObj?['name'] ?? json['branchName']) as String?,
+      departmentName: (deptObj?['name'] ?? json['departmentName']) as String?,
+      position: (json['position']) as String?,
+      hireDate: hireDateRaw != null ? DateTime.tryParse(hireDateRaw as String) : null,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -47,6 +62,10 @@ class UserModel extends UserEntity {
         'photo_url': photoUrl,
         'department_id': departmentId,
         'branch_id': branchId,
+        'branchName': branchName,
+        'departmentName': departmentName,
+        'position': position,
+        'hireDate': hireDate?.toIso8601String(),
       };
 
   /// Serialises to a JSON string for [StorageService].

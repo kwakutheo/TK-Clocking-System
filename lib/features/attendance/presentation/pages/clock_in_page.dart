@@ -233,6 +233,7 @@ class _ClockDisplayState extends State<_ClockDisplay>
   late final Stream<DateTime> _clock;
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
+  StreamSubscription? _pulseSub;
 
   @override
   void initState() {
@@ -250,10 +251,19 @@ class _ClockDisplayState extends State<_ClockDisplay>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    _pulseSub = Stream.periodic(const Duration(seconds: 1)).listen((_) {
+      if (mounted) {
+        _pulseController
+            .forward(from: 0)
+            .then((_) => _pulseController.reverse());
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pulseSub?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -268,10 +278,6 @@ class _ClockDisplayState extends State<_ClockDisplay>
       initialData: DateTime.now(),
       builder: (context, snapshot) {
         final now = snapshot.data!;
-        // Trigger pulse on every second change
-        _pulseController
-            .forward(from: 0)
-            .then((_) => _pulseController.reverse());
 
         final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
         final amPm = now.hour < 12 ? 'AM' : 'PM';
@@ -576,28 +582,21 @@ class _ActionTile extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: color,
+                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                    offset: const Offset(2, 6),
-                  ),
-                ],
+                border: Border.all(color: color.withValues(alpha: 0.2)),
               ),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, color: Colors.white, size: 28),
+                    Icon(icon, color: color, size: 28),
                     const SizedBox(height: 4),
                     Text(
                       label,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                            color: color,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                   ],
@@ -611,7 +610,7 @@ class _ActionTile extends StatelessWidget {
                 child: Icon(
                   Icons.fingerprint_rounded,
                   size: 14,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: color.withValues(alpha: 0.7),
                 ),
               ),
           ],
@@ -649,25 +648,30 @@ class _QrScanButton extends StatelessWidget {
       child: Opacity(
         opacity: isDisabled ? 0.4 : 1.0,
         child: Material(
-          color: Colors.deepPurpleAccent,
+          elevation: 3,
           borderRadius: BorderRadius.circular(16),
-          elevation: 5,
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.2)),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(
                   Icons.qr_code_scanner_rounded,
-                  color: Colors.white,
+                  color: Color(0xFF7C3AED),
                   size: 24,
                 ),
                 const SizedBox(width: 12),
                 Text(
                   'Scan QR Code',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF7C3AED),
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ],
@@ -859,32 +863,37 @@ class _QrTypeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      elevation: 3,
       borderRadius: BorderRadius.circular(12),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: color.withValues(alpha: 0.5),
-              size: 16,
-            ),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.15)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(width: 16),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: color.withValues(alpha: 0.5),
+                size: 16,
+              ),
+            ],
+          ),
         ),
       ),
     );

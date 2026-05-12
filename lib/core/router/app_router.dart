@@ -9,6 +9,8 @@ import 'package:tk_clocking_system/features/attendance/presentation/pages/clock_
 import 'package:tk_clocking_system/features/attendance/presentation/pages/history_page.dart';
 import 'package:tk_clocking_system/features/attendance/presentation/pages/my_report_page.dart';
 import 'package:tk_clocking_system/shared/widgets/loading_indicator.dart';
+import 'package:tk_clocking_system/core/di/injection_container.dart';
+import 'package:tk_clocking_system/core/router/go_router_refresh_stream.dart';
 
 /// Declarative router with auth-based redirects.
 ///
@@ -21,6 +23,7 @@ abstract final class AppRouter {
         navigatorKey: _rootNavigatorKey,
         initialLocation: '/splash',
         redirect: _redirect,
+        refreshListenable: GoRouterRefreshStream(sl<AuthBloc>().stream),
         routes: [
           GoRoute(
             path: '/splash',

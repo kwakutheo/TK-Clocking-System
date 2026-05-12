@@ -306,135 +306,149 @@ class _DashboardTabState extends State<_DashboardTab> {
           );
         }
       },
-      child: VisibilityDetector(
-        key: const Key('dashboard-tab'),
-        onVisibilityChanged: (info) {
-          if (info.visibleFraction > 0.5) {
-            _loadData(silent: true);
-            _checkPending();
-            context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-          }
-        },
-        child: SafeArea(
-          top: false,
-          child: RefreshIndicator(
-            edgeOffset: 40,
-            onRefresh: () async {
-              await _loadData(silent: true, force: true);
-              if (mounted) {
-                context.read<AuthBloc>().add(const AuthSyncProfileEvent());
-              }
-            },
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverAppBar(
-                  floating: true,
-                  snap: true,
-                  elevation: 0,
-                  scrolledUnderElevation: 1,
-                  toolbarHeight: 64,
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${DateFormat('EEE, d MMM').format(DateTime.now())} • ${_greeting()}'
-                            .toUpperCase(),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Hi, ${user?.fullName.split(' ').first ?? 'Employee'}',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: colorScheme.onSurface,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    GestureDetector(
-                      onTap: () {
-                        final homeState =
-                            context.findAncestorStateOfType<HomePageState>();
-                        homeState?.setTab(3);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colorScheme.outlineVariant
-                                .withValues(alpha: 0.5),
-                            width: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.colorScheme.surface,
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+              theme.colorScheme.surface,
+            ],
+          ),
+        ),
+        child: VisibilityDetector(
+          key: const Key('dashboard-tab'),
+          onVisibilityChanged: (info) {
+            if (info.visibleFraction > 0.5) {
+              _loadData(silent: true);
+              _checkPending();
+              context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+            }
+          },
+          child: SafeArea(
+            top: false,
+            child: RefreshIndicator(
+              edgeOffset: 40,
+              onRefresh: () async {
+                await _loadData(silent: true, force: true);
+                if (mounted) {
+                  context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+                }
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverAppBar(
+                    floating: true,
+                    snap: true,
+                    elevation: 0,
+                    scrolledUnderElevation: 1,
+                    toolbarHeight: 64,
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${DateFormat('EEE, d MMM').format(DateTime.now())} • ${_greeting()}'
+                              .toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
                           ),
                         ),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: colorScheme.primaryContainer,
-                          child: Text(
-                            user?.initials ?? '?',
-                            style: TextStyle(
-                              color: colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                        const SizedBox(height: 2),
+                        Text(
+                          'Hi, ${user?.fullName.split(' ').first ?? 'Employee'}',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: colorScheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      GestureDetector(
+                        onTap: () {
+                          final homeState =
+                              context.findAncestorStateOfType<HomePageState>();
+                          homeState?.setTab(3);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colorScheme.outlineVariant
+                                  .withValues(alpha: 0.5),
+                              width: 2,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: colorScheme.primaryContainer,
+                            child: Text(
+                              user?.initials ?? '?',
+                              style: TextStyle(
+                                color: colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                  bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(32),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 16, bottom: 12),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _buildWorkZoneBadge(),
+                      const SizedBox(width: 16),
+                    ],
+                    bottom: PreferredSize(
+                      preferredSize: const Size.fromHeight(32),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 12),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _buildWorkZoneBadge(),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      if (_pendingCount > 0) ...[
-                        _OfflineWarningBanner(
-                          count: _pendingCount,
-                          onSync: () {
-                            context
-                                .read<AttendanceBloc>()
-                                .add(const AttendanceSyncEvent());
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_isLoading && _data == null)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 40),
-                            child: CircularProgressIndicator(),
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        if (_pendingCount > 0) ...[
+                          _OfflineWarningBanner(
+                            count: _pendingCount,
+                            onSync: () {
+                              context
+                                  .read<AttendanceBloc>()
+                                  .add(const AttendanceSyncEvent());
+                            },
                           ),
-                        )
-                      else if (_data == null)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 40),
-                            child: Text('Failed to load data. Pull to retry.'),
-                          ),
-                        )
-                      else
-                        _buildHomeContent(context, _data!),
-                    ]),
+                          const SizedBox(height: 16),
+                        ],
+                        if (_isLoading && _data == null)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 40),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (_data == null)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 40),
+                              child:
+                                  Text('Failed to load data. Pull to retry.'),
+                            ),
+                          )
+                        else
+                          _buildHomeContent(context, _data!),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1155,55 +1169,70 @@ class _QuickActionsCard extends StatelessWidget {
 
     return Card(
       elevation: 4,
-      clipBehavior: Clip.none,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Expanded(
-              child: Material(
-                elevation: 5,
-                borderRadius: BorderRadius.circular(12),
-                child: _QuickAction(
-                  label: 'Time Clock',
-                  icon: Icons.access_time_rounded,
-                  color: Colors.green,
-                  onTap: () => context.go('/home/clock-in'),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Expanded(
+                child: Material(
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(12),
+                  child: _QuickAction(
+                    label: 'Time Clock',
+                    icon: Icons.access_time_rounded,
+                    color: Colors.green,
+                    onTap: () => context.go('/home/clock-in'),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Material(
-                elevation: 5,
-                borderRadius: BorderRadius.circular(12),
-                child: _QuickAction(
-                  label: 'History',
-                  icon: Icons.history_rounded,
-                  color: colorScheme.primary,
-                  onTap: () {
-                    context.findAncestorStateOfType<HomePageState>()?.setTab(1);
-                  },
+              const SizedBox(width: 12),
+              Expanded(
+                child: Material(
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(12),
+                  child: _QuickAction(
+                    label: 'History',
+                    icon: Icons.history_rounded,
+                    color: const Color.fromARGB(255, 2, 44, 255),
+                    onTap: () {
+                      context
+                          .findAncestorStateOfType<HomePageState>()
+                          ?.setTab(1);
+                    },
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Material(
-                elevation: 5,
-                borderRadius: BorderRadius.circular(12),
-                child: _QuickAction(
-                  label: 'Report',
-                  icon: Icons.analytics_rounded,
-                  color: Colors.orange,
-                  onTap: () {
-                    context.findAncestorStateOfType<HomePageState>()?.setTab(2);
-                  },
+              const SizedBox(width: 12),
+              Expanded(
+                child: Material(
+                  elevation: 3,
+                  borderRadius: BorderRadius.circular(12),
+                  child: _QuickAction(
+                    label: 'Report',
+                    icon: Icons.analytics_rounded,
+                    color: Colors.orange,
+                    onTap: () {
+                      context
+                          .findAncestorStateOfType<HomePageState>()
+                          ?.setTab(2);
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1227,16 +1256,9 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: color,
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 8,
-            spreadRadius: 1,
-            offset: const Offset(2, 6),
-          ),
-        ],
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1247,13 +1269,13 @@ class _QuickAction extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
               children: [
-                Icon(icon, color: Colors.white, size: 28),
+                Icon(icon, color: color, size: 28),
                 const SizedBox(height: 8),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                        color: color,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ],
@@ -1420,14 +1442,6 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black,
-              blurRadius: 10,
-              spreadRadius: 3,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
