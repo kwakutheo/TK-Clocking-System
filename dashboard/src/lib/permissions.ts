@@ -114,7 +114,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
   super_admin: [
     'employees.view', 'employees.create', 'employees.edit', 'employees.delete',
     'employees.reset_password', 'employees.toggle_status',
-    'attendance.view', 'attendance.view_live', 'attendance.edit', 'attendance.export', 'attendance.admin_clock',
+    'attendance.view', 'attendance.view_live', 'attendance.export', 'attendance.admin_clock',
     'calendar.view', 'calendar.create', 'calendar.edit', 'calendar.delete',
     'shifts.manage', 'departments.manage', 'branches.manage', 'holidays.manage',
     'audit.view', 'permissions.manage',
