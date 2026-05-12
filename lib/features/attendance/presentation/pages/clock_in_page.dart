@@ -55,20 +55,36 @@ class _ClockInPageState extends State<ClockInPage> {
             }
 
             final isOffline = state.record.syncStatus == SyncStatus.pending;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                icon: Icon(
+                  isOffline
+                      ? Icons.cloud_off_rounded
+                      : Icons.check_circle_outline_rounded,
+                  size: 40,
+                  color: isOffline ? Colors.orange : Colors.green,
+                ),
+                title: Text(
+                  isOffline ? 'Saved Offline' : 'Success',
+                  textAlign: TextAlign.center,
+                ),
                 content: Text(
                   isOffline
-                      ? '${_label(state.record.type)} saved offline — will sync when connected.'
+                      ? '${_label(state.record.type)} saved offline. It will sync automatically when you are connected to the internet.'
                       : '${_label(state.record.type)} recorded successfully!',
+                  textAlign: TextAlign.center,
                 ),
-                backgroundColor: isOffline
-                    ? Colors.orange.shade700
-                    : Theme.of(context).colorScheme.primary,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                actions: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('OK'),
+                    ),
+                  ),
+                ],
               ),
             );
           } else if (state is AttendanceEarlyClockOutWarning) {
