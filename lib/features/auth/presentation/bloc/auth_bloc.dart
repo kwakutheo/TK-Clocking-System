@@ -1,4 +1,6 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:tk_clocking_system/core/errors/failures.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/get_cached_user_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/login_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/logout_usecase.dart';
@@ -59,12 +61,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       username: event.username,
       password: event.password,
     );
-    result.fold(
-      (failure) => emit(AuthFailure(failure.message)),
-      (loginResult) => emit(
-        AuthAuthenticated(loginResult.user, isOffline: loginResult.isOffline),
-      ),
-    );
+
+    if (result.isLeft()) {
+      emit(AuthFailure(result.swap().getOrElse(() => const ServerFailure()).message));
+      return;
+    }
+
+    final loginResult = result.getOrElse(() => throw Exception('Should not happen'));
+
+    // 1. Emit shallow user immediately so navigation can happen
+    emit(AuthAuthenticated(loginResult.user, isOffline: loginResult.isOffline));
+
+    // 2. If online, sync full profile in the background to fill in the gaps
+    if (!loginResult.isOffline) {
+      final syncResult = await _syncProfile();
+      syncResult.fold(
+        (failure) => null, // Log or ignore, we already have the basic user
+        (syncedUser) => emit(AuthAuthenticated(syncedUser)),
+      );
+    }
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────

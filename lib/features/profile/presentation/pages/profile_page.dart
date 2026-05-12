@@ -30,6 +30,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isEditing = false;
   bool _isSaving = false;
   bool _isChangingPassword = false;
+  String? _lastSyncedUserId;
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _fullNameController;
@@ -45,6 +46,18 @@ class _ProfilePageState extends State<ProfilePage> {
     _usernameController = TextEditingController(text: user?.username ?? '');
     _passwordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+
+    // Re-sync profile whenever a different account logs in.
+    // This handles the case where the page is already visible inside the
+    // IndexedStack so VisibilityDetector.onVisibilityChanged won't re-fire.
+    if (user != null && user.id != _lastSyncedUserId) {
+      _lastSyncedUserId = user.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<AuthBloc>().add(const AuthSyncProfileEvent());
+        }
+      });
+    }
   }
 
   @override
