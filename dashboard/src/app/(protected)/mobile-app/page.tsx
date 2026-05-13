@@ -129,7 +129,7 @@ export default function MobileAppPage() {
             <a 
               href="/apps/tk_clocking.apk" 
               download="tk_clocking_app.apk"
-              className={styles.primaryButton}
+              className={styles.secondaryButton}
             >
               <Download size={18} />
               Download APK
@@ -139,14 +139,14 @@ export default function MobileAppPage() {
               className={styles.secondaryButton}
             >
               {copied ? <CheckCircle2 size={18} color="var(--success)" /> : <Share2 size={18} />}
-              {copied ? 'Copied!' : 'Share'}
+              {copied ? 'Copied!' : 'Share Link'}
             </button>
             <button 
               onClick={handlePrint}
               className={styles.secondaryButton}
             >
               <Printer size={18} />
-              Print
+              Print QR Code
             </button>
           </div>
         </div>

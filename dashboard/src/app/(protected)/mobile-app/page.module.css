@@ -168,7 +168,11 @@
 }
 
 .secondaryButton:hover {
-  background: var(--bg-card-hover);
+  background: var(--bg-card-hover, rgba(59, 130, 246, 0.05));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .iconWrapper {
