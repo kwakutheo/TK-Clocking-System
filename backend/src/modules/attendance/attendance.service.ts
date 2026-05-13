@@ -987,7 +987,7 @@ export class AttendanceService {
         tempDate.setDate(tempDate.getDate() + 1); // start checking from tomorrow
       }
 
-      for (let i = 0; i < 30; i++) { // check up to 30 days ahead
+      for (let i = 0; i < 60; i++) { // check up to 60 days ahead
         const status = await this._checkNonWorkingDay(tempDate);
         if (!status.isNonWorking) {
           nextShiftDateStr = tempDate.toISOString();
