@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   Zap,
   Info,
-  Printer
+  Printer,
+  Share2
 } from 'lucide-react';
 import styles from './page.module.css';
 import { useAuthStore } from '@/lib/store';
@@ -60,13 +61,25 @@ export default function MobileAppPage() {
     }
   }, []);
 
-  const handleCopyLink = async () => {
+  const handleShareLink = async () => {
     try {
-      await navigator.clipboard.writeText(downloadUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (navigator.share) {
+        await navigator.share({
+          title: 'TK Clocking App',
+          text: 'Download the TK Clocking mobile application here:',
+          url: downloadUrl,
+        });
+      } else {
+        // Fallback to clipboard if share is not supported
+        await navigator.clipboard.writeText(downloadUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      // Ignore AbortError which happens when user cancels the share dialog
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Error sharing:', err);
+      }
     }
   };
 
@@ -122,11 +135,11 @@ export default function MobileAppPage() {
               Download APK
             </a>
             <button 
-              onClick={handleCopyLink}
+              onClick={handleShareLink}
               className={styles.secondaryButton}
             >
-              {copied ? <CheckCircle2 size={18} color="var(--success)" /> : <Copy size={18} />}
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? <CheckCircle2 size={18} color="var(--success)" /> : <Share2 size={18} />}
+              {copied ? 'Copied!' : 'Share'}
             </button>
             <button 
               onClick={handlePrint}
