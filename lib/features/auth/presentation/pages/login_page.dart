@@ -116,47 +116,36 @@ class _LoginPageState extends State<LoginPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colorScheme.primary.withValues(alpha: 0.2),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      'assets/icons/icon.png',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  'assets/icons/icon.png',
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(width: 16),
-                Text(
-                  'TK Clocking',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.primary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ],
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => _showServerConfigDialog(context),
-              tooltip: 'Configure Server IP',
+            const SizedBox(width: 16),
+            Text(
+              'TK Clocking System',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colorScheme.primary,
+                letterSpacing: -0.5,
+              ),
             ),
           ],
         ),
