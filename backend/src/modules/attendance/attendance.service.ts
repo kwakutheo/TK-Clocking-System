@@ -974,10 +974,16 @@ export class AttendanceService {
     if (shift) {
       let tempDate = new Date(today);
       
+      const now = new Date();
+      const [sHours, sMins] = shift.startTime.split(':').map(Number);
+      const shiftStart = new Date(today);
+      shiftStart.setHours(sHours, sMins, 0, 0);
+
       const hasClockOutToday = todayLogs.some(l => l.type === AttendanceType.CLOCK_OUT);
-      const isDoneForToday = hasClockOutToday || (isShiftOver && !isClockedIn);
+      const isShiftStarted = now >= shiftStart;
+      const shouldSkipToday = hasClockOutToday || (isShiftOver && !isClockedIn) || isShiftStarted;
       
-      if (isDoneForToday) {
+      if (shouldSkipToday) {
         tempDate.setDate(tempDate.getDate() + 1); // start checking from tomorrow
       }
 
