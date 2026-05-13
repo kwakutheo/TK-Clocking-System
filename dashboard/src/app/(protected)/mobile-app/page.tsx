@@ -43,7 +43,7 @@ export default function MobileAppPage() {
           canvasRef.current,
           url,
           {
-            width: 200,
+            width: 500,
             margin: 1,
             color: {
               dark: '#000000',

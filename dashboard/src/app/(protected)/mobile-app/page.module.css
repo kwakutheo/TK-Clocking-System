@@ -71,6 +71,11 @@
   align-items: center;
 }
 
+.qrContainer canvas {
+  width: 200px !important;
+  height: 200px !important;
+}
+
 .buttonGroup {
   display: flex;
   gap: 16px;
@@ -201,7 +206,7 @@
     box-shadow: none !important;
     padding: 0 !important;
     margin: 0 auto !important;
-    max-width: 400px;
+    max-width: 600px;
   }
 
   .qrContainer {
@@ -209,6 +214,11 @@
     border: 2px solid #000;
     padding: 24px;
     margin-top: 24px;
+  }
+
+  .qrContainer canvas {
+    width: 400px !important;
+    height: 400px !important;
   }
 
   .cardTitle {
