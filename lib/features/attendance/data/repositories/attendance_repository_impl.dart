@@ -147,16 +147,31 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   @override
   Future<Either<Failure, TermReportEntity>> getMyTermReport() async {
     try {
-      // 1. Fetch terms to find the active one
-      final termsResponse = await _api.get<List<dynamic>>(ApiEndpoints.terms);
-      final terms = termsResponse.data
-              ?.cast<Map<String, dynamic>>()
-              .map(AcademicTermModel.fromJson)
-              .toList() ??
-          [];
+      // 1. Fetch terms to find the active one.
+      // Use <dynamic> — Dio does not correctly handle List<dynamic> as a
+      // generic type parameter; the raw response.data will already be a
+      // List<dynamic> when the server returns a JSON array.
+      final termsResponse = await _api.get<dynamic>(ApiEndpoints.terms);
+      final rawTerms = termsResponse.data;
+      final termsList = rawTerms is List ? rawTerms : <dynamic>[];
+      final terms = termsList
+          .cast<Map<String, dynamic>>()
+          .map(AcademicTermModel.fromJson)
+          .toList();
 
-      final activeTerm = terms.cast<AcademicTermModel?>().firstWhere(
-            (t) => t?.isActive == true,
+      // Pick the term that contains today's date.
+      // All terms have isActive:true by default (backend default), so sorting
+      // by isActive alone is unreliable — we'd end up with the newest term,
+      // which may be in the future.  Instead we prefer the term whose date
+      // range actually contains today, then fall back to the most-recent past
+      // term, then whatever is first in the list.
+      AcademicTermModel? activeTerm = terms.cast<AcademicTermModel?>().firstWhere(
+            (t) => t?.containsToday == true,
+            orElse: () => null,
+          );
+      activeTerm ??= terms.cast<AcademicTermModel?>().firstWhere(
+            (t) => t != null && t.endDate.isNotEmpty && t.endDate.compareTo(
+              DateTime.now().toIso8601String().substring(0, 10)) < 0,
             orElse: () => terms.isNotEmpty ? terms.first : null,
           );
 
@@ -164,16 +179,17 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
         return const Left(ServerFailure('No active term found.'));
       }
 
-      // 2. Fetch the report for the active term
-      final reportResponse = await _api.get<Map<String, dynamic>>(
+      // 2. Fetch the report for the active term.
+      final reportResponse = await _api.get<dynamic>(
         ApiEndpoints.myReportTerm(activeTerm.id),
       );
 
-      if (reportResponse.data == null) {
-        return const Left(ServerFailure('Empty report data.'));
+      final rawReport = reportResponse.data;
+      if (rawReport == null || rawReport is! Map<String, dynamic>) {
+        return const Left(ServerFailure('Empty or malformed report data.'));
       }
 
-      final report = TermReportModel.fromJson(reportResponse.data!);
+      final report = TermReportModel.fromJson(rawReport);
       return Right(report);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
