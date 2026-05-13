@@ -37,7 +37,7 @@ export default function MobileAppPage() {
   useEffect(() => {
     // Generate the full download URL based on the current origin
     if (typeof window !== 'undefined') {
-      const url = `${window.location.origin}/apps/tk_clocking.apk`;
+      const url = `${window.location.origin}/download`;
       setDownloadUrl(url);
 
       if (canvasRef.current) {
