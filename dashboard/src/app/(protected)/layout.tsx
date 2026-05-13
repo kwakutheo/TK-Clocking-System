@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   Menu,
   Sun,
-  Moon
+  Moon,
+  Smartphone
 } from 'lucide-react';
 
 interface NavItem {
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { href: '/permissions', icon: ShieldAlert,      label: 'Permissions',    permission: 'permissions.manage' },
   { href: '/departments', icon: Building2,        label: 'Departments',    permission: 'departments.manage' },
   { href: '/branches',    icon: MapPin,           label: 'Branches',       permission: 'branches.manage' },
+  { href: '/mobile-app',  icon: Smartphone,       label: 'Mobile App',     permission: 'employees.view' },
   { href: '/profile',     icon: UserCircle,       label: 'My Profile'   },
 ];
 
