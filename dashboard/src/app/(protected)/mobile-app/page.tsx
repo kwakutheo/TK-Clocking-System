@@ -81,7 +81,7 @@ export default function MobileAppPage() {
       <div className={styles.header}>
         <h1 className={styles.title}>Mobile App Distribution</h1>
         <p className={styles.subtitle}>
-          Distribute the TK Clocking mobile application to your employees
+          Distribute the TK Clocking mobile application to your employees (Android Only, iOS will be available soon)
         </p>
       </div>
 
@@ -171,7 +171,7 @@ export default function MobileAppPage() {
               <div className={styles.infoListItemIcon}><Zap size={18} /></div>
               <div>
                 <strong>4. Grant Permissions</strong>
-                <br />The app requires Camera (for facial recognition) and Location (for geofencing) permissions to function correctly. Please grant these when prompted.
+                <br />The app requires Camera (to scan branch QR code) and Location (for geofencing) permissions to function correctly. Please grant these when prompted.
               </div>
             </li>
           </ul>
@@ -190,7 +190,7 @@ export default function MobileAppPage() {
             }}>
               <Info size={24} color="var(--primary)" style={{ flexShrink: 0 }} />
               <p style={{ margin: 0 }}>
-                This is an internal enterprise application and is not available on the public Google Play Store.
+                This is an internal enterprise application and is not available on the various public Store.
               </p>
             </div>
           </div>
