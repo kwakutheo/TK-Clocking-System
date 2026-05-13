@@ -156,3 +156,68 @@
   flex-shrink: 0;
   margin-top: 2px;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide the sidebar and global header/nav elements which are usually outside this component.
+     Since we can't easily target them from a CSS module without global selectors, 
+     we use standard global class names that are common, or we rely on the container. */
+  :global(.sidebar),
+  :global(.mobile-header),
+  :global(.theme-toggle-btn) {
+    display: none !important;
+  }
+
+  :global(.app-shell) {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  :global(.main-content) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything on the page except the QR code card */
+  .header,
+  .buttonGroup,
+  .iconWrapper,
+  .card:not(:first-child) {
+    display: none !important;
+  }
+
+  .container {
+    padding: 0;
+    margin: 0;
+  }
+
+  .content {
+    display: block;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 400px;
+  }
+
+  .qrContainer {
+    box-shadow: none !important;
+    border: 2px solid #000;
+    padding: 24px;
+    margin-top: 24px;
+  }
+
+  .cardTitle {
+    font-size: 24px;
+    color: #000 !important;
+  }
+
+  .cardDesc {
+    font-size: 16px;
+    color: #000 !important;
+  }
+}

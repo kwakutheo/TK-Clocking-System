@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   ShieldCheck, 
   Zap,
-  Info
+  Info,
+  Printer
 } from 'lucide-react';
 import styles from './page.module.css';
 import { useAuthStore } from '@/lib/store';
@@ -67,6 +68,10 @@ export default function MobileAppPage() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (!isHydrated || !user) return null;
 
   return (
@@ -107,7 +112,14 @@ export default function MobileAppPage() {
               className={styles.secondaryButton}
             >
               {copied ? <CheckCircle2 size={18} color="var(--success)" /> : <Copy size={18} />}
-              {copied ? 'Copied!' : 'Copy Link'}
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button 
+              onClick={handlePrint}
+              className={styles.secondaryButton}
+            >
+              <Printer size={18} />
+              Print
             </button>
           </div>
         </div>
