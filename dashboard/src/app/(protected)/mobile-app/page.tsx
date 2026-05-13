@@ -90,8 +90,8 @@ export default function MobileAppPage() {
         <div className={styles.card}>
           {/* Print Only Header */}
           <div className={styles.printHeader}>
-            <Image src="/logo.png" alt="TK Clocking Logo" width={100} height={100} style={{ borderRadius: '20px', marginBottom: '16px' }} />
-            <h1 className={styles.printTitle}>TK CLOCKING</h1>
+            <Image src="/app_logo.png" alt="TK Clocking Logo" width={100} height={100} style={{ borderRadius: '20px', marginBottom: '16px' }} />
+            <h1 className={styles.printTitle}>TK CLOCKING SYSTEM</h1>
           </div>
 
           <div className={styles.iconWrapper}>
