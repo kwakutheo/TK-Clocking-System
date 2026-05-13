@@ -973,7 +973,14 @@ export class AttendanceService {
     let nextShiftDateStr: string | null = null;
     if (shift) {
       let tempDate = new Date(today);
-      tempDate.setDate(tempDate.getDate() + 1); // start checking from tomorrow
+      
+      const hasClockOutToday = todayLogs.some(l => l.type === AttendanceType.CLOCK_OUT);
+      const isDoneForToday = hasClockOutToday || (isShiftOver && !isClockedIn);
+      
+      if (isDoneForToday) {
+        tempDate.setDate(tempDate.getDate() + 1); // start checking from tomorrow
+      }
+
       for (let i = 0; i < 30; i++) { // check up to 30 days ahead
         const status = await this._checkNonWorkingDay(tempDate);
         if (!status.isNonWorking) {
