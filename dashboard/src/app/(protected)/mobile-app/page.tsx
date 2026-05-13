@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import QRCode from 'qrcode';
 import { 
   Download, 
@@ -45,6 +46,7 @@ export default function MobileAppPage() {
           {
             width: 500,
             margin: 1,
+            errorCorrectionLevel: 'H',
             color: {
               dark: '#000000',
               light: '#ffffff',
@@ -86,6 +88,12 @@ export default function MobileAppPage() {
       <div className={styles.content}>
         {/* QR Code Card */}
         <div className={styles.card}>
+          {/* Print Only Header */}
+          <div className={styles.printHeader}>
+            <Image src="/logo.png" alt="TK Clocking Logo" width={100} height={100} style={{ borderRadius: '20px', marginBottom: '16px' }} />
+            <h1 className={styles.printTitle}>TK CLOCKING</h1>
+          </div>
+
           <div className={styles.iconWrapper}>
             <Smartphone size={32} />
           </div>
@@ -94,8 +102,14 @@ export default function MobileAppPage() {
             Have your employees scan this QR code with their mobile device to instantly download and install the clocking app.
           </p>
           
-          <div className={styles.qrContainer}>
-            <canvas ref={canvasRef}></canvas>
+          <div className={styles.qrContainerWrapper}>
+            <div className={styles.qrContainer}>
+              <canvas ref={canvasRef}></canvas>
+              <div className={styles.qrCenterIcon}>
+                <Smartphone size={36} color="var(--primary)" />
+              </div>
+            </div>
+            <p className={styles.printFooterText}>Scan to download the mobile app.</p>
           </div>
 
           <div className={styles.buttonGroup}>
