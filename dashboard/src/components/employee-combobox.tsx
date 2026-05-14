@@ -109,14 +109,14 @@ export function EmployeeCombobox({
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 1000,
-          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+          background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10,
           boxShadow: '0 12px 40px rgba(0,0,0,0.25)', overflow: 'hidden',
         }}>
           {/* Search + toggle */}
           <div style={{
             padding: '10px 12px', borderBottom: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column', gap: 8,
-            background: 'var(--bg-card)',
+            background: 'var(--bg-surface)',
           }}>
             <input
               autoFocus
@@ -145,7 +145,7 @@ export function EmployeeCombobox({
           </div>
 
           {/* Results */}
-          <div style={{ maxHeight: 280, overflowY: 'auto', background: 'var(--bg-card)' }}>
+          <div style={{ maxHeight: 280, overflowY: 'auto', background: 'var(--bg-surface)' }}>
             {groups.length === 0 ? (
               <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                 No employees found.
@@ -156,7 +156,7 @@ export function EmployeeCombobox({
                 <div style={{
                   padding: '8px 14px 4px', fontSize: 11, fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: 1,
-                  color: 'var(--text-muted)', background: 'var(--bg-card)',
+                  color: 'var(--text-muted)', background: 'var(--bg-surface)',
                 }}>
                   {group.label}
                 </div>
