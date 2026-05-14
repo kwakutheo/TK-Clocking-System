@@ -5,9 +5,6 @@ import { shiftsApi, calendarApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { Clock, Plus, Trash2, Save, Edit, ShieldAlert } from 'lucide-react';
 import { can } from '@/lib/permissions';
-import { Dialog } from '@/components/ui/dialog';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { AlertDialog } from '@/components/ui/alert-dialog';
 
 const fetcher = () => shiftsApi.list().then((r) => r.data);
 
@@ -26,8 +23,6 @@ export default function ShiftsPage() {
     endTime: '17:00',
     graceMinutes: 15,
   });
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [alertMsg, setAlertMsg] = useState<string | null>(null);
 
   if (!canManage) {
     return (
@@ -51,8 +46,8 @@ export default function ShiftsPage() {
     setShowAdd(true);
   };
 
-  const handleAdd = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       if (editingId) {
         await shiftsApi.update(editingId, {
@@ -71,7 +66,7 @@ export default function ShiftsPage() {
       setForm({ name: '', startTime: '08:00', endTime: '17:00', graceMinutes: 15 });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to save shift';
-      setAlertMsg(Array.isArray(msg) ? msg.join('\n') : msg);
+      alert(Array.isArray(msg) ? msg.join('\n') : msg);
     }
   };
 
@@ -81,15 +76,13 @@ export default function ShiftsPage() {
     setForm({ name: '', startTime: '08:00', endTime: '17:00', graceMinutes: 15 });
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!confirmDeleteId) return;
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this shift?')) return;
     try {
-      await shiftsApi.delete(confirmDeleteId);
+      await shiftsApi.delete(id);
       mutate();
     } catch (err) {
-      setAlertMsg('Failed to delete shift');
-    } finally {
-      setConfirmDeleteId(null);
+      alert('Failed to delete shift');
     }
   };
 
@@ -154,7 +147,7 @@ export default function ShiftsPage() {
                       <button 
                         className="btn btn-sm btn-ghost" 
                         style={{ color: 'var(--danger)' }} 
-                        onClick={() => setConfirmDeleteId(s.id)}
+                        onClick={() => handleDelete(s.id)}
                         aria-label="Delete Shift"
                         title="Delete Shift"
                       >
@@ -169,92 +162,75 @@ export default function ShiftsPage() {
         )}
       </div>
 
-      <Dialog
-        open={showAdd}
-        onOpenChange={(open) => !open && handleClose()}
-        title={editingId ? 'Edit Shift' : 'Create New Shift'}
-        maxWidth={400}
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={handleClose}>Cancel</button>
-            <button type="submit" form="shift-form" className="btn btn-primary">
-              <Save size={18} style={{ marginRight: 8 }} />
-              {editingId ? 'Update Shift' : 'Save Shift'}
-            </button>
-          </>
-        }
-      >
-        <form id="shift-form" onSubmit={handleAdd}>
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <label htmlFor="shiftName">Shift Name</label>
-            <input 
-              id="shiftName"
-              className="form-input" 
-              required 
-              value={form.name} 
-              onChange={e => setForm({...form, name: e.target.value})} 
-              placeholder="e.g. Morning Shift, Night Shift" 
-            />
-          </div>
-          <div className="form-grid" style={{ padding: 0, marginBottom: 16 }}>
-            <div className="form-group">
-              <label htmlFor="startTime">Start Time</label>
-              <input 
-                id="startTime"
-                type="time" 
-                className="form-input" 
-                required 
-                value={form.startTime} 
-                onChange={e => setForm({...form, startTime: e.target.value})} 
-              />
+      {showAdd && (
+        <div className="modal-overlay" onClick={handleClose}>
+          <div className="modal-content" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editingId ? 'Edit Shift' : 'Create New Shift'}</h3>
+              <button className="modal-close" onClick={handleClose}>✕</button>
             </div>
-            <div className="form-group">
-              <label htmlFor="endTime">End Time</label>
-              <input 
-                id="endTime"
-                type="time" 
-                className="form-input" 
-                required 
-                value={form.endTime} 
-                onChange={e => setForm({...form, endTime: e.target.value})} 
-              />
-            </div>
+            <form onSubmit={handleAdd}>
+              <div className="form-group">
+                <label htmlFor="shiftName">Shift Name</label>
+                <input 
+                  id="shiftName"
+                  className="form-input" 
+                  required 
+                  value={form.name} 
+                  onChange={e => setForm({...form, name: e.target.value})} 
+                  placeholder="e.g. Morning Shift, Night Shift" 
+                />
+              </div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="startTime">Start Time</label>
+                  <input 
+                    id="startTime"
+                    type="time" 
+                    className="form-input" 
+                    required 
+                    value={form.startTime} 
+                    onChange={e => setForm({...form, startTime: e.target.value})} 
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="endTime">End Time</label>
+                  <input 
+                    id="endTime"
+                    type="time" 
+                    className="form-input" 
+                    required 
+                    value={form.endTime} 
+                    onChange={e => setForm({...form, endTime: e.target.value})} 
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="graceMinutes">Grace Minutes (Late threshold)</label>
+                <input 
+                  id="graceMinutes"
+                  type="number" 
+                  className="form-input" 
+                  required 
+                  value={form.graceMinutes} 
+                  onChange={e => setForm({...form, graceMinutes: Number(e.target.value)})} 
+                  placeholder="e.g. 15"
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Clock-ins after {form.startTime} + this many minutes will be flagged as LATE.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn" onClick={handleClose}>Cancel</button>
+                <button type="submit" className="btn btn-primary">
+                  <Save size={18} style={{ marginRight: 8 }} />
+                  {editingId ? 'Update Shift' : 'Save Shift'}
+                </button>
+              </div>
+            </form>
           </div>
-          <div className="form-group">
-            <label htmlFor="graceMinutes">Grace Minutes (Late threshold)</label>
-            <input 
-              id="graceMinutes"
-              type="number" 
-              className="form-input" 
-              required 
-              value={form.graceMinutes} 
-              onChange={e => setForm({...form, graceMinutes: Number(e.target.value)})} 
-              placeholder="e.g. 15"
-            />
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
-              Clock-ins after {form.startTime} + this many minutes will be flagged as LATE.
-            </p>
-          </div>
-        </form>
-      </Dialog>
-
-      <ConfirmDialog
-        open={!!confirmDeleteId}
-        onOpenChange={(open) => !open && setConfirmDeleteId(null)}
-        title="Delete Shift"
-        message="Are you sure you want to delete this shift? This action cannot be undone."
-        onConfirm={handleDeleteConfirm}
-        confirmText="Delete Shift"
-        variant="danger"
-      />
-
-      <AlertDialog
-        open={!!alertMsg}
-        onOpenChange={(open) => !open && setAlertMsg(null)}
-        title="Notice"
-        message={alertMsg}
-        variant="error"
-      />
+        </div>
+      )}
     </>
   );
 }

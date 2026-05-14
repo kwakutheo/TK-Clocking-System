@@ -3,9 +3,6 @@ import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { departmentsApi } from '@/lib/api';
 import { can } from '@/lib/permissions';
-import { Dialog } from '@/components/ui/dialog';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { AlertDialog } from '@/components/ui/alert-dialog';
 
 const fetcher = () => departmentsApi.list().then((r) => r.data);
 
@@ -18,7 +15,6 @@ export default function DepartmentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [alertData, setAlertData] = useState<{ title: string; msg: string; variant: 'success' | 'error' | 'info' } | null>(null);
 
   const [name, setName] = useState('');
   const userRole = useMemo(() =>
@@ -60,11 +56,7 @@ export default function DepartmentsPage() {
       resetForm();
     } catch (err: any) {
       const msg = err.response?.data?.message;
-      setAlertData({
-        title: 'Error',
-        msg: Array.isArray(msg) ? msg.join(', ') : msg ?? 'Something went wrong.',
-        variant: 'error'
-      });
+      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Something went wrong.');
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +69,7 @@ export default function DepartmentsPage() {
       setDeleteConfirm(null);
     } catch (err: any) {
       const msg = err.response?.data?.message;
-      setAlertData({ title: 'Error', msg: Array.isArray(msg) ? msg.join(', ') : msg ?? 'Failed to delete department.', variant: 'error' });
+      alert(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Failed to delete department.');
     }
   };
 
@@ -134,53 +126,54 @@ export default function DepartmentsPage() {
         </div>
       )}
 
-      <Dialog
-        open={showModal}
-        onOpenChange={(open) => !open && setShowModal(false)}
-        title={editingId ? 'Edit Department' : 'Add Department'}
-        maxWidth={400}
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-            <button type="submit" form="dept-form" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Department'}
-            </button>
-          </>
-        }
-      >
-        <form id="dept-form" onSubmit={handleSubmit}>
-          {error && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{error}</div>}
-          <div className="form-group" style={{ marginBottom: 16 }}>
-            <label htmlFor="deptName">Department Name</label>
-            <input
-              id="deptName"
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Engineering"
-              required
-            />
+      {/* Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editingId ? 'Edit Department' : 'Add Department'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              {error && <div className="alert alert-danger">{error}</div>}
+              <div className="form-group">
+                <label htmlFor="deptName">Department Name</label>
+                <input
+                  id="deptName"
+                  className="form-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Engineering"
+                  required
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Department'}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
-      </Dialog>
+        </div>
+      )}
 
-      <ConfirmDialog
-        open={!!deleteConfirm}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-        title="Delete Department"
-        message="Are you sure you want to delete this department? Employees assigned to it will be unassigned."
-        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
-        confirmText="Delete"
-        variant="danger"
-      />
-
-      <AlertDialog
-        open={!!alertData}
-        onOpenChange={(open) => !open && setAlertData(null)}
-        title={alertData?.title ?? ''}
-        message={alertData?.msg}
-        variant={alertData?.variant}
-      />
+      {/* Delete confirmation */}
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-content" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Delete Department</h3>
+              <button className="modal-close" onClick={() => setDeleteConfirm(null)}>✕</button>
+            </div>
+            <p>Are you sure you want to delete this department? Employees assigned to it will be unassigned.</p>
+            <div className="modal-footer">
+              <button className="btn" onClick={() => setDeleteConfirm(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={() => handleDelete(deleteConfirm)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

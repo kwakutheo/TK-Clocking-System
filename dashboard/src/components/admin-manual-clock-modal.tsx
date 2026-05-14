@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { attendanceApi } from '@/lib/api';
 import useSWR from 'swr';
 import { X, UserCheck, Clock, LogIn, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
-import { Dialog } from '@/components/ui/dialog';
 
 /** Returns the current local time as "HH:mm" — refreshes every 10 s so the max cap stays accurate. */
 function useCurrentTime() {
@@ -77,181 +76,230 @@ export function AdminManualClockModal({ onClose, onSuccess }: Props) {
   };
 
   return (
-    <Dialog
-      open={true}
-      onOpenChange={(open) => !open && onClose()}
-      title="Manual Clock Override"
-      description="Admin action · recorded in audit log"
-      icon={<UserCheck size={24} color="var(--primary)" />}
-      maxWidth={520}
-      footer={
-        <>
-          <button
-            type="button"
-            id="manual-clock-cancel"
-            className="btn btn-secondary"
-            onClick={onClose}
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="admin-manual-clock-form"
-            id="manual-clock-submit"
-            className="btn btn-primary"
-            disabled={loading || !employeeId || !note.trim()}
-          >
-            {loading ? 'Saving…' : `Confirm ${type === 'clock_in' ? 'Clock In' : 'Clock Out'}`}
-          </button>
-        </>
-      }
-    >
-      {/* Warning banner */}
-      <div style={{
-        display: 'flex', gap: 10, alignItems: 'flex-start',
-        background: 'rgba(245,158,11,0.08)',
-        border: '1px solid rgba(245,158,11,0.3)',
-        borderRadius: 10, padding: '10px 14px', marginBottom: 20,
-      }}>
-        <AlertTriangle size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: 1 }} />
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          You cannot clock yourself in/out. Use this only when an employee cannot access their phone.
-          All manual entries are permanently flagged in the audit trail.
-        </span>
-      </div>
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)', zIndex: 1000,
+        }}
+      />
 
-      <form id="admin-manual-clock-form" onSubmit={handleSubmit}>
-        {/* Employee selector */}
-        <div className="form-group" style={{ marginBottom: 16 }}>
-          <label htmlFor="manual-clock-employee" style={{ fontSize: 13, fontWeight: 600 }}>
-            Employee <span style={{ color: 'var(--danger)' }}>*</span>
-          </label>
-          <select
-            id="manual-clock-employee"
-            className="form-input"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            required
-          >
-            <option value="">— Select Employee —</option>
-            {eligibleEmployees.map((emp: any) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.user?.fullName}
-                {emp.user?.role === 'hr_admin' || emp.user?.role === 'super_admin'
-                  ? ' (Admin)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Action type */}
-        <div className="form-group" style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 13, fontWeight: 600 }}>
-            Action <span style={{ color: 'var(--danger)' }}>*</span>
-          </label>
-          <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-            {(['clock_in', 'clock_out'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                id={`manual-clock-type-${t}`}
-                onClick={() => setType(t)}
-                style={{
-                  flex: 1, padding: '10px 12px',
-                  borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  border: type === t ? '2px solid var(--primary)' : '1px solid var(--border)',
-                  background: type === t ? 'rgba(59,130,246,0.1)' : 'var(--bg-card)',
-                  color: type === t ? 'var(--primary)' : 'var(--text-secondary)',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {t === 'clock_in' ? <LogIn size={15} /> : <LogOut size={15} />}
-                {t === 'clock_in' ? 'Clock In' : 'Clock Out'}
-              </button>
-            ))}
+      {/* Modal */}
+      <div
+        style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '100%', maxWidth: 520,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 16,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+          zIndex: 1001,
+          padding: 28,
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'rgba(59,130,246,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <UserCheck size={18} color="var(--primary)" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>
+                Manual Clock Override
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
+                Admin action · recorded in audit log
+              </div>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            id="manual-clock-modal-close"
+            title="Close dialog"
+            aria-label="Close dialog"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-secondary)', padding: 4, borderRadius: 6,
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Custom timestamp toggle */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-            <input
-              id="manual-clock-custom-time-toggle"
-              type="checkbox"
-              checked={useCustomTime}
-              onChange={(e) => setUseCustomTime(e.target.checked)}
-            />
-            <Clock size={14} />
-            Set a specific time (leave unchecked to use current time)
-          </label>
-          {useCustomTime && (
-            <div style={{ marginTop: 8 }}>
+        {/* Warning banner */}
+        <div style={{
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+          background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: 10, padding: '10px 14px', marginBottom: 20,
+        }}>
+          <AlertTriangle size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            You cannot clock yourself in/out. Use this only when an employee cannot access their phone.
+            All manual entries are permanently flagged in the audit trail.
+          </span>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {/* Employee selector */}
+          <div className="form-group" style={{ marginBottom: 16 }}>
+            <label htmlFor="manual-clock-employee" style={{ fontSize: 13, fontWeight: 600 }}>
+              Employee <span style={{ color: 'var(--danger)' }}>*</span>
+            </label>
+            <select
+              id="manual-clock-employee"
+              className="form-input"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              required
+            >
+              <option value="">— Select Employee —</option>
+              {eligibleEmployees.map((emp: any) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.user?.fullName}
+                  {emp.user?.role === 'hr_admin' || emp.user?.role === 'super_admin'
+                    ? ' (Admin)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action type */}
+          <div className="form-group" style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              Action <span style={{ color: 'var(--danger)' }}>*</span>
+            </label>
+            <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+              {(['clock_in', 'clock_out'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  id={`manual-clock-type-${t}`}
+                  onClick={() => setType(t)}
+                  style={{
+                    flex: 1, padding: '10px 12px',
+                    borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    border: type === t ? '2px solid var(--primary)' : '1px solid var(--border)',
+                    background: type === t ? 'rgba(59,130,246,0.1)' : 'var(--bg-card)',
+                    color: type === t ? 'var(--primary)' : 'var(--text-secondary)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {t === 'clock_in' ? <LogIn size={15} /> : <LogOut size={15} />}
+                  {t === 'clock_in' ? 'Clock In' : 'Clock Out'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom timestamp toggle */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
               <input
-                id="manual-clock-custom-time"
-                type="time"
-                className="form-input"
-                aria-label="Manual clock time (today only)"
-                title="Select a time on today's working day"
-                value={customTime}
-                max={currentTime}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  // Extra guard: reject times beyond the current minute
-                  if (val && val > currentTime) return;
-                  setCustomTime(val);
-                }}
+                id="manual-clock-custom-time-toggle"
+                type="checkbox"
+                checked={useCustomTime}
+                onChange={(e) => setUseCustomTime(e.target.checked)}
               />
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                Time is applied to <strong>today</strong> ({format(new Date(), 'EEE, MMM d yyyy')}).
-                Cannot be set in the future or on a different day.
-              </p>
+              <Clock size={14} />
+              Set a specific time (leave unchecked to use current time)
+            </label>
+            {useCustomTime && (
+              <div style={{ marginTop: 8 }}>
+                <input
+                  id="manual-clock-custom-time"
+                  type="time"
+                  className="form-input"
+                  aria-label="Manual clock time (today only)"
+                  title="Select a time on today's working day"
+                  value={customTime}
+                  max={currentTime}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Extra guard: reject times beyond the current minute
+                    if (val && val > currentTime) return;
+                    setCustomTime(val);
+                  }}
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Time is applied to <strong>today</strong> ({format(new Date(), 'EEE, MMM d yyyy')}).
+                  Cannot be set in the future or on a different day.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Note */}
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label htmlFor="manual-clock-note" style={{ fontSize: 13, fontWeight: 600 }}>
+              Reason / Note <span style={{ color: 'var(--danger)' }}>*</span>
+            </label>
+            <textarea
+              id="manual-clock-note"
+              className="form-input"
+              rows={3}
+              placeholder="e.g. Employee's phone was dead. Confirmed arrival at 08:05."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              style={{ resize: 'vertical', minHeight: 72 }}
+              required
+            />
+          </div>
+
+          {/* Error / Success */}
+          {error && (
+            <div style={{
+              display: 'flex', gap: 8, alignItems: 'center',
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 8, padding: '10px 14px', marginBottom: 16,
+              color: 'var(--danger)', fontSize: 13,
+            }}>
+              <AlertTriangle size={14} />
+              {error}
             </div>
           )}
-        </div>
+          {success && (
+            <div style={{
+              display: 'flex', gap: 8, alignItems: 'center',
+              background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)',
+              borderRadius: 8, padding: '10px 14px', marginBottom: 16,
+              color: 'var(--success)', fontSize: 13,
+            }}>
+              <CheckCircle size={14} />
+              {success}
+            </div>
+          )}
 
-        {/* Note */}
-        <div className="form-group" style={{ marginBottom: 20 }}>
-          <label htmlFor="manual-clock-note" style={{ fontSize: 13, fontWeight: 600 }}>
-            Reason / Note <span style={{ color: 'var(--danger)' }}>*</span>
-          </label>
-          <textarea
-            id="manual-clock-note"
-            className="form-input"
-            rows={3}
-            placeholder="e.g. Employee's phone was dead. Confirmed arrival at 08:05."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            style={{ resize: 'vertical', minHeight: 72 }}
-            required
-          />
-        </div>
-
-        {/* Error / Success */}
-        {error && (
-          <div style={{
-            display: 'flex', gap: 8, alignItems: 'center',
-            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 8, padding: '10px 14px', marginBottom: 16,
-            color: 'var(--danger)', fontSize: 13,
-          }}>
-            <AlertTriangle size={14} />
-            {error}
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              id="manual-clock-cancel"
+              className="btn btn-secondary"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              id="manual-clock-submit"
+              className="btn btn-primary"
+              disabled={loading || !employeeId || !note.trim()}
+            >
+              {loading ? 'Saving…' : `Confirm ${type === 'clock_in' ? 'Clock In' : 'Clock Out'}`}
+            </button>
           </div>
-        )}
-        {success && (
-          <div style={{
-            display: 'flex', gap: 8, alignItems: 'center',
-            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)',
-            borderRadius: 8, padding: '10px 14px', marginBottom: 16,
-            color: 'var(--success)', fontSize: 13,
-          }}>
-            <CheckCircle size={14} />
-            {success}
-          </div>
-        )}
-      </form>
-    </Dialog>
+        </form>
+      </div>
+    </>
   );
 }
