@@ -301,12 +301,19 @@ export class AttendanceExportService {
     const todayLocal = new Date(today.getTime() - (offset * 60 * 1000));
     const todayStr = todayLocal.toISOString().split('T')[0];
 
+    const formatDate = (dateStr: string) => {
+      const d = new Date(dateStr);
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${daysOfWeek[d.getDay()]}, ${d.getDate().toString().padStart(2, '0')} ${months[d.getMonth()]}`;
+    };
+
     const tableBody = days.map(d => {
       const isFuture = d.date > todayStr;
 
       if (isFuture) {
         return [
-          d.date,
+          formatDate(d.date),
           { text: '-', color: '#6b7280', bold: false },
           '-',
           '-',
@@ -322,7 +329,7 @@ export class AttendanceExportService {
       else if (d.status === 'PRESENT') statusColor = '#059669'; // Darker green for good contrast
 
       return [
-        d.date,
+        formatDate(d.date),
         { text: d.status, color: statusColor, bold: d.status === 'ABSENT' || d.status === 'PRESENT' },
         d.clockIn ? new Date(d.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
         d.clockOut ? new Date(d.clockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
@@ -345,10 +352,16 @@ export class AttendanceExportService {
     return {
       table: {
         headerRows: 1,
-        widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto'],
+        widths: ['auto', '*', 55, 55, 'auto', 'auto', 'auto'],
         body: tableBody
       },
-      layout: 'lightHorizontalLines'
+      layout: {
+        hLineWidth: (i: number, node: any) => 1,
+        vLineWidth: (i: number, node: any) => 0,
+        hLineColor: (i: number, node: any) => '#e5e7eb',
+        paddingTop: (i: number, node: any) => 6,
+        paddingBottom: (i: number, node: any) => 6,
+      }
     };
   }
 }
