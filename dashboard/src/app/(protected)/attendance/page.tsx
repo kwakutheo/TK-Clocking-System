@@ -293,9 +293,25 @@ export default function AttendanceReportPage() {
             <label htmlFor="selectEmployee">Select Employee</label>
             <select id="selectEmployee" className="form-input" value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)}>
               <option value="">— Select Employee —</option>
-              {(employees ?? []).map((emp: any) => (
-                <option key={emp.id} value={emp.id}>{emp.user?.fullName}</option>
-              ))}
+              <optgroup label="Active Employees">
+                {(employees ?? []).filter((e: any) => e.status === 'active').map((emp: any) => (
+                  <option key={emp.id} value={emp.id}>{emp.user?.fullName}</option>
+                ))}
+              </optgroup>
+              {(employees ?? []).filter((e: any) => e.status === 'suspended').length > 0 && (
+                <optgroup label="Suspended Employees">
+                  {(employees ?? []).filter((e: any) => e.status === 'suspended').map((emp: any) => (
+                    <option key={emp.id} value={emp.id}>{emp.user?.fullName} (Suspended)</option>
+                  ))}
+                </optgroup>
+              )}
+              {(employees ?? []).filter((e: any) => e.status === 'inactive').length > 0 && (
+                <optgroup label="Inactive Employees">
+                  {(employees ?? []).filter((e: any) => e.status === 'inactive').map((emp: any) => (
+                    <option key={emp.id} value={emp.id}>{emp.user?.fullName} (Inactive)</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </div>
           <div className="form-group">
