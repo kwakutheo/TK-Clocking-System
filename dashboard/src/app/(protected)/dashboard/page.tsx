@@ -117,6 +117,7 @@ export default function DashboardPage() {
 
   const liveList: any[] = live ?? [];
   const employeeList: any[] = employees ?? [];
+  const activeWorkforce = employeeList.filter(emp => emp.status === 'active' || emp.status === 'suspended');
   const branchList: any[] = branches ?? [];
   const dashboardStats = stats ?? { totalUniqueAttendance: 0, currentlyOnSite: 0 };
 
@@ -325,7 +326,7 @@ export default function DashboardPage() {
             {isToday && (
               <StatCard
                 icon={<Building2 size={20} />}
-                value={employeeList.length}
+                value={activeWorkforce.length}
                 label="Total Employees"
                 color="#3b82f6"
                 secondary="Registered in workforce"
@@ -408,7 +409,15 @@ export default function DashboardPage() {
                       {emp.branch && <span> · {emp.branch}</span>}
                     </div>
                   </div>
-                  {emp.shift && (
+                  {emp.isSuspended ? (
+                    <div style={{
+                      fontSize: 11, color: '#f43f5e', fontWeight: 600,
+                      background: 'rgba(244,63,94,0.1)', padding: '3px 8px',
+                      borderRadius: 6, whiteSpace: 'nowrap', flexShrink: 0,
+                    }}>
+                      SUSPENDED
+                    </div>
+                  ) : emp.shift && (
                     <div style={{
                       fontSize: 11, color: '#f59e0b', fontWeight: 600,
                       background: 'rgba(245,158,11,0.1)', padding: '3px 8px',

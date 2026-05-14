@@ -1200,7 +1200,7 @@ export class AttendanceService {
       const allEmployees = await this.employees.findAll();
       allEmployees.forEach(emp => {
         if (
-          emp.status !== 'active' ||
+          (emp.status !== 'active' && emp.status !== 'suspended') ||
           !emp.shift ||
           // Exclude employees who weren't registered yet on the queried date.
           // Use hireDate as the registration date (matching the attendance report logic),
@@ -1224,6 +1224,7 @@ export class AttendanceService {
             employeeCode: emp.employeeCode,
             branch: (emp as any).branch?.name ?? null,
             shift: `${emp.shift.startTime} – ${emp.shift.endTime}`,
+            isSuspended: emp.status === 'suspended',
           });
         }
       });
