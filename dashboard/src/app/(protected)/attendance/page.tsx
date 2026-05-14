@@ -235,7 +235,7 @@ export default function AttendanceReportPage() {
         <p className="page-subtitle">Detailed tracking of days worked, absences, lateness, and early departures</p>
       </div>
 
-      <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+      <div className="card" style={{ padding: 24, marginBottom: 24, position: 'relative', zIndex: 100 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 24, gap: 12 }}>
           {can(user?.role, 'attendance.export') && (
             <>
