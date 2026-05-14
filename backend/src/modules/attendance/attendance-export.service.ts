@@ -59,16 +59,21 @@ export class AttendanceExportService {
   }
 
   private buildBulkSummaryDocDefinition(reports: any[], title: string, subtitle: string): any {
+    const now = new Date();
+    const generatedStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    
     const footerFn = function(currentPage: number, pageCount: number) {
       return {
         columns: [
-          { 
-            image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), 
-            width: 20, 
-            margin: [0, -2, 5, 0] 
+          {
+            width: '*',
+            columns: [
+              { image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), width: 20, margin: [0, -2, 5, 0] },
+              { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+            ]
           },
-          { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 },
-          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+          { text: `Report generated on ${generatedStr}`, alignment: 'center', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' },
+          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' }
         ],
         margin: [40, 10, 40, 0]
       };
@@ -145,16 +150,21 @@ export class AttendanceExportService {
     ];
     const monthName = monthNames[month - 1];
 
+    const now = new Date();
+    const generatedStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
     const footerFn = function(currentPage: number, pageCount: number) {
       return {
         columns: [
-          { 
-            image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), 
-            width: 20, 
-            margin: [0, -2, 5, 0] 
+          {
+            width: '*',
+            columns: [
+              { image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), width: 20, margin: [0, -2, 5, 0] },
+              { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+            ]
           },
-          { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 },
-          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+          { text: `Report generated on ${generatedStr}`, alignment: 'center', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' },
+          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' }
         ],
         margin: [40, 10, 40, 0]
       };
@@ -199,16 +209,21 @@ export class AttendanceExportService {
       content.push(this.buildDailyLogTable(m.days));
     });
 
+    const now = new Date();
+    const generatedStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
     const footerFn = function(currentPage: number, pageCount: number) {
       return {
         columns: [
-          { 
-            image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), 
-            width: 20, 
-            margin: [0, -2, 5, 0] 
+          {
+            width: '*',
+            columns: [
+              { image: require('path').join(process.cwd(), '..', 'dashboard', 'public', 'logo.png'), width: 20, margin: [0, -2, 5, 0] },
+              { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+            ]
           },
-          { text: 'TK Clocking System', alignment: 'left', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 },
-          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9 }
+          { text: `Report generated on ${generatedStr}`, alignment: 'center', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' },
+          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' }
         ],
         margin: [40, 10, 40, 0]
       };
