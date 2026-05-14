@@ -83,7 +83,7 @@ export class EmployeesService {
     hireDate?: string;
     phone?: string;
     role?: UserRole;
-  }): Promise<Employee> {
+  }, adminUser?: User): Promise<Employee> {
     const employeeCode = payload.employeeCode ?? await this._generateEmployeeCode();
 
     const existingCode = await this.repo.findOne({
@@ -135,6 +135,23 @@ export class EmployeesService {
 
       const savedEmployee = await queryRunner.manager.save(employee);
       await queryRunner.commitTransaction();
+
+      if (adminUser) {
+        await this.auditService.log({
+          user: adminUser,
+          action: 'CREATE_EMPLOYEE',
+          module: 'EMPLOYEES',
+          targetId: savedEmployee.id,
+          oldValues: null,
+          newValues: {
+            fullName: savedUser.fullName,
+            username: savedUser.username,
+            employeeCode: savedEmployee.employeeCode,
+            role: savedUser.role,
+          },
+        });
+      }
+
       return savedEmployee;
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -315,8 +332,25 @@ export class EmployeesService {
     return { pin };
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, adminUser?: User): Promise<void> {
     const emp = await this.findById(id);
+
+    if (adminUser) {
+      await this.auditService.log({
+        user: adminUser,
+        action: 'DELETE_EMPLOYEE',
+        module: 'EMPLOYEES',
+        targetId: id,
+        oldValues: {
+          fullName: emp.user.fullName,
+          employeeCode: emp.employeeCode,
+          username: emp.user.username,
+          role: emp.user.role,
+        },
+        newValues: null,
+      });
+    }
+
     // Delete the user; the employee row cascades because
     // Employee.user has onDelete: 'CASCADE'.
     await this.userRepo.delete(emp.user.id);

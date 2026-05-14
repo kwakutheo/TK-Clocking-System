@@ -46,8 +46,8 @@ export class EmployeesController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions('employees.create')
   @ApiOperation({ summary: 'Register new employee' })
-  register(@Body() dto: CreateEmployeeDto): Promise<Employee> {
-    return this.service.createEmployeeWithUser(dto);
+  register(@Body() dto: CreateEmployeeDto, @CurrentUser() adminUser: User): Promise<Employee> {
+    return this.service.createEmployeeWithUser(dto, adminUser);
   }
 
   @Patch('me')
@@ -87,7 +87,7 @@ export class EmployeesController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions('employees.delete')
   @ApiOperation({ summary: 'Delete employee' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() adminUser: User): Promise<void> {
+    return this.service.remove(id, adminUser);
   }
 }
