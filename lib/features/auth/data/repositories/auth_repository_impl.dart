@@ -51,7 +51,15 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(LoginResult(user: user));
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
-        return const Left(InvalidCredentialsFailure());
+        // Extract the actual reason from the backend response body.
+        // The backend sends e.g: { "message": "Your account has been deactivated..." }
+        final responseData = e.response?.data;
+        String errorMessage = 'Invalid username or password.';
+        if (responseData is Map<String, dynamic> &&
+            responseData['message'] is String) {
+          errorMessage = responseData['message'] as String;
+        }
+        return Left(InvalidCredentialsFailure(errorMessage));
       }
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
