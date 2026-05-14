@@ -37,7 +37,22 @@ export class AuthService {
     if (!user) return null;
 
     const matches = await bcrypt.compare(password, user.passwordHash);
-    return matches ? user : null;
+    if (!matches) return null;
+
+    // Check employee status before allowing login
+    const employee = await this.employees.findByUserId(user.id).catch(() => null);
+    if (employee && employee.status === 'inactive') {
+      throw new UnauthorizedException(
+        'Your account has been deactivated. Please contact your HR administrator for assistance.',
+      );
+    }
+    if (employee && employee.status === 'suspended') {
+      throw new UnauthorizedException(
+        'Your account has been suspended. Please contact your HR administrator for assistance.',
+      );
+    }
+
+    return user;
   }
 
   // ── Login — returns access + refresh tokens ────────────────────────────────
