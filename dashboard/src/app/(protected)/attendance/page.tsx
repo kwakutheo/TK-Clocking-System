@@ -94,7 +94,7 @@ function EmployeeCombobox({ employees, value, onChange }: {
       {/* Dropdown panel */}
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 200,
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 1000,
           background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)', overflow: 'hidden',
         }}>
@@ -429,11 +429,14 @@ export default function AttendanceReportPage() {
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
           gap: 20, 
-          alignItems: 'flex-end',
+          alignItems: 'flex-start',
           background: 'var(--bg-card-alt)',
           padding: 20,
           borderRadius: 12,
-          border: '1px solid var(--border)'
+          border: '1px solid var(--border)',
+          overflow: 'visible',
+          position: 'relative',
+          zIndex: 10,
         }}>
           <div className="form-group">
             <label htmlFor="selectEmployee">Select Employee</label>
