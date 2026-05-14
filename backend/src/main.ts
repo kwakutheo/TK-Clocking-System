@@ -43,7 +43,20 @@ async function bootstrap() {
   );
 
   // ── Global prefix ───────────────────────────────────────────────────────────
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['health'], // Exclude /health from the /api/v1 prefix
+  });
+
+  // ── Health Check ────────────────────────────────────────────────────────────
+  // This endpoint is used by uptime monitors (like Cron-job.org or Render)
+  // to keep the service awake and verify it's running.
+  app.use('/health', (req, res) => {
+    res.status(200).send({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      timezone: process.env.TZ,
+    });
+  });
 
   // ── Swagger ─────────────────────────────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()
