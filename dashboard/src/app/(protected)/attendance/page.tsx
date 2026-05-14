@@ -293,9 +293,9 @@ export default function AttendanceReportPage() {
           border: '1px solid var(--border)',
           overflow: 'visible',
           position: 'relative',
-          zIndex: 10,
+          zIndex: 50,
         }}>
-          <div className="form-group">
+          <div className="form-group" style={{ position: 'relative', zIndex: 20 }}>
             <label htmlFor="selectEmployee">Select Employee</label>
             <EmployeeCombobox
               employees={employees ?? []}
