@@ -60,7 +60,10 @@ export class AttendanceExportService {
 
   private buildBulkSummaryDocDefinition(reports: any[], title: string, subtitle: string): any {
     const now = new Date();
-    const generatedStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const generatedStr = `${dd}/${mm}/${yyyy} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     
     const footerFn = function(currentPage: number, pageCount: number) {
       return {
@@ -151,7 +154,10 @@ export class AttendanceExportService {
     const monthName = monthNames[month - 1];
 
     const now = new Date();
-    const generatedStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const generatedStr = `${dd}/${mm}/${yyyy} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     const footerFn = function(currentPage: number, pageCount: number) {
       return {
@@ -210,7 +216,10 @@ export class AttendanceExportService {
     });
 
     const now = new Date();
-    const generatedStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const generatedStr = `${dd}/${mm}/${yyyy} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     const footerFn = function(currentPage: number, pageCount: number) {
       return {
