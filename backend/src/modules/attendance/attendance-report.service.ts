@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { AttendanceLog } from '../attendance/attendance-log.entity';
 import { Employee } from '../employees/employee.entity';
 import { HolidaysService } from '../holidays/holidays.service';
@@ -104,7 +104,7 @@ export class AttendanceReportService {
   }
 
   async getBulkMonthlyReport(month: number, year: number, branchId?: string) {
-    const query: any = { status: EmployeeStatus.ACTIVE };
+    const query: any = { status: In([EmployeeStatus.ACTIVE, EmployeeStatus.SUSPENDED]) };
     if (branchId) {
       query.branch = { id: branchId };
     }
@@ -122,7 +122,7 @@ export class AttendanceReportService {
   }
 
   async getBulkTermReport(termId: string, branchId?: string) {
-    const query: any = { status: EmployeeStatus.ACTIVE };
+    const query: any = { status: In([EmployeeStatus.ACTIVE, EmployeeStatus.SUSPENDED]) };
     if (branchId) {
       query.branch = { id: branchId };
     }
@@ -291,7 +291,7 @@ export class AttendanceReportService {
             sEnd.setHours(eHours, eMins, 0, 0);
             
             if (new Date() > sEnd) {
-              status = 'ABSENT';
+              status = employee.status === EmployeeStatus.SUSPENDED ? 'ABSENT (SUSPENDED)' : 'ABSENT';
               daysAbsent++;
             } else {
               status = 'AWAITING';
@@ -311,7 +311,7 @@ export class AttendanceReportService {
       } else if (day < registrationDate) {
         status = 'NOT REGISTERED';
       } else {
-        status = 'ABSENT';
+        status = employee.status === EmployeeStatus.SUSPENDED ? 'ABSENT (SUSPENDED)' : 'ABSENT';
         daysAbsent++;
       }
 
