@@ -40,7 +40,7 @@ function StatCard({
   color: string;
   trend?: string;
   trendUp?: boolean;
-  secondary?: string;
+  secondary?: React.ReactNode;
   onClick?: () => void;
 }) {
   return (
@@ -118,6 +118,8 @@ export default function DashboardPage() {
   const liveList: any[] = live ?? [];
   const employeeList: any[] = employees ?? [];
   const activeWorkforce = employeeList.filter(emp => emp.status === 'active' || emp.status === 'suspended');
+  const activeCount = employeeList.filter(emp => emp.status === 'active').length;
+  const suspendedCount = employeeList.filter(emp => emp.status === 'suspended').length;
   const branchList: any[] = branches ?? [];
   const dashboardStats = stats ?? { totalUniqueAttendance: 0, currentlyOnSite: 0 };
 
@@ -329,7 +331,13 @@ export default function DashboardPage() {
                 value={activeWorkforce.length}
                 label="Total Employees"
                 color="#3b82f6"
-                secondary="Registered in workforce"
+                secondary={
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>{activeCount} Active</span>
+                    <span style={{ color: 'var(--text-muted)' }}>•</span>
+                    <span style={{ color: '#f43f5e', fontWeight: 600 }}>{suspendedCount} Suspended</span>
+                  </div>
+                }
               />
             )}
           </>
