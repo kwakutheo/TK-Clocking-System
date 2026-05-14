@@ -1,6 +1,6 @@
 'use client';
 import useSWR from 'swr';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import { employeesApi, branchesApi, departmentsApi, shiftsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -48,8 +48,16 @@ export default function EmployeesPage() {
   const [adminPasswordValue, setAdminPasswordValue] = useState('');
 
   const [activeBranch, setActiveBranch] = useState<string>('all');
+  const [activeStatusView, setActiveStatusView] = useState<'all' | 'active' | 'inactive' | 'suspended'>('active');
   const [activeRoleView, setActiveRoleView] = useState<'all' | 'staff' | 'admin'>('all');
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
+  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setOpenActionMenu(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const toggleDept = (deptName: string) => {
     setExpandedDepts(prev => ({
@@ -78,7 +86,7 @@ export default function EmployeesPage() {
   const departments: any[] = departmentsData ?? [];
   const shifts: any[] = shiftsData ?? [];
 
-  const filtered = employees.filter((e) => {
+  const contextFiltered = useMemo(() => employees.filter((e) => {
     const role = e.user?.role ?? 'employee';
     if (activeRoleView === 'staff' && (role === 'hr_admin' || role === 'super_admin')) return false;
     if (activeRoleView === 'admin' && (role === 'employee' || role === 'supervisor')) return false;
@@ -93,7 +101,35 @@ export default function EmployeesPage() {
     const matchesBranch = activeBranch === 'all' || e.branch?.id === activeBranch;
     
     return matchesSearch && matchesBranch;
-  });
+  }), [employees, activeRoleView, search, activeBranch]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: 0, active: 0, inactive: 0, suspended: 0 };
+    contextFiltered.forEach(emp => {
+      counts.all++;
+      if (emp.status === 'active') counts.active++;
+      else if (emp.status === 'inactive') counts.inactive++;
+      else if (emp.status === 'suspended') counts.suspended++;
+    });
+    return counts;
+  }, [contextFiltered]);
+
+  const filtered = useMemo(() => {
+    const statusFiltered = activeStatusView === 'all' 
+      ? contextFiltered 
+      : contextFiltered.filter(e => e.status === activeStatusView);
+      
+    return [...statusFiltered].sort((a, b) => {
+      const statusOrder: Record<string, number> = { active: 1, suspended: 2, inactive: 3 };
+      const aStatus = statusOrder[a.status] || 4;
+      const bStatus = statusOrder[b.status] || 4;
+      if (aStatus !== bStatus) return aStatus - bStatus;
+      
+      const aName = a.user?.fullName ?? '';
+      const bName = b.user?.fullName ?? '';
+      return aName.localeCompare(bName);
+    });
+  }, [contextFiltered, activeStatusView]);
 
   const groupedEmployees = filtered.reduce((acc: Record<string, any[]>, emp) => {
     const deptName = emp.department?.name || 'Unassigned Department';
@@ -277,6 +313,37 @@ export default function EmployeesPage() {
       </div>
 
       <div className="table-wrap">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+          <button 
+            className={`btn btn-sm ${activeStatusView === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveStatusView('all')}
+            style={{ borderRadius: 20, whiteSpace: 'nowrap' }}
+          >
+            All ({statusCounts.all})
+          </button>
+          <button 
+            className={`btn btn-sm ${activeStatusView === 'active' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveStatusView('active')}
+            style={{ borderRadius: 20, whiteSpace: 'nowrap' }}
+          >
+            Active ({statusCounts.active})
+          </button>
+          <button 
+            className={`btn btn-sm ${activeStatusView === 'suspended' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveStatusView('suspended')}
+            style={{ borderRadius: 20, whiteSpace: 'nowrap' }}
+          >
+            Suspended ({statusCounts.suspended})
+          </button>
+          <button 
+            className={`btn btn-sm ${activeStatusView === 'inactive' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveStatusView('inactive')}
+            style={{ borderRadius: 20, whiteSpace: 'nowrap' }}
+          >
+            Inactive ({statusCounts.inactive})
+          </button>
+        </div>
+
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8 }}>
           <button 
             className={`btn btn-sm ${activeBranch === 'all' ? 'btn-primary' : 'btn-ghost'}`}
@@ -360,8 +427,10 @@ export default function EmployeesPage() {
                     </tr>
                     
                     {/* Employee Rows */}
-                    {isExpanded && deptEmployees.map((emp: any) => (
-                      <tr key={emp.id} style={{ background: 'transparent' }}>
+                    {isExpanded && deptEmployees.map((emp: any) => {
+                      const isInactive = emp.status === 'inactive' || emp.status === 'suspended';
+                      return (
+                      <tr key={emp.id} style={{ background: 'transparent', opacity: isInactive ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div className="avatar">
@@ -385,23 +454,14 @@ export default function EmployeesPage() {
                         <td><span className={`badge ${roleBadge[emp.user?.role] ?? 'badge-blue'}`}>{roleLabel[emp.user?.role] ?? emp.user?.role}</span></td>
                         <td>
                           {can(userRole, 'employees.toggle_status') ? (
-                            <label className="toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 8 }}>
-                              <input 
-                                type="checkbox" 
-                                checked={emp.status === 'active'}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusToggle(emp.id, emp.status === 'active' ? 'inactive' : 'active');
-                                }}
-                                style={{ display: 'none' }}
-                              />
+                            <div className="toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'default', gap: 8 }}>
                               <div style={{
                                 width: 36,
                                 height: 20,
                                 background: emp.status === 'active' ? 'var(--success)' : 'var(--border)',
                                 borderRadius: 10,
                                 position: 'relative',
-                                transition: '0.2s',
+                                opacity: 0.9,
                               }}>
                                 <div style={{
                                   width: 16,
@@ -411,14 +471,13 @@ export default function EmployeesPage() {
                                   position: 'absolute',
                                   top: 2,
                                   left: emp.status === 'active' ? 18 : 2,
-                                  transition: '0.2s',
                                   boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                                 }} />
                               </div>
                               <span style={{ fontSize: 12, color: emp.status === 'active' ? 'var(--success)' : 'var(--text-secondary)' }}>
                                 {emp.status.charAt(0).toUpperCase() + emp.status.slice(1)}
                               </span>
-                            </label>
+                            </div>
                           ) : (
                             <span className={`badge ${statusBadge[emp.status] ?? 'badge-blue'}`}>{emp.status}</span>
                           )}
@@ -426,45 +485,71 @@ export default function EmployeesPage() {
                         <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {emp.hireDate ? format(new Date(emp.hireDate), 'MMM d, yyyy') : '—'}
                         </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {can(userRole, 'employees.edit') && (
-                              <button
-                                className="btn btn-sm"
-                                style={{ padding: '4px 8px', fontSize: 12 }}
-                                onClick={(e) => { e.stopPropagation(); openEdit(emp); }}
-                                title="Edit"
-                                aria-label="Edit Employee"
-                              >
-                                ✏️
-                              </button>
-                            )}
-                            {can(userRole, 'employees.reset_password') && (
-                              <button
-                                className="btn btn-sm"
-                                style={{ padding: '4px 8px', fontSize: 12, backgroundColor: 'var(--amber-100)', color: 'var(--amber-800)', borderColor: 'var(--amber-200)' }}
-                                onClick={(e) => { e.stopPropagation(); setResetPasswordConfirm(emp.id); setAdminPasswordValue(''); }}
-                                title="Reset Password"
-                                aria-label="Reset Password"
-                              >
-                                🔑
-                              </button>
-                            )}
-                            {can(userRole, 'employees.delete') && (
-                              <button
-                                className="btn btn-sm btn-danger"
-                                style={{ padding: '4px 8px', fontSize: 12 }}
-                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(emp.id); setDeleteInputName(''); }}
-                                title="Delete"
-                                aria-label="Delete Employee"
-                              >
-                                🗑️
-                              </button>
-                            )}
-                          </div>
+                        <td style={{ position: 'relative' }}>
+                          <button
+                            className="btn btn-sm btn-ghost"
+                            style={{ padding: 0, fontSize: 18, borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid transparent' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionMenu(openActionMenu === emp.id ? null : emp.id);
+                            }}
+                            title="More Actions"
+                          >
+                            ⋮
+                          </button>
+
+                          {openActionMenu === emp.id && (
+                            <div 
+                              style={{ 
+                                position: 'absolute', 
+                                right: 16, 
+                                top: 36, 
+                                background: 'var(--bg-surface)', 
+                                border: '1px solid var(--border)', 
+                                borderRadius: 8, 
+                                padding: 6, 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: 2, 
+                                zIndex: 100, 
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                minWidth: 170
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {can(userRole, 'employees.edit') && (
+                                <button
+                                  className="btn btn-sm btn-ghost"
+                                  style={{ justifyContent: 'flex-start', width: '100%', padding: '8px 12px', fontSize: 13, border: 'none', background: 'transparent' }}
+                                  onClick={(e) => { e.stopPropagation(); setOpenActionMenu(null); openEdit(emp); }}
+                                >
+                                  <span style={{ marginRight: 10 }}>✏️</span> Edit Profile
+                                </button>
+                              )}
+                              {can(userRole, 'employees.reset_password') && (
+                                <button
+                                  className="btn btn-sm btn-ghost"
+                                  style={{ justifyContent: 'flex-start', width: '100%', padding: '8px 12px', fontSize: 13, color: 'var(--amber-600)', border: 'none', background: 'transparent' }}
+                                  onClick={(e) => { e.stopPropagation(); setOpenActionMenu(null); setResetPasswordConfirm(emp.id); setAdminPasswordValue(''); }}
+                                >
+                                  <span style={{ marginRight: 10 }}>🔑</span> Reset Password
+                                </button>
+                              )}
+                              {can(userRole, 'employees.delete') && (
+                                <button
+                                  className="btn btn-sm btn-ghost"
+                                  style={{ justifyContent: 'flex-start', width: '100%', padding: '8px 12px', fontSize: 13, color: 'var(--danger)', border: 'none', background: 'transparent' }}
+                                  onClick={(e) => { e.stopPropagation(); setOpenActionMenu(null); setDeleteConfirm(emp.id); setDeleteInputName(''); }}
+                                >
+                                  <span style={{ marginRight: 10 }}>🗑️</span> Delete Employee
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 );
               })}
