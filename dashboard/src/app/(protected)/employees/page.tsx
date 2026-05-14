@@ -53,11 +53,7 @@ export default function EmployeesPage() {
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleClickOutside = () => setOpenActionMenu(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+  // Action menu state is managed below with a fixed overlay
 
   const toggleDept = (deptName: string) => {
     setExpandedDepts(prev => ({
@@ -485,7 +481,7 @@ export default function EmployeesPage() {
                         <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {emp.hireDate ? format(new Date(emp.hireDate), 'MMM d, yyyy') : '—'}
                         </td>
-                        <td style={{ position: 'relative' }}>
+                        <td style={{ position: 'relative', zIndex: openActionMenu === emp.id ? 50 : 1 }}>
                           <button
                             className="btn btn-sm btn-ghost"
                             style={{ padding: 0, fontSize: 18, borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid transparent' }}
@@ -499,25 +495,30 @@ export default function EmployeesPage() {
                           </button>
 
                           {openActionMenu === emp.id && (
-                            <div 
-                              style={{ 
-                                position: 'absolute', 
-                                right: 16, 
-                                top: 36, 
-                                background: 'var(--bg-surface)', 
-                                border: '1px solid var(--border)', 
-                                borderRadius: 8, 
-                                padding: 6, 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                gap: 2, 
-                                zIndex: 100, 
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                                minWidth: 170
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {can(userRole, 'employees.edit') && (
+                            <>
+                              <div 
+                                style={{ position: 'fixed', inset: 0, zIndex: 90 }} 
+                                onClick={(e) => { e.stopPropagation(); setOpenActionMenu(null); }}
+                              />
+                              <div 
+                                style={{ 
+                                  position: 'absolute', 
+                                  right: 32, 
+                                  top: 0, 
+                                  background: 'var(--bg-surface)', 
+                                  border: '1px solid var(--border)', 
+                                  borderRadius: 8, 
+                                  padding: 6, 
+                                  display: 'flex', 
+                                  flexDirection: 'column', 
+                                  gap: 2, 
+                                  zIndex: 100, 
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                                  minWidth: 170
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {can(userRole, 'employees.edit') && (
                                 <button
                                   className="btn btn-sm btn-ghost"
                                   style={{ justifyContent: 'flex-start', width: '100%', padding: '8px 12px', fontSize: 13, border: 'none', background: 'transparent' }}
@@ -545,6 +546,7 @@ export default function EmployeesPage() {
                                 </button>
                               )}
                             </div>
+                            </>
                           )}
                         </td>
                       </tr>
