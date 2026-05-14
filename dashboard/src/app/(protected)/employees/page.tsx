@@ -43,6 +43,7 @@ export default function EmployeesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteInputName, setDeleteInputName] = useState('');
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState<string | null>(null);
   const [adminPasswordValue, setAdminPasswordValue] = useState('');
 
@@ -453,7 +454,7 @@ export default function EmployeesPage() {
                               <button
                                 className="btn btn-sm btn-danger"
                                 style={{ padding: '4px 8px', fontSize: 12 }}
-                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(emp.id); }}
+                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(emp.id); setDeleteInputName(''); }}
                                 title="Delete"
                                 aria-label="Delete Employee"
                               >
@@ -649,23 +650,46 @@ export default function EmployeesPage() {
       )}
 
       {/* Delete confirmation */}
-      {deleteConfirm && (
-        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
-          <div className="modal-content" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Delete Employee</h3>
-              <button className="modal-close" onClick={() => setDeleteConfirm(null)}>✕</button>
-            </div>
-            <p>Are you sure you want to delete this employee? This action cannot be undone.</p>
-            <div className="modal-footer">
-              <button className="btn" onClick={() => setDeleteConfirm(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={() => handleDelete(deleteConfirm)}>
-                Delete
-              </button>
+      {deleteConfirm && (() => {
+        const empToDelete = employees.find(e => e.id === deleteConfirm);
+        if (!empToDelete) return null;
+        
+        return (
+          <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+            <div className="modal-content" style={{ maxWidth: 450 }} onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Delete Employee</h3>
+                <button className="modal-close" onClick={() => setDeleteConfirm(null)}>✕</button>
+              </div>
+              <div style={{ padding: '0 4px' }}>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
+                  Are you sure you want to delete <strong>{empToDelete.user?.fullName}</strong>? This action cannot be undone and will permanently remove all their historical data.
+                </p>
+                <div className="form-group" style={{ marginBottom: 24 }}>
+                  <label>Please type <strong>{empToDelete.user?.fullName}</strong> to confirm.</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={deleteInputName}
+                    onChange={(e) => setDeleteInputName(e.target.value)}
+                    placeholder={empToDelete.user?.fullName}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn" onClick={() => setDeleteConfirm(null)}>Cancel</button>
+                <button 
+                  className="btn btn-danger" 
+                  onClick={() => handleDelete(deleteConfirm)}
+                  disabled={deleteInputName !== empToDelete.user?.fullName}
+                >
+                  Confirm Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Reset Password Modal */}
       {resetPasswordConfirm && (
