@@ -1,10 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { AttendanceReportService } from './attendance-report.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ReportVerification } from './report-verification.entity';
+import { randomBytes } from 'crypto';
 const pdfmake = require('pdfmake');
 
 @Injectable()
 export class AttendanceExportService {
-  constructor(private readonly reportService: AttendanceReportService) {
+  constructor(
+    private readonly reportService: AttendanceReportService,
+    @InjectRepository(ReportVerification)
+    private readonly verificationRepo: Repository<ReportVerification>
+  ) {
     // Use standard PDF fonts so we don't need TTF files
     const fonts = {
       Helvetica: {
@@ -19,14 +27,39 @@ export class AttendanceExportService {
 
   async exportMonthlyPdf(employeeId: string, month: number, year: number): Promise<Buffer> {
     const report = await this.reportService.getMonthlyReport(employeeId, month, year);
-    const docDefinition = this.buildMonthlyDocDefinition(report, month, year);
+    
+    const verificationCode = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
+    await this.verificationRepo.save({
+      verificationCode,
+      reportData: {
+        type: 'monthly',
+        employee: report.employee,
+        month,
+        year,
+        summary: report.summary
+      }
+    });
+
+    const docDefinition = this.buildMonthlyDocDefinition(report, month, year, verificationCode);
     const pdfDoc = pdfmake.createPdf(docDefinition);
     return await pdfDoc.getBuffer();
   }
 
   async exportTermPdf(employeeId: string, termId: string): Promise<Buffer> {
     const report = await this.reportService.getTermReport(employeeId, termId);
-    const docDefinition = this.buildTermDocDefinition(report);
+    
+    const verificationCode = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
+    await this.verificationRepo.save({
+      verificationCode,
+      reportData: {
+        type: 'term',
+        employee: report.employee,
+        termId,
+        summary: report.summary
+      }
+    });
+
+    const docDefinition = this.buildTermDocDefinition(report, verificationCode);
     const pdfDoc = pdfmake.createPdf(docDefinition);
     return await pdfDoc.getBuffer();
   }
@@ -42,7 +75,24 @@ export class AttendanceExportService {
     const title = `Bulk Attendance Summary - ${monthName} ${year}`;
     const subtitle = branchId ? `Branch: ${branchName}` : 'All Branches';
 
-    const docDefinition = this.buildBulkSummaryDocDefinition(reports, title, subtitle);
+    const verificationCode = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
+    await this.verificationRepo.save({
+      verificationCode,
+      reportData: {
+        type: 'bulk_monthly',
+        title,
+        subtitle,
+        month,
+        year,
+        branchId,
+        reports: reports.map(r => ({
+          employee: r.employee,
+          summary: r.summary
+        }))
+      }
+    });
+
+    const docDefinition = this.buildBulkSummaryDocDefinition(reports, title, subtitle, verificationCode);
     const pdfDoc = pdfmake.createPdf(docDefinition);
     return await pdfDoc.getBuffer();
   }
@@ -53,12 +103,28 @@ export class AttendanceExportService {
     const title = `Bulk Attendance Summary - ${termName || 'Term'}`;
     const subtitle = branchId ? `Branch: ${branchName}` : 'All Branches';
 
-    const docDefinition = this.buildBulkSummaryDocDefinition(reports, title, subtitle);
+    const verificationCode = `REF-${randomBytes(4).toString('hex').toUpperCase()}`;
+    await this.verificationRepo.save({
+      verificationCode,
+      reportData: {
+        type: 'bulk_term',
+        title,
+        subtitle,
+        termId,
+        branchId,
+        reports: reports.map(r => ({
+          employee: r.employee,
+          summary: r.summary
+        }))
+      }
+    });
+
+    const docDefinition = this.buildBulkSummaryDocDefinition(reports, title, subtitle, verificationCode);
     const pdfDoc = pdfmake.createPdf(docDefinition);
     return await pdfDoc.getBuffer();
   }
 
-  private buildBulkSummaryDocDefinition(reports: any[], title: string, subtitle: string): any {
+  private buildBulkSummaryDocDefinition(reports: any[], title: string, subtitle: string, verificationCode: string): any {
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
     const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -76,7 +142,13 @@ export class AttendanceExportService {
             ]
           },
           { text: `Report generated on ${generatedStr}`, alignment: 'center', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' },
-          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' }
+          { 
+            width: '*',
+            columns: [
+              { text: `Page ${currentPage} of ${pageCount}\nVerify: ${verificationCode}`, alignment: 'right', margin: [0, 2, 5, 0], color: '#6b7280', fontSize: 8 },
+              { qr: `https://tk-clocking.com/verify/${verificationCode}`, fit: 25, alignment: 'right' }
+            ]
+          }
         ],
         margin: [40, 10, 40, 0]
       };
@@ -146,7 +218,7 @@ export class AttendanceExportService {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
-  private buildMonthlyDocDefinition(report: any, month: number, year: number): any {
+  private buildMonthlyDocDefinition(report: any, month: number, year: number, verificationCode: string): any {
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
@@ -170,7 +242,13 @@ export class AttendanceExportService {
             ]
           },
           { text: `Report generated on ${generatedStr}`, alignment: 'center', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' },
-          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' }
+          { 
+            width: '*',
+            columns: [
+              { text: `Page ${currentPage} of ${pageCount}\nVerify: ${verificationCode}`, alignment: 'right', margin: [0, 2, 5, 0], color: '#6b7280', fontSize: 8 },
+              { qr: `https://tk-clocking.com/verify/${verificationCode}`, fit: 25, alignment: 'right' }
+            ]
+          }
         ],
         margin: [40, 10, 40, 0]
       };
@@ -196,7 +274,7 @@ export class AttendanceExportService {
     };
   }
 
-  private buildTermDocDefinition(report: any): any {
+  private buildTermDocDefinition(report: any, verificationCode: string): any {
     const content: any[] = [
       { text: 'Academic Term Attendance Report', style: 'coverTitle', alignment: 'center', margin: [0, 60, 0, 10] },
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#00000038' }], margin: [0, 0, 0, 20] },
@@ -232,7 +310,13 @@ export class AttendanceExportService {
             ]
           },
           { text: `Report generated on ${generatedStr}`, alignment: 'center', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' },
-          { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', margin: [0, 2, 0, 0], color: '#6b7280', fontSize: 9, width: '*' }
+          { 
+            width: '*',
+            columns: [
+              { text: `Page ${currentPage} of ${pageCount}\nVerify: ${verificationCode}`, alignment: 'right', margin: [0, 2, 5, 0], color: '#6b7280', fontSize: 8 },
+              { qr: `https://tk-clocking.com/verify/${verificationCode}`, fit: 25, alignment: 'right' }
+            ]
+          }
         ],
         margin: [40, 10, 40, 0]
       };

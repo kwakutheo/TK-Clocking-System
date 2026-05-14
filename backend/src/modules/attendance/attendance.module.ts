@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AttendanceLog } from './attendance-log.entity';
+import { ReportVerification } from './report-verification.entity';
 import { Employee } from '../employees/employee.entity';
 import { AttendanceService } from './attendance.service';
 import { AttendanceReportService } from './attendance-report.service';
 import { AttendanceExportService } from './attendance-export.service';
 import { AttendanceController } from './attendance.controller';
+import { VerificationController } from './verification.controller';
 import { EmployeesModule } from '../employees/employees.module';
 import { BranchesModule } from '../branches/branches.module';
 import { HolidaysModule } from '../holidays/holidays.module';
@@ -16,7 +18,7 @@ import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AttendanceLog, Employee]),
+    TypeOrmModule.forFeature([AttendanceLog, ReportVerification, Employee]),
     EmployeesModule,
     BranchesModule,
     HolidaysModule,
@@ -24,7 +26,7 @@ import { AuditModule } from '../audit/audit.module';
     AuditModule,
 
   ],
-  controllers: [AttendanceController],
+  controllers: [AttendanceController, VerificationController],
   providers: [AttendanceService, AttendanceReportService, AttendanceExportService],
   exports: [AttendanceService],
 })
