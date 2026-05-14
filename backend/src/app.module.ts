@@ -35,7 +35,7 @@ import { APP_GUARD } from '@nestjs/core';
         password: config.get<string>('DB_PASS', 'postgres'),
         database: config.get<string>('DB_NAME', 'tk_clocking'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get<string>('NODE_ENV') !== 'production',
+        synchronize: true, // TEMP: create report_verifications table in production
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
