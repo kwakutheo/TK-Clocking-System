@@ -659,6 +659,15 @@ export default function AttendanceReportPage() {
         }
         .tab:hover { background: var(--bg-card-hover); color: var(--text-primary); }
         .tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+
+        /* Disable hover lift/glow on attendance stat tiles */
+        .stats-grid .stat-card { cursor: default; }
+        .stats-grid .stat-card:hover {
+          transform: none;
+          border-color: var(--border);
+          box-shadow: none;
+        }
+        .stats-grid .stat-card:hover .stat-card-glow { opacity: 0.12; }
       `}</style>
     </>
   );
