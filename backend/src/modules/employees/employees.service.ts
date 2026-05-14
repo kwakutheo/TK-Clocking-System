@@ -165,6 +165,10 @@ export class EmployeesService {
 
 
     const oldValues = {
+      fullName: emp.user.fullName,
+      phone: emp.user.phone,
+      username: emp.user.username,
+      role: emp.user.role,
       position: emp.position,
       status: (emp as any).status,
       shift: emp.shift?.name ?? null,
@@ -221,6 +225,10 @@ export class EmployeesService {
         targetId: id,
         oldValues,
         newValues: {
+          fullName: updatedEmp.user.fullName,
+          phone: updatedEmp.user.phone,
+          username: updatedEmp.user.username,
+          role: updatedEmp.user.role,
           position: updatedEmp.position,
           status: (updatedEmp as any).status,
           shift: updatedEmp.shift?.name ?? null,
