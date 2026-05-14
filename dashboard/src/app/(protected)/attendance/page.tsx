@@ -2,7 +2,7 @@
 import useSWR from 'swr';
 import { useState, useEffect, useMemo } from 'react';
 import { attendanceApi, employeesApi, calendarApi, branchesApi } from '@/lib/api';
-import { format, parseISO, eachMonthOfInterval, isSameMonth } from 'date-fns';
+import { format, parseISO, eachMonthOfInterval, isSameMonth, isAfter, startOfDay } from 'date-fns';
 import { Clock, User, Calendar, AlertTriangle, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { can } from '@/lib/permissions';
 import { useAuthStore } from '@/lib/store';
@@ -519,27 +519,32 @@ export default function AttendanceReportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDays.map((day: any) => (
-                    <tr key={day.date} className={day.status === 'ABSENT' ? 'row-absent' : ''}>
+                  {filteredDays.map((day: any) => {
+                    const isFuture = isAfter(parseISO(day.date), startOfDay(new Date()));
+                    return (
+                    <tr key={day.date} className={!isFuture && day.status === 'ABSENT' ? 'row-absent' : ''}>
                       <td style={{ fontWeight: 500 }}>{format(parseISO(day.date), 'EEE, dd MMM')}</td>
                       <td>
-                        <span className={`badge badge-${
-                          day.status.toLowerCase().includes('holiday') ? 'blue' : 
-                          day.status.toLowerCase().includes('break') ? 'amber' :
-                          (day.status === 'WEEKEND' || day.status.includes('OFF-TERM')) ? 'ghost' : 
-                          day.status === 'INCOMPLETE' ? 'orange' :
-                          day.status === 'PRESENT' ? 'green' : 
-                          (day.status === 'SCHEDULED' || day.status === 'IN PROGRESS') ? 'blue' : 
-                          'red'
-                        }`}>
-                          {day.status}
-                        </span>
+                        {!isFuture ? (
+                          <span className={`badge badge-${
+                            day.status.toLowerCase().includes('holiday') ? 'blue' : 
+                            day.status.toLowerCase().includes('break') ? 'amber' :
+                            (day.status === 'WEEKEND' || day.status.includes('OFF-TERM')) ? 'ghost' : 
+                            day.status === 'INCOMPLETE' ? 'orange' :
+                            day.status === 'PRESENT' ? 'green' : 
+                            (day.status === 'SCHEDULED' || day.status === 'IN PROGRESS') ? 'blue' : 
+                            'red'
+                          }`}>
+                            {day.status}
+                          </span>
+                        ) : '—'}
                       </td>
-                      <td>{day.clockIn ? format(new Date(day.clockIn), 'HH:mm') : '—'}</td>
-                      <td>{day.clockOut ? format(new Date(day.clockOut), 'HH:mm') : '—'}</td>
-                      <td style={{ fontWeight: 600 }}>{day.hours > 0 ? `${day.hours}h` : '—'}</td>
+                      <td>{!isFuture && day.clockIn ? format(new Date(day.clockIn), 'HH:mm') : '—'}</td>
+                      <td>{!isFuture && day.clockOut ? format(new Date(day.clockOut), 'HH:mm') : '—'}</td>
+                      <td style={{ fontWeight: 600 }}>{!isFuture && day.hours > 0 ? `${day.hours}h` : '—'}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {!isFuture ? (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {day.isLate && (
                             <span
                               title={`Late by ${formatMinutes(day.lateMinutes)}`}
@@ -590,10 +595,11 @@ export default function AttendanceReportPage() {
                               Perfect Shift
                             </span>
                           )}
-                        </div>
+                          </div>
+                        ) : '—'}
                       </td>
                     </tr>
-                  ))}
+                  )})}
                   {filteredDays.length === 0 && (
                     <tr>
                       <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
