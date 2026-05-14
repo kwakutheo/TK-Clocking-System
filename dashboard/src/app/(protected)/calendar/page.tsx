@@ -5,6 +5,9 @@ import { calendarApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
 import { Calendar, Plus, Trash2, Edit2, Coffee, ChevronRight, ChevronDown, GraduationCap, ShieldAlert } from 'lucide-react';
 import { can } from '@/lib/permissions';
+import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 
 const fetcher = () => calendarApi.listTerms().then((r) => r.data);
 
@@ -24,6 +27,9 @@ export default function AcademicCalendarPage() {
   const [editingTerm, setEditingTerm] = useState<any>(null);
   const [expandedYears, setExpandedYears] = useState<Record<string, boolean>>({});
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [alertData, setAlertData] = useState<{ title: string; msg: string; variant: 'success' | 'error' | 'info' } | null>(null);
+  const [deleteTermConfirm, setDeleteTermConfirm] = useState<string | null>(null);
+  const [deleteBreakConfirm, setDeleteBreakConfirm] = useState<string | null>(null);
 
   const [termForm, setTermForm] = useState({
     name: '',
@@ -109,7 +115,7 @@ export default function AcademicCalendarPage() {
       const currentEnd = new Date(validTerms[i].endDate).getTime();
       
       if (currentStart > currentEnd) {
-        alert(`${validTerms[i].name} cannot end before its start date.`);
+        setAlertData({ title: 'Validation Error', msg: `${validTerms[i].name} cannot end before its start date.`, variant: 'error' });
         setIsSubmitting(false);
         return;
       }
@@ -118,7 +124,7 @@ export default function AcademicCalendarPage() {
         const nextStart = new Date(validTerms[j].startDate).getTime();
         const nextEnd = new Date(validTerms[j].endDate).getTime();
         if (Math.max(currentStart, nextStart) <= Math.min(currentEnd, nextEnd)) {
-           alert(`Dates for ${validTerms[i].name} and ${validTerms[j].name} overlap.`);
+           setAlertData({ title: 'Validation Error', msg: `Dates for ${validTerms[i].name} and ${validTerms[j].name} overlap.`, variant: 'error' });
            setIsSubmitting(false);
            return;
         }
@@ -129,7 +135,7 @@ export default function AcademicCalendarPage() {
         const extStart = new Date(existingTerm.startDate).getTime();
         const extEnd = new Date(existingTerm.endDate).getTime();
         if (Math.max(currentStart, extStart) <= Math.min(currentEnd, extEnd)) {
-          alert(`${validTerms[i].name} overlaps with an another term (${existingTerm.name}).`);
+          setAlertData({ title: 'Validation Error', msg: `${validTerms[i].name} overlaps with an another term (${existingTerm.name}).`, variant: 'error' });
           setIsSubmitting(false);
           return;
         }
@@ -161,7 +167,7 @@ export default function AcademicCalendarPage() {
         ]
       });
     } catch (err) {
-      alert('Failed to save academic year');
+      setAlertData({ title: 'Error', msg: 'Failed to save academic year', variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -176,7 +182,7 @@ export default function AcademicCalendarPage() {
       const newEnd = new Date(termForm.endDate).getTime();
       
       if (newStart > newEnd) {
-        alert(`The term cannot end before its start date.`);
+        setAlertData({ title: 'Validation Error', msg: 'The term cannot end before its start date.', variant: 'error' });
         setIsSubmitting(false);
         return;
       }
@@ -186,7 +192,7 @@ export default function AcademicCalendarPage() {
         const extStart = new Date(existingTerm.startDate).getTime();
         const extEnd = new Date(existingTerm.endDate).getTime();
         if (Math.max(newStart, extStart) <= Math.min(newEnd, extEnd)) {
-          alert(`This term overlaps with an existing term (${existingTerm.name}).`);
+          setAlertData({ title: 'Validation Error', msg: `This term overlaps with an existing term (${existingTerm.name}).`, variant: 'error' });
           setIsSubmitting(false);
           return;
         }
@@ -207,7 +213,7 @@ export default function AcademicCalendarPage() {
       setEditingTerm(null);
       setTermForm({ name: '', academicYear: '', startDate: '', endDate: '' });
     } catch (err) {
-      alert('Failed to save term');
+      setAlertData({ title: 'Error', msg: 'Failed to save term', variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -222,7 +228,7 @@ export default function AcademicCalendarPage() {
     const bEnd = new Date(breakForm.endDate).getTime();
 
     if (bStart > bEnd) {
-      alert("The break cannot end before its start date.");
+      setAlertData({ title: 'Validation Error', msg: 'The break cannot end before its start date.', variant: 'error' });
       setIsSubmitting(false);
       return;
     }
@@ -233,7 +239,7 @@ export default function AcademicCalendarPage() {
       const tEnd = new Date(parentTerm.endDate).getTime();
       
       if (bStart < tStart || bEnd > tEnd) {
-        alert("The mid-term break must fall completely within the start and end dates of the term.");
+        setAlertData({ title: 'Validation Error', msg: 'The mid-term break must fall completely within the start and end dates of the term.', variant: 'error' });
         setIsSubmitting(false);
         return;
       }
@@ -242,7 +248,7 @@ export default function AcademicCalendarPage() {
         const eBStart = new Date(existingBreak.startDate).getTime();
         const eBEnd = new Date(existingBreak.endDate).getTime();
         if (Math.max(bStart, eBStart) <= Math.min(bEnd, eBEnd)) {
-          alert(`This break overlaps with an existing break (${existingBreak.name}).`);
+          setAlertData({ title: 'Validation Error', msg: `This break overlaps with an existing break (${existingBreak.name}).`, variant: 'error' });
           setIsSubmitting(false);
           return;
         }
@@ -255,29 +261,33 @@ export default function AcademicCalendarPage() {
       setShowBreakModal(false);
       setBreakForm({ name: '', startDate: '', endDate: '' });
     } catch (err) {
-      alert('Failed to save break');
+      setAlertData({ title: 'Error', msg: 'Failed to save break', variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const deleteTerm = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this term? All associated breaks will be removed.')) return;
+  const executeDeleteTerm = async () => {
+    if (!deleteTermConfirm) return;
     try {
-      await calendarApi.deleteTerm(id);
+      await calendarApi.deleteTerm(deleteTermConfirm);
       mutate();
     } catch (err) {
-      alert('Failed to delete term');
+      setAlertData({ title: 'Error', msg: 'Failed to delete term', variant: 'error' });
+    } finally {
+      setDeleteTermConfirm(null);
     }
   };
 
-  const deleteBreak = async (id: string) => {
-    if (!confirm('Delete this break?')) return;
+  const executeDeleteBreak = async () => {
+    if (!deleteBreakConfirm) return;
     try {
-      await calendarApi.deleteBreak(id);
+      await calendarApi.deleteBreak(deleteBreakConfirm);
       mutate();
     } catch (err) {
-      alert('Failed to delete break');
+      setAlertData({ title: 'Error', msg: 'Failed to delete break', variant: 'error' });
+    } finally {
+      setDeleteBreakConfirm(null);
     }
   };
 
@@ -428,7 +438,7 @@ export default function AcademicCalendarPage() {
                               )}
                               {can(userRole, 'calendar.delete') && (
                               <button 
-                                onClick={() => deleteTerm(term.id)} 
+                                onClick={() => setDeleteTermConfirm(term.id)} 
                                 style={{ color: 'var(--danger)' }}
                                 aria-label="Delete Term"
                                 title="Delete Term"
@@ -483,7 +493,7 @@ export default function AcademicCalendarPage() {
                                     </div>
                                     {can(userRole, 'calendar.delete') && (
                                     <button 
-                                      onClick={() => deleteBreak(b.id)} 
+                                      onClick={() => setDeleteBreakConfirm(b.id)} 
                                       style={{ color: 'var(--danger)', opacity: 0.6 }}
                                       aria-label="Delete Break"
                                       title="Delete Break"
@@ -510,210 +520,234 @@ export default function AcademicCalendarPage() {
       )}
 
       {/* Year Modal */}
-      {showYearModal && (
-        <div className="modal-overlay" onClick={() => setShowYearModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
-            <div className="modal-header">
-              <h3>Create Academic Year</h3>
-              <button className="modal-close" onClick={() => setShowYearModal(false)}>&times;</button>
-            </div>
-            <form onSubmit={handleYearSubmit}>
-              <div className="form-group" style={{ marginBottom: 20 }}>
-                <label htmlFor="yearName">Academic Year</label>
-                <input 
-                  id="yearName"
-                  className="form-input" 
-                  placeholder="e.g. 2025/2026" 
-                  value={yearForm.academicYear}
-                  onChange={e => setYearForm({...yearForm, academicYear: e.target.value})}
-                  required 
-                />
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '50vh', overflowY: 'auto', paddingRight: 4 }}>
-                {yearForm.terms.map((term, index) => (
-                  <div key={index} style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    <div className="form-group" style={{ marginBottom: 12 }}>
-                      <label htmlFor={`termName-${index}`}>Term Name</label>
-                      <input 
-                        id={`termName-${index}`}
-                        className="form-input" 
-                        value={term.name}
-                        onChange={e => {
-                          const newTerms = [...yearForm.terms];
-                          newTerms[index].name = e.target.value;
-                          setYearForm({...yearForm, terms: newTerms});
-                        }}
-                        required={index === 0}
-                      />
-                    </div>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label htmlFor={`startDate-${index}`}>Start Date</label>
-                        <input 
-                          id={`startDate-${index}`}
-                          type="date" 
-                          className="form-input" 
-                          value={term.startDate}
-                          onChange={e => {
-                            const newTerms = [...yearForm.terms];
-                            newTerms[index].startDate = e.target.value;
-                            setYearForm({...yearForm, terms: newTerms});
-                          }}
-                          required={index === 0 || term.endDate !== ''}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor={`endDate-${index}`}>End Date</label>
-                        <input 
-                          id={`endDate-${index}`}
-                          type="date" 
-                          className="form-input" 
-                          value={term.endDate}
-                          onChange={e => {
-                            const newTerms = [...yearForm.terms];
-                            newTerms[index].endDate = e.target.value;
-                            setYearForm({...yearForm, terms: newTerms});
-                          }}
-                          required={index === 0 || term.startDate !== ''}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="modal-footer" style={{ marginTop: 24 }}>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowYearModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Save Academic Year'}
-                </button>
-              </div>
-            </form>
+      <Dialog
+        open={showYearModal}
+        onOpenChange={(open) => !open && setShowYearModal(false)}
+        title="Create Academic Year"
+        maxWidth={600}
+        footer={
+          <>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowYearModal(false)}>Cancel</button>
+            <button type="submit" form="year-form" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Academic Year'}
+            </button>
+          </>
+        }
+      >
+        <form id="year-form" onSubmit={handleYearSubmit}>
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label htmlFor="yearName">Academic Year</label>
+            <input 
+              id="yearName"
+              className="form-input" 
+              placeholder="e.g. 2025/2026" 
+              value={yearForm.academicYear}
+              onChange={e => setYearForm({...yearForm, academicYear: e.target.value})}
+              required 
+            />
           </div>
-        </div>
-      )}
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '50vh', overflowY: 'auto', paddingRight: 4 }}>
+            {yearForm.terms.map((term, index) => (
+              <div key={index} style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label htmlFor={`termName-${index}`}>Term Name</label>
+                  <input 
+                    id={`termName-${index}`}
+                    className="form-input" 
+                    value={term.name}
+                    onChange={e => {
+                      const newTerms = [...yearForm.terms];
+                      newTerms[index].name = e.target.value;
+                      setYearForm({...yearForm, terms: newTerms});
+                    }}
+                    required={index === 0}
+                  />
+                </div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor={`startDate-${index}`}>Start Date</label>
+                    <input 
+                      id={`startDate-${index}`}
+                      type="date" 
+                      className="form-input" 
+                      value={term.startDate}
+                      onChange={e => {
+                        const newTerms = [...yearForm.terms];
+                        newTerms[index].startDate = e.target.value;
+                        setYearForm({...yearForm, terms: newTerms});
+                      }}
+                      required={index === 0 || term.endDate !== ''}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor={`endDate-${index}`}>End Date</label>
+                    <input 
+                      id={`endDate-${index}`}
+                      type="date" 
+                      className="form-input" 
+                      value={term.endDate}
+                      onChange={e => {
+                        const newTerms = [...yearForm.terms];
+                        newTerms[index].endDate = e.target.value;
+                        setYearForm({...yearForm, terms: newTerms});
+                      }}
+                      required={index === 0 || term.startDate !== ''}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </form>
+      </Dialog>
 
       {/* Edit Term Modal */}
-      {showTermModal && (
-        <div className="modal-overlay" onClick={() => setShowTermModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingTerm ? 'Edit Term' : 'Add Term'}</h3>
-              <button className="modal-close" onClick={() => setShowTermModal(false)}>&times;</button>
+      <Dialog
+        open={showTermModal}
+        onOpenChange={(open) => !open && setShowTermModal(false)}
+        title={editingTerm ? 'Edit Term' : 'Add Term'}
+        maxWidth={600}
+        footer={
+          <>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowTermModal(false)}>Cancel</button>
+            <button type="submit" form="term-form" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Term'}
+            </button>
+          </>
+        }
+      >
+        <form id="term-form" onSubmit={handleTermSubmit}>
+          <div className="form-grid">
+            <div className="form-group full-width">
+              <label htmlFor="termNameModal">Term Name</label>
+              <input 
+                id="termNameModal"
+                className="form-input" 
+                placeholder="e.g. Term 1" 
+                value={termForm.name}
+                onChange={e => setTermForm({...termForm, name: e.target.value})}
+                required 
+              />
             </div>
-            <form onSubmit={handleTermSubmit}>
-              <div className="form-grid">
-                <div className="form-group full-width">
-                  <label htmlFor="termName">Term Name</label>
-                  <input 
-                    id="termName"
-                    className="form-input" 
-                    placeholder="e.g. Term 1" 
-                    value={termForm.name}
-                    onChange={e => setTermForm({...termForm, name: e.target.value})}
-                    required 
-                  />
-                </div>
-                <div className="form-group full-width">
-                  <label htmlFor="academicYear">Academic Year</label>
-                  <input 
-                    id="academicYear"
-                    className="form-input" 
-                    placeholder="e.g. 2023/2024" 
-                    value={termForm.academicYear}
-                    onChange={e => setTermForm({...termForm, academicYear: e.target.value})}
-                    required 
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="startDate">Start Date</label>
-                  <input 
-                    id="startDate"
-                    type="date" 
-                    className="form-input" 
-                    value={termForm.startDate}
-                    onChange={e => setTermForm({...termForm, startDate: e.target.value})}
-                    required 
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="endDate">End Date</label>
-                  <input 
-                    id="endDate"
-                    type="date" 
-                    className="form-input" 
-                    value={termForm.endDate}
-                    onChange={e => setTermForm({...termForm, endDate: e.target.value})}
-                    required 
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setShowTermModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Save Term'}
-                </button>
-              </div>
-            </form>
+            <div className="form-group full-width">
+              <label htmlFor="academicYearModal">Academic Year</label>
+              <input 
+                id="academicYearModal"
+                className="form-input" 
+                placeholder="e.g. 2023/2024" 
+                value={termForm.academicYear}
+                onChange={e => setTermForm({...termForm, academicYear: e.target.value})}
+                required 
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="startDateModal">Start Date</label>
+              <input 
+                id="startDateModal"
+                type="date" 
+                className="form-input" 
+                value={termForm.startDate}
+                onChange={e => setTermForm({...termForm, startDate: e.target.value})}
+                required 
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="endDateModal">End Date</label>
+              <input 
+                id="endDateModal"
+                type="date" 
+                className="form-input" 
+                value={termForm.endDate}
+                onChange={e => setTermForm({...termForm, endDate: e.target.value})}
+                required 
+              />
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Dialog>
 
       {/* Break Modal */}
-      {showBreakModal && (
-        <div className="modal-overlay" onClick={() => setShowBreakModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
-            <div className="modal-header">
-              <h3>Add Mid-term Break</h3>
-              <button className="modal-close" onClick={() => setShowBreakModal(false)}>&times;</button>
+      <Dialog
+        open={showBreakModal}
+        onOpenChange={(open) => !open && setShowBreakModal(false)}
+        title="Add Mid-term Break"
+        maxWidth={450}
+        footer={
+          <>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowBreakModal(false)}>Cancel</button>
+            <button type="submit" form="break-form" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Add Break'}
+            </button>
+          </>
+        }
+      >
+        <form id="break-form" onSubmit={handleBreakSubmit}>
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+            <div className="form-group">
+              <label htmlFor="breakName">Break Name</label>
+              <input 
+                id="breakName"
+                className="form-input" 
+                placeholder="e.g. Mid-term break" 
+                value={breakForm.name}
+                onChange={e => setBreakForm({...breakForm, name: e.target.value})}
+                required 
+              />
             </div>
-            <form onSubmit={handleBreakSubmit}>
-              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                <div className="form-group">
-                  <label htmlFor="breakName">Break Name</label>
-                  <input 
-                    id="breakName"
-                    className="form-input" 
-                    placeholder="e.g. Mid-term break" 
-                    value={breakForm.name}
-                    onChange={e => setBreakForm({...breakForm, name: e.target.value})}
-                    required 
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="breakStartDate">Start Date</label>
-                  <input 
-                    id="breakStartDate"
-                    type="date" 
-                    className="form-input" 
-                    value={breakForm.startDate}
-                    onChange={e => setBreakForm({...breakForm, startDate: e.target.value})}
-                    required 
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="breakEndDate">End Date</label>
-                  <input 
-                    id="breakEndDate"
-                    type="date" 
-                    className="form-input" 
-                    value={breakForm.endDate}
-                    onChange={e => setBreakForm({...breakForm, endDate: e.target.value})}
-                    required 
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setShowBreakModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Add Break'}
-                </button>
-              </div>
-            </form>
+            <div className="form-group">
+              <label htmlFor="breakStartDate">Start Date</label>
+              <input 
+                id="breakStartDate"
+                type="date" 
+                className="form-input" 
+                value={breakForm.startDate}
+                onChange={e => setBreakForm({...breakForm, startDate: e.target.value})}
+                required 
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="breakEndDate">End Date</label>
+              <input 
+                id="breakEndDate"
+                type="date" 
+                className="form-input" 
+                value={breakForm.endDate}
+                onChange={e => setBreakForm({...breakForm, endDate: e.target.value})}
+                required 
+              />
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTermConfirm}
+        onOpenChange={(open) => !open && setDeleteTermConfirm(null)}
+        title="Delete Term"
+        message="Are you sure you want to delete this term? All associated breaks will be removed."
+        onConfirm={executeDeleteTerm}
+        confirmText="Delete"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        open={!!deleteBreakConfirm}
+        onOpenChange={(open) => !open && setDeleteBreakConfirm(null)}
+        title="Delete Break"
+        message="Are you sure you want to delete this break?"
+        onConfirm={executeDeleteBreak}
+        confirmText="Delete"
+        variant="danger"
+      />
+
+      <AlertDialog
+        open={!!alertData}
+        onOpenChange={(open) => !open && setAlertData(null)}
+        title={alertData?.title ?? ''}
+        message={alertData?.msg}
+        variant={alertData?.variant}
+      />
     </>
   );
 }

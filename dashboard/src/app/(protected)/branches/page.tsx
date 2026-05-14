@@ -4,6 +4,9 @@ import useSWR from 'swr';
 import QRCode from 'qrcode';
 import { branchesApi } from '@/lib/api';
 import { can } from '@/lib/permissions';
+import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 
 const fetcher = () => branchesApi.list().then((r) => r.data);
 
@@ -85,76 +88,40 @@ function PasswordModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: 16,
-      }}
-      onClick={onClose}
-    >
-      <div
-        className="modal-content"
-        style={{
-          padding: 28,
-          maxWidth: 400,
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Confirm Password</div>
-        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
-          Enter your login password to regenerate this branch QR code. The old code will become invalid immediately.
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="modalPassword">Your Password</label>
-          <input
-            id="modalPassword"
-            ref={inputRef}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && password.length >= 6 && !isLoading) {
-                onConfirm(password);
-              }
-            }}
-            className="form-input"
-            style={{ marginBottom: 24 }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={onClose}
-            className="btn"
-            style={{ flex: 1, justifyContent: 'center' }}
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(password)}
-            disabled={password.length < 6 || isLoading}
-            className="btn btn-primary"
-            style={{ flex: 1, justifyContent: 'center' }}
-          >
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      title="Confirm Password"
+      description="Enter your login password to regenerate this branch QR code. The old code will become invalid immediately."
+      maxWidth={400}
+      footer={
+        <>
+          <button onClick={onClose} className="btn" disabled={isLoading} style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+          <button onClick={() => onConfirm(password)} disabled={password.length < 6 || isLoading} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
             {isLoading ? '⏳ Verifying…' : 'Confirm'}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="form-group" style={{ marginTop: 8 }}>
+        <label htmlFor="modalPassword">Your Password</label>
+        <input
+          id="modalPassword"
+          ref={inputRef}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && password.length >= 6 && !isLoading) {
+              onConfirm(password);
+            }
+          }}
+          className="form-input"
+        />
       </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -164,6 +131,8 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
+  const [alertData, setAlertData] = useState<{title: string; msg: string; variant: 'success' | 'error' | 'info'} | null>(null);
+
   const handleRegenerate = async (password: string) => {
     setIsRegenerating(true);
     try {
@@ -172,7 +141,7 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
       setShowPasswordModal(false);
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Failed to regenerate QR code.';
-      alert(msg);
+      setAlertData({ title: 'Error', msg, variant: 'error' });
     } finally {
       setIsRegenerating(false);
     }
@@ -181,7 +150,7 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
   const handleCopy = () => {
     if (qrCode) {
       navigator.clipboard.writeText(qrCode);
-      alert('QR code copied to clipboard!');
+      setAlertData({ title: 'Success', msg: 'QR code copied to clipboard!', variant: 'success' });
     }
   };
 
@@ -366,6 +335,14 @@ function BranchCard({ branch, onEdit, onDelete, canDelete }: { branch: any; onEd
         onConfirm={handleRegenerate}
         isLoading={isRegenerating}
       />
+
+      <AlertDialog
+        open={!!alertData}
+        onOpenChange={(open) => !open && setAlertData(null)}
+        title={alertData?.title ?? ''}
+        message={alertData?.msg}
+        variant={alertData?.variant}
+      />
     </div>
   );
 }
@@ -378,6 +355,7 @@ export default function BranchesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [alertData, setAlertData] = useState<{ title: string; msg: string; variant: 'success' | 'error' | 'info' } | null>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -434,7 +412,7 @@ export default function BranchesPage() {
       resetForm();
     } catch (err: any) {
       const msg = err.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Something went wrong.');
+      setAlertData({ title: 'Error', msg: Array.isArray(msg) ? msg.join(', ') : msg ?? 'Something went wrong.', variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -447,7 +425,7 @@ export default function BranchesPage() {
       setDeleteConfirm(null);
     } catch (err: any) {
       const msg = err.response?.data?.message;
-      alert(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Failed to delete branch.');
+      setAlertData({ title: 'Error', msg: Array.isArray(msg) ? msg.join(', ') : msg ?? 'Failed to delete branch.', variant: 'error' });
     }
   };
 
@@ -499,132 +477,131 @@ export default function BranchesPage() {
         </div>
       )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingId ? 'Edit Branch' : 'Add Branch'}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)} aria-label="Close Modal">✕</button>
+      <Dialog
+        open={showModal}
+        onOpenChange={(open) => !open && setShowModal(false)}
+        title={editingId ? 'Edit Branch' : 'Add Branch'}
+        maxWidth={600}
+        footer={
+          <>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+            <button type="submit" form="branch-form" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Branch'}
+            </button>
+          </>
+        }
+      >
+        <form id="branch-form" onSubmit={handleSubmit}>
+          {error && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{error}</div>}
+          <div className="form-grid" style={{ paddingTop: 0, paddingBottom: 0 }}>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="branchName">Branch Name <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <input
+                id="branchName"
+                className="form-input"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                placeholder="e.g. Accra Central"
+              />
             </div>
-            <form onSubmit={handleSubmit}>
-              {error && <div className="alert alert-danger">{error}</div>}
-              <div className="form-grid">
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label htmlFor="branchName">Branch Name <span style={{ color: 'var(--danger)' }}>*</span></label>
-                  <input
-                    id="branchName"
-                    className="form-input"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                    placeholder="e.g. Accra Central"
-                  />
-                </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label htmlFor="mapsUrl">Google Maps URL <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(paste to auto-fill coordinates)</span></label>
-                  <input
-                    id="mapsUrl"
-                    className="form-input"
-                    type="text"
-                    value={mapsUrl}
-                    placeholder="https://www.google.com/maps/place/..."
-                    onChange={(e) => {
-                      const url = e.target.value;
-                      setMapsUrl(url);
-                      const match = url.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
-                      if (match) {
-                        setForm((prev) => ({ ...prev, latitude: match[1], longitude: match[2] }));
-                      }
-                    }}
-                  />
-                </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <a
-                    href={`https://www.google.com/maps/@${form.latitude || '0'},${form.longitude || '0'},15z`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-ghost btn-sm"
-                    style={{ flexShrink: 0 }}
-                    onClick={(e) => {
-                      if (!form.latitude || !form.longitude) {
-                        e.preventDefault();
-                        window.open('https://www.google.com/maps', '_blank');
-                      }
-                    }}
-                  >
-                    🗺 Pick on Google Maps
-                  </a>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    Right-click a spot → copy coordinates → paste above
-                  </span>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="latitude">Latitude <span style={{ color: 'var(--danger)' }}>*</span></label>
-                  <input
-                    id="latitude"
-                    className="form-input"
-                    type="number"
-                    step="any"
-                    value={form.latitude}
-                    onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-                    placeholder="e.g. 5.6037"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="longitude">Longitude <span style={{ color: 'var(--danger)' }}>*</span></label>
-                  <input
-                    id="longitude"
-                    className="form-input"
-                    type="number"
-                    step="any"
-                    value={form.longitude}
-                    onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-                    placeholder="e.g. -0.1870"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="radius">Geofence Radius (meters) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                  <input
-                    id="radius"
-                    className="form-input"
-                    type="number"
-                    value={form.allowedRadius}
-                    onChange={(e) => setForm({ ...form, allowedRadius: e.target.value })}
-                    placeholder="300"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Branch'}
-                </button>
-              </div>
-            </form>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="mapsUrl">Google Maps URL <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(paste to auto-fill coordinates)</span></label>
+              <input
+                id="mapsUrl"
+                className="form-input"
+                type="text"
+                value={mapsUrl}
+                placeholder="https://www.google.com/maps/place/..."
+                onChange={(e) => {
+                  const url = e.target.value;
+                  setMapsUrl(url);
+                  const match = url.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                  if (match) {
+                    setForm((prev) => ({ ...prev, latitude: match[1], longitude: match[2] }));
+                  }
+                }}
+              />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, alignItems: 'center' }}>
+              <a
+                href={`https://www.google.com/maps/@${form.latitude || '0'},${form.longitude || '0'},15z`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+                style={{ flexShrink: 0 }}
+                onClick={(e) => {
+                  if (!form.latitude || !form.longitude) {
+                    e.preventDefault();
+                    window.open('https://www.google.com/maps', '_blank');
+                  }
+                }}
+              >
+                🗺 Pick on Google Maps
+              </a>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Right-click a spot → copy coordinates → paste above
+              </span>
+            </div>
+            <div className="form-group">
+              <label htmlFor="latitude">Latitude <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <input
+                id="latitude"
+                className="form-input"
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                placeholder="e.g. 5.6037"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="longitude">Longitude <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <input
+                id="longitude"
+                className="form-input"
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                placeholder="e.g. -0.1870"
+                required
+              />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="radius">Geofence Radius (meters) <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <input
+                id="radius"
+                className="form-input"
+                type="number"
+                value={form.allowedRadius}
+                onChange={(e) => setForm({ ...form, allowedRadius: e.target.value })}
+                placeholder="300"
+                required
+              />
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Dialog>
 
-      {/* Delete confirmation */}
-      {deleteConfirm && (
-        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
-          <div className="modal-content" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Delete Branch</h3>
-              <button className="modal-close" onClick={() => setDeleteConfirm(null)}>✕</button>
-            </div>
-            <p>Are you sure you want to delete this branch? This action cannot be undone.</p>
-            <div className="modal-footer">
-              <button className="btn" onClick={() => setDeleteConfirm(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={() => handleDelete(deleteConfirm)}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title="Delete Branch"
+        message="Are you sure you want to delete this branch? This action cannot be undone."
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        confirmText="Delete Branch"
+        variant="danger"
+      />
+
+      <AlertDialog
+        open={!!alertData}
+        onOpenChange={(open) => !open && setAlertData(null)}
+        title={alertData?.title ?? ''}
+        message={alertData?.msg}
+        variant={alertData?.variant}
+      />
     </>
   );
 }

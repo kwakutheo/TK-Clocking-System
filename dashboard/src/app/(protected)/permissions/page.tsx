@@ -15,6 +15,8 @@ import {
   type Role,
 } from '@/lib/permissions';
 import { settingsApi } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AlertDialog } from '@/components/ui/alert-dialog';
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
   super_admin: 'Full system control. Cannot be restricted.',
@@ -32,6 +34,8 @@ export default function PermissionsPage() {
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => loadPermissions());
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [alertMsg, setAlertMsg] = useState<{ title: string; msg: string; variant: 'success'|'error' } | null>(null);
   const hasUnsavedChanges = React.useRef(false);
 
   // Sync server data into local state + cache once loaded
@@ -66,7 +70,7 @@ export default function PermissionsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
-      alert('Failed to save permissions. Please try again.');
+      setAlertMsg({ title: 'Error', msg: 'Failed to save permissions. Please try again.', variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -84,9 +88,9 @@ export default function PermissionsPage() {
     return () => clearTimeout(timer);
   }, [matrix]);
 
-  const handleReset = async () => {
-    if (!confirm('Reset all permissions to their default values?')) return;
+  const handleResetConfirm = async () => {
     setSaving(true);
+    setConfirmReset(false);
     try {
       await settingsApi.updatePermissions(DEFAULT_PERMISSIONS as unknown as Record<string, string[]>);
       setMatrix(DEFAULT_PERMISSIONS);
@@ -95,7 +99,7 @@ export default function PermissionsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch {
-      alert('Failed to reset permissions.');
+      setAlertMsg({ title: 'Error', msg: 'Failed to reset permissions.', variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -115,7 +119,7 @@ export default function PermissionsPage() {
           <p className="page-subtitle">Define exactly what each role can and cannot do in the system.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={handleReset} disabled={saving}>
+          <button className="btn btn-ghost" onClick={() => setConfirmReset(true)} disabled={saving}>
             Reset to Defaults
           </button>
           <button
@@ -288,6 +292,23 @@ export default function PermissionsPage() {
         </table>
       </div>
 
+      <ConfirmDialog
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title="Reset Permissions"
+        message="Are you sure you want to reset all permissions to their default values? This will overwrite any custom configurations."
+        onConfirm={handleResetConfirm}
+        confirmText="Yes, Reset to Defaults"
+        variant="warning"
+      />
+
+      <AlertDialog
+        open={!!alertMsg}
+        onOpenChange={(open) => !open && setAlertMsg(null)}
+        title={alertMsg?.title ?? 'Notice'}
+        message={alertMsg?.msg}
+        variant={alertMsg?.variant ?? 'info'}
+      />
 
     </>
   );
