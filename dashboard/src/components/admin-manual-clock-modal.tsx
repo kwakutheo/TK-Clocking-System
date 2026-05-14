@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { attendanceApi } from '@/lib/api';
 import useSWR from 'swr';
 import { X, UserCheck, Clock, LogIn, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
+import { EmployeeCombobox } from './employee-combobox';
 
 /** Returns the current local time as "HH:mm" — refreshes every 10 s so the max cap stays accurate. */
 function useCurrentTime() {
@@ -153,22 +154,12 @@ export function AdminManualClockModal({ onClose, onSuccess }: Props) {
             <label htmlFor="manual-clock-employee" style={{ fontSize: 13, fontWeight: 600 }}>
               Employee <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
-            <select
-              id="manual-clock-employee"
-              className="form-input"
+            <EmployeeCombobox
+              employees={eligibleEmployees}
               value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              required
-            >
-              <option value="">— Select Employee —</option>
-              {eligibleEmployees.map((emp: any) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.user?.fullName}
-                  {emp.user?.role === 'hr_admin' || emp.user?.role === 'super_admin'
-                    ? ' (Admin)' : ''}
-                </option>
-              ))}
-            </select>
+              onChange={setEmployeeId}
+              placeholder="— Select Employee —"
+            />
           </div>
 
           {/* Action type */}
