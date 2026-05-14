@@ -270,7 +270,28 @@ export class AttendanceExportService {
   }
 
   private buildDailyLogTable(days: any[]) {
+    // Get today's date as YYYY-MM-DD
+    const today = new Date();
+    // Use local timezone offset to get correct today date
+    const offset = today.getTimezoneOffset();
+    const todayLocal = new Date(today.getTime() - (offset * 60 * 1000));
+    const todayStr = todayLocal.toISOString().split('T')[0];
+
     const tableBody = days.map(d => {
+      const isFuture = d.date > todayStr;
+
+      if (isFuture) {
+        return [
+          d.date,
+          { text: '-', color: '#6b7280', bold: false },
+          '-',
+          '-',
+          '-',
+          '-',
+          '-'
+        ];
+      }
+
       let statusColor = '#000000';
       if (d.status === 'ABSENT') statusColor = '#ef4444';
       else if (d.status.includes('HOLIDAY') || d.status === 'WEEKEND') statusColor = '#6b7280';
