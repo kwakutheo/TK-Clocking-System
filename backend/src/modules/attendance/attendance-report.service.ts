@@ -278,6 +278,8 @@ export class AttendanceReportService {
         // If it's today or the future and they haven't clocked out yet, don't mark as absent
         if (employee.status === EmployeeStatus.INACTIVE) {
           status = 'INACTIVE';
+        } else if (employee.status === EmployeeStatus.SUSPENDED) {
+          status = 'SUSPENDED';
         } else if (isWeekEnd) {
           status = 'WEEKEND';
         } else if (holiday) {
@@ -293,7 +295,7 @@ export class AttendanceReportService {
             sEnd.setHours(eHours, eMins, 0, 0);
             
             if (new Date() > sEnd) {
-              status = employee.status === EmployeeStatus.SUSPENDED ? 'ABSENT (SUSPENDED)' : 'ABSENT';
+              status = 'ABSENT';
               daysAbsent++;
             } else {
               status = 'AWAITING';
