@@ -276,7 +276,9 @@ export class AttendanceReportService {
         totalHours += hours;
       } else if (isFuture || isToday) {
         // If it's today or the future and they haven't clocked out yet, don't mark as absent
-        if (isWeekEnd) {
+        if (employee.status === EmployeeStatus.INACTIVE) {
+          status = 'INACTIVE';
+        } else if (isWeekEnd) {
           status = 'WEEKEND';
         } else if (holiday) {
           status = `HOLIDAY (${holiday.name})`;
