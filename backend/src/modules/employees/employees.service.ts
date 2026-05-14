@@ -167,6 +167,9 @@ export class EmployeesService {
     const oldValues = {
       position: emp.position,
       status: (emp as any).status,
+      shift: emp.shift?.name ?? null,
+      branch: emp.branch?.name ?? null,
+      department: emp.department?.name ?? null,
     };
 
     if (data.username && data.username !== emp.user.username) {
@@ -208,6 +211,8 @@ export class EmployeesService {
 
     await this.repo.save(emp);
 
+    const updatedEmp = await this.findById(id);
+
     if (adminUser) {
       await this.auditService.log({
         user: adminUser,
@@ -216,16 +221,16 @@ export class EmployeesService {
         targetId: id,
         oldValues,
         newValues: {
-          position: emp.position,
-          status: emp.status,
-          shiftId: emp.shift?.id ?? null,
-          branchId: emp.branch?.id ?? null,
-          departmentId: emp.department?.id ?? null,
+          position: updatedEmp.position,
+          status: (updatedEmp as any).status,
+          shift: updatedEmp.shift?.name ?? null,
+          branch: updatedEmp.branch?.name ?? null,
+          department: updatedEmp.department?.name ?? null,
         },
       });
     }
 
-    return this.findById(id);
+    return updatedEmp;
   }
 
   async updateProfile(userId: string, data: {
