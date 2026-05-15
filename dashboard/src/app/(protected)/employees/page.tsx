@@ -415,7 +415,13 @@ export default function EmployeesPage() {
                     >
                       <td colSpan={10} style={{ padding: '12px 16px', fontWeight: 600 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 10, opacity: 0.5 }}>{isExpanded ? '▼' : '▶'}</span>
+                          <span style={{ 
+                            fontSize: 10, 
+                            opacity: 0.5,
+                            display: 'inline-block',
+                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease'
+                          }}>▶</span>
                           <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{deptName}</span>
                           <span className="badge badge-gray" style={{ fontSize: 11 }}>{deptEmployees.length}</span>
                         </div>
@@ -423,10 +429,19 @@ export default function EmployeesPage() {
                     </tr>
                     
                     {/* Employee Rows */}
-                    {isExpanded && deptEmployees.map((emp: any) => {
+                    {isExpanded && deptEmployees.map((emp: any, index: number) => {
                       const isInactive = emp.status === 'inactive' || emp.status === 'suspended';
                       return (
-                      <tr key={emp.id} style={{ background: 'transparent', opacity: isInactive ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+                      <tr 
+                        key={emp.id} 
+                        className="emp-row-animate"
+                        style={{ 
+                          background: 'transparent', 
+                          opacity: isInactive ? 0.6 : 1, 
+                          transition: 'opacity 0.2s',
+                          animationDelay: `${index * 0.02}s`
+                        }}
+                      >
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div className="avatar">

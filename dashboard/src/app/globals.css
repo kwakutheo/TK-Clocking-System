@@ -650,6 +650,15 @@ tr:last-child td { border-bottom: none; }
 
 tr:hover td { background: rgba(255,255,255,0.02); }
 
+@keyframes rowSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { transform: translateY(0); }
+}
+
+.emp-row-animate {
+  animation: rowSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ── Badge ────────────────────────────────────────────────────────────────── */
 .badge {
   display: inline-flex;
@@ -667,6 +676,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .badge-red    { background: var(--danger-dim);   color: var(--danger);   }
 .badge-amber  { background: var(--accent-dim);   color: var(--accent);   }
 .badge-orange { background: var(--warning-dim);  color: var(--warning);  }
+.badge-gray   { background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); }
 .badge-ghost  { background: rgba(255, 255, 255, 0.05); color: var(--text-secondary); border: 1px solid var(--border); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
