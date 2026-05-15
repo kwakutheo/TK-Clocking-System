@@ -420,7 +420,7 @@ export default function EmployeesPage() {
                             opacity: 0.5,
                             display: 'inline-block',
                             transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.2s ease'
+                            transition: 'transform 0.3s ease'
                           }}>▶</span>
                           <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{deptName}</span>
                           <span className="badge badge-gray" style={{ fontSize: 11 }}>{deptEmployees.length}</span>
@@ -439,7 +439,7 @@ export default function EmployeesPage() {
                           background: 'transparent', 
                           opacity: isInactive ? 0.6 : 1, 
                           transition: 'opacity 0.2s',
-                          animationDelay: `${index * 0.02}s`
+                          animationDelay: `${index * 0.05}s`
                         }}
                       >
                         <td>
