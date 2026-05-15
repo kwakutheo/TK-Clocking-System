@@ -26,6 +26,7 @@ export type Permission =
   | 'departments.manage'
   | 'branches.manage'
   | 'holidays.manage'
+  | 'leaves.manage'
   | 'audit.view'
   | 'permissions.manage';
 
@@ -51,6 +52,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'departments.manage': 'Manage Departments',
   'branches.manage': 'Manage Branches',
   'holidays.manage': 'Manage Holidays',
+  'leaves.manage': 'Manage Leave Requests',
   'audit.view': 'View Audit Logs',
   'permissions.manage': 'Manage Roles & Permissions',
 };
@@ -96,6 +98,7 @@ export const PERMISSION_GROUPS: { label: string; icon: string; permissions: Perm
       'departments.manage',
       'branches.manage',
       'holidays.manage',
+      'leaves.manage',
       'audit.view',
       'permissions.manage',
     ],
@@ -116,7 +119,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
     'employees.reset_password', 'employees.toggle_status',
     'attendance.view', 'attendance.view_live', 'attendance.export', 'attendance.admin_clock',
     'calendar.view', 'calendar.create', 'calendar.edit', 'calendar.delete',
-    'shifts.manage', 'departments.manage', 'branches.manage', 'holidays.manage',
+    'shifts.manage', 'departments.manage', 'branches.manage', 'holidays.manage', 'leaves.manage',
     'audit.view', 'permissions.manage',
   ],
   hr_admin: [
@@ -124,7 +127,7 @@ export const DEFAULT_PERMISSIONS: PermissionMatrix = {
     'employees.reset_password', 'employees.toggle_status',
     'attendance.view', 'attendance.view_live', 'attendance.export', 'attendance.admin_clock',
     'calendar.view', 'calendar.create', 'calendar.edit',
-    'holidays.manage',
+    'holidays.manage', 'leaves.manage',
   ],
   supervisor: [
     'employees.view',

@@ -6,6 +6,8 @@ import { Employee } from '../employees/employee.entity';
 import { EmployeeStatusLog } from '../employees/employee-status-log.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
+import { LeavesService } from '../leaves/leaves.service';
+import { LeaveRequest } from '../leaves/leave-request.entity';
 import { EmployeeStatus, AttendanceType } from '../../common/enums';
 import { 
   startOfMonth, 
@@ -42,20 +44,24 @@ export class AttendanceReportService {
     private readonly statusLogRepo: Repository<EmployeeStatusLog>,
     private readonly holidaysService: HolidaysService,
     private readonly academicCalendarService: AcademicCalendarService,
+    private readonly leavesService: LeavesService,
   ) {}
 
   async getMonthlyReport(employeeId: string, month: number, year: number) {
     const startDate = startOfMonth(new Date(year, month - 1));
     const endDate = endOfMonth(startDate);
-    return this.getReportForRange(employeeId, startDate, endDate);
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
+    const approvedLeaves = await this.leavesService.findApprovedInRange(employeeId, startStr, endStr);
+    return this.getReportForRange(employeeId, startDate, endDate, undefined, approvedLeaves);
   }
 
   async getTermReport(employeeId: string, termId: string, preloadedLogs?: EmployeeStatusLog[]) {
     const term = await this.academicCalendarService.findOneTerm(termId);
     const startDate = parseISO(term.startDate);
     const endDate = parseISO(term.endDate);
-    
-    const fullReport = await this.getReportForRange(employeeId, startDate, endDate, preloadedLogs);
+    const approvedLeaves = await this.leavesService.findApprovedInRange(employeeId, term.startDate, term.endDate);
+    const fullReport = await this.getReportForRange(employeeId, startDate, endDate, preloadedLogs, approvedLeaves);
     
     // Group by month for "monthly tabs"
     const months: any[] = [];
@@ -192,7 +198,13 @@ export class AttendanceReportService {
     return results.filter(r => r !== null);
   }
 
-  private async getReportForRange(employeeId: string, startDate: Date, endDate: Date, preloadedLogs?: EmployeeStatusLog[]) {
+  private async getReportForRange(
+    employeeId: string,
+    startDate: Date,
+    endDate: Date,
+    preloadedLogs?: EmployeeStatusLog[],
+    preloadedLeaves?: LeaveRequest[],
+  ) {
     const employee = await this.employeeRepo.findOne({
       where: { id: employeeId },
       relations: ['user', 'shift'],
@@ -204,6 +216,12 @@ export class AttendanceReportService {
       where: { employee: { id: employeeId } },
       order: { startDate: 'ASC' },
     });
+
+    // Fetch approved leaves if not preloaded (for individual reports)
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
+    const approvedLeaves: LeaveRequest[] = preloadedLeaves ??
+      await this.leavesService.findApprovedInRange(employeeId, startStr, endStr);
 
     const logs = await this.attendanceRepo.find({
       where: {
@@ -221,6 +239,7 @@ export class AttendanceReportService {
     let totalHours = 0;
     let daysWorked = 0;
     let daysAbsent = 0;
+    let daysOnLeave = 0;
     let daysLate = 0;
     let totalLateMinutes = 0;
     let daysEarlyDeparture = 0;
@@ -354,7 +373,15 @@ export class AttendanceReportService {
         } else if (day < registrationDate) {
           status = 'NOT REGISTERED';
         } else {
-          if (isFuture || isToday) {
+          // ── Check approved personal leaves before marking ABSENT ──────────
+          const onLeave = approvedLeaves.find(
+            l => dayStr >= l.startDate && dayStr <= l.endDate,
+          );
+          if (onLeave) {
+            // Approved leave — not counted as absent
+            status = `LEAVE (${onLeave.leaveType})`;
+            daysOnLeave++;
+          } else if (isFuture || isToday) {
             if (isToday && employee.shift) {
               const [eHours, eMins] = employee.shift.endTime.split(':').map(Number);
               const sEnd = new Date(day);
@@ -400,6 +427,7 @@ export class AttendanceReportService {
         totalHours: Number(totalHours.toFixed(2)),
         daysWorked,
         daysAbsent,
+        daysOnLeave,
         daysLate,
         totalLateMinutes,
         daysEarlyDeparture,

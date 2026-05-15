@@ -17,3 +17,19 @@ export enum EmployeeStatus {
   INACTIVE = 'inactive',
   SUSPENDED = 'suspended',
 }
+
+export enum LeaveType {
+  SICK = 'SICK',
+  ANNUAL = 'ANNUAL',
+  CASUAL = 'CASUAL',
+  MATERNITY = 'MATERNITY',
+  PATERNITY = 'PATERNITY',
+  OTHER = 'OTHER',
+}
+
+export enum LeaveStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}

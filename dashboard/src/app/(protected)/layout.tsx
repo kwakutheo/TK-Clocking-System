@@ -20,7 +20,8 @@ import {
   Menu,
   Sun,
   Moon,
-  Smartphone
+  Smartphone,
+  FileText
 } from 'lucide-react';
 
 interface NavItem {
@@ -32,16 +33,17 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Overview'    },
-  { href: '/attendance',  icon: Clock,            label: 'Attendance',     permission: 'attendance.view' },
-  { href: '/employees',   icon: Users,            label: 'Employees',      permission: 'employees.view'  },
-  { href: '/shifts',      icon: Clock,            label: 'Shifts',         permission: 'shifts.manage'   },
-  { href: '/holidays',    icon: Calendar,         label: 'Holidays',       permission: 'holidays.manage' },
-  { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', permission: 'calendar.view' },
-  { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',     permission: 'audit.view'      },
-  { href: '/permissions', icon: ShieldAlert,      label: 'Permissions',    permission: 'permissions.manage' },
-  { href: '/departments', icon: Building2,        label: 'Departments',    permission: 'departments.manage' },
-  { href: '/branches',    icon: MapPin,           label: 'Branches',       permission: 'branches.manage' },
-  { href: '/mobile-app',  icon: Smartphone,       label: 'Mobile App',     permission: 'employees.view' },
+  { href: '/attendance',  icon: Clock,            label: 'Attendance',        permission: 'attendance.view'    },
+  { href: '/employees',   icon: Users,            label: 'Employees',         permission: 'employees.view'     },
+  { href: '/leaves',      icon: FileText,         label: 'Leave Requests'                                       },
+  { href: '/shifts',      icon: Clock,            label: 'Shifts',            permission: 'shifts.manage'      },
+  { href: '/holidays',    icon: Calendar,         label: 'Holidays',          permission: 'holidays.manage'    },
+  { href: '/calendar',    icon: Calendar,         label: 'Academic Calendar', permission: 'calendar.view'      },
+  { href: '/audit',       icon: ShieldCheck,      label: 'Audit Logs',        permission: 'audit.view'         },
+  { href: '/permissions', icon: ShieldAlert,      label: 'Permissions',       permission: 'permissions.manage' },
+  { href: '/departments', icon: Building2,        label: 'Departments',       permission: 'departments.manage' },
+  { href: '/branches',    icon: MapPin,           label: 'Branches',          permission: 'branches.manage'    },
+  { href: '/mobile-app',  icon: Smartphone,       label: 'Mobile App',        permission: 'employees.view'     },
   { href: '/profile',     icon: UserCircle,       label: 'My Profile'   },
 ];
 
