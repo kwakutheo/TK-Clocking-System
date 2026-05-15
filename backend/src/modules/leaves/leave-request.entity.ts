@@ -37,7 +37,7 @@ export class LeaveRequest {
 
   /** Optional rejection/approval note from the reviewer */
   @Column({ name: 'review_note', type: 'text', nullable: true })
-  reviewNote: string;
+  reviewNote: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

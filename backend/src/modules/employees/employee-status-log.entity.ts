@@ -24,7 +24,7 @@ export class EmployeeStatusLog {
   startDate: Date;
 
   @Column({ name: 'end_date', type: 'date', nullable: true })
-  endDate: Date;
+  endDate: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

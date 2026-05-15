@@ -130,7 +130,7 @@ export class LeavesService {
     const oldStatus = leave.status;
     leave.status = decision.status;
     leave.reviewedBy = reviewer;
-    leave.reviewNote = decision.reviewNote ?? undefined;
+    leave.reviewNote = decision.reviewNote ?? null;
 
     const saved = await this.leaveRepo.save(leave);
 
