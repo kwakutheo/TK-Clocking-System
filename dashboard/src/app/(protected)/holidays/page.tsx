@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useState } from 'react';
 import { holidaysApi } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
-import { Calendar, Plus, Trash2, Edit, ShieldAlert } from 'lucide-react';
+import { Calendar, Plus, Trash2, Edit, ShieldAlert, DownloadCloud } from 'lucide-react';
 import { can } from '@/lib/permissions';
 import { useAuthStore } from '@/lib/store';
 import { useMemo } from 'react';
@@ -16,6 +16,7 @@ export default function HolidaysPage() {
   const holidays: any[] = data ?? [];
 
   const [showModal, setShowModal] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', date: '', isRecurring: true });
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -131,6 +132,52 @@ export default function HolidaysPage() {
     setShowModal(true);
   };
 
+  const handleSyncPublicHolidays = async () => {
+    const nextYear = new Date().getFullYear() + 1;
+    const yearStr = prompt('Enter year to sync official holidays from Ghana (e.g. 2026, 2027):', nextYear.toString());
+    if (!yearStr || isNaN(Number(yearStr))) return;
+    
+    setIsSyncing(true);
+    try {
+      const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${yearStr}/GH`);
+      if (!res.ok) throw new Error('Failed to fetch from public calendar API');
+      const publicHolidays = await res.json();
+
+      // Build a set of existing dates/recurring rules to avoid duplicates
+      const existingDates = new Set();
+      holidays.forEach(h => {
+        existingDates.add(h.date);
+        if (h.isRecurring) existingDates.add(h.date.substring(5)); // MM-DD
+      });
+
+      const missing = publicHolidays.filter((ph: any) => {
+        const mmdd = ph.date.substring(5);
+        return !existingDates.has(ph.date) && !existingDates.has(mmdd);
+      });
+
+      if (missing.length === 0) {
+        alert(`All public holidays for ${yearStr} are already in your system.`);
+        return;
+      }
+
+      if (!confirm(`Found ${missing.length} new holidays for ${yearStr}. Do you want to automatically add them?`)) return;
+
+      // Add them all (default to One-Time since API doesn't guarantee permanent dates)
+      await Promise.all(missing.map((ph: any) => holidaysApi.create({
+        name: ph.name,
+        date: ph.date,
+        isRecurring: false
+      })));
+
+      mutate();
+      alert(`Successfully synced ${missing.length} holidays for ${yearStr}!`);
+    } catch (err) {
+      alert('Error syncing public holidays. Please try again.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <>
       <div className="page-header">
@@ -139,10 +186,16 @@ export default function HolidaysPage() {
           <p className="page-subtitle">Manage public holidays to ensure accurate absence tracking</p>
         </div>
         {can(userRole, 'holidays.manage') && (
-          <button className="btn btn-primary" onClick={openAdd}>
-            <Plus size={18} style={{ marginRight: 8 }} />
-            Add Holiday
-          </button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn btn-secondary" onClick={handleSyncPublicHolidays} disabled={isSyncing}>
+              <DownloadCloud size={18} style={{ marginRight: 6 }} />
+              {isSyncing ? 'Syncing...' : 'Sync Year'}
+            </button>
+            <button className="btn btn-primary" onClick={openAdd}>
+              <Plus size={18} style={{ marginRight: 6 }} />
+              Add Holiday
+            </button>
+          </div>
         )}
       </div>
 
