@@ -16,6 +16,9 @@ export default function HolidaysPage() {
   const holidays: any[] = data ?? [];
 
   const [showModal, setShowModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncResults, setSyncResults] = useState<any[]>([]);
+  const [selectedSyncDates, setSelectedSyncDates] = useState<Record<string, boolean>>({});
   const [isSyncing, setIsSyncing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', date: '', isRecurring: true });
@@ -157,22 +160,44 @@ export default function HolidaysPage() {
 
       if (missing.length === 0) {
         alert(`All public holidays for ${yearStr} are already in your system.`);
+        setIsSyncing(false);
         return;
       }
 
-      if (!confirm(`Found ${missing.length} new holidays for ${yearStr}. Do you want to automatically add them?`)) return;
+      // Show the review modal instead of a simple confirm
+      setSyncResults(missing);
+      const initialSelected: Record<string, boolean> = {};
+      missing.forEach((m: any) => initialSelected[m.date] = true);
+      setSelectedSyncDates(initialSelected);
+      setShowSyncModal(true);
+    } catch (err) {
+      alert('Error syncing public holidays. Please try again.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
-      // Add them all (default to One-Time since API doesn't guarantee permanent dates)
-      await Promise.all(missing.map((ph: any) => holidaysApi.create({
+  const handleApproveSync = async () => {
+    const toAdd = syncResults.filter(h => selectedSyncDates[h.date]);
+    if (toAdd.length === 0) {
+      alert('Please select at least one holiday to import.');
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      await Promise.all(toAdd.map((ph: any) => holidaysApi.create({
         name: ph.name,
         date: ph.date,
         isRecurring: false
       })));
 
       mutate();
-      alert(`Successfully synced ${missing.length} holidays for ${yearStr}!`);
+      setShowSyncModal(false);
+      setSyncResults([]);
+      alert(`Successfully added ${toAdd.length} holidays!`);
     } catch (err) {
-      alert('Error syncing public holidays. Please try again.');
+      alert('Failed to import holidays.');
     } finally {
       setIsSyncing(false);
     }
@@ -304,6 +329,70 @@ export default function HolidaysPage() {
                 <button type="submit" className="btn btn-primary">{editingId ? 'Update' : 'Save Holiday'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Sync Review Modal */}
+      {showSyncModal && (
+        <div className="modal-overlay" onClick={() => !isSyncing && setShowSyncModal(false)}>
+          <div className="modal-content" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Review Holidays Found</h3>
+              <button className="modal-close" onClick={() => setShowSyncModal(false)} disabled={isSyncing}>✕</button>
+            </div>
+            <div style={{ padding: '0 20px', maxHeight: 400, overflowY: 'auto' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 15 }}>
+                The following holidays were found for Ghana. Select the ones you want to add to your system.
+              </p>
+              <table style={{ width: '100%' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ width: 40, padding: '8px 0' }}>
+                      <input 
+                        type="checkbox" 
+                        aria-label="Select all holidays"
+                        checked={Object.values(selectedSyncDates).every(v => v)}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          const next: Record<string, boolean> = {};
+                          syncResults.forEach(r => next[r.date] = val);
+                          setSelectedSyncDates(next);
+                        }}
+                      />
+                    </th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Holiday Name</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {syncResults.map(h => (
+                    <tr key={h.date} style={{ borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                      <td style={{ padding: '8px 0' }}>
+                        <input 
+                          type="checkbox" 
+                          aria-label={`Select ${h.name}`}
+                          checked={!!selectedSyncDates[h.date]} 
+                          onChange={e => setSelectedSyncDates(prev => ({ ...prev, [h.date]: e.target.checked }))}
+                        />
+                      </td>
+                      <td style={{ padding: '8px', fontWeight: 500 }}>{h.name}</td>
+                      <td style={{ padding: '8px', color: 'var(--text-secondary)' }}>{format(parseISO(h.date), 'dd MMM yyyy')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn" onClick={() => setShowSyncModal(false)} disabled={isSyncing}>Cancel</button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                disabled={isSyncing || !Object.values(selectedSyncDates).some(v => v)}
+                onClick={handleApproveSync}
+              >
+                {isSyncing ? 'Importing...' : `Import ${Object.values(selectedSyncDates).filter(v => v).length} Holidays`}
+              </button>
+            </div>
           </div>
         </div>
       )}
