@@ -29,4 +29,3 @@ import { AuditModule } from '../audit/audit.module';
   exports: [AttendanceService],
 })
 export class AttendanceModule {}
-export class AttendanceModule {}
