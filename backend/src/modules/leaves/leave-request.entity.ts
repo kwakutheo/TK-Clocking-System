@@ -15,7 +15,7 @@ export class LeaveRequest {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ name: 'leave_type', type: 'varchar', length: 20 })
   leaveType: LeaveType;
 
   @Column({ name: 'start_date', type: 'date' })
