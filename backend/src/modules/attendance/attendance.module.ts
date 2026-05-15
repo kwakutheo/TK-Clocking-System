@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AttendanceLog } from './attendance-log.entity';
 import { Employee } from '../employees/employee.entity';
+import { EmployeeStatusLog } from '../employees/employee-status-log.entity';
 import { AttendanceService } from './attendance.service';
 import { AttendanceReportService } from './attendance-report.service';
 import { AttendanceExportService } from './attendance-export.service';
@@ -16,7 +17,7 @@ import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AttendanceLog, Employee]),
+    TypeOrmModule.forFeature([AttendanceLog, Employee, EmployeeStatusLog]),
     EmployeesModule,
     BranchesModule,
     HolidaysModule,

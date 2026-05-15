@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  OneToOne, JoinColumn, ManyToOne,
+  OneToOne, JoinColumn, ManyToOne, OneToMany,
   CreateDateColumn, UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
@@ -48,6 +48,12 @@ export class Employee {
     default: EmployeeStatus.ACTIVE,
   })
   status: EmployeeStatus;
+
+  @Column({ name: 'status_change_date', type: 'date', nullable: true })
+  statusChangeDate: Date;
+
+  @OneToMany('EmployeeStatusLog', 'employee', { cascade: true })
+  statusLogs: any[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { AttendanceLog } from '../attendance/attendance-log.entity';
 import { Employee } from '../employees/employee.entity';
+import { EmployeeStatusLog } from '../employees/employee-status-log.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import { AcademicCalendarService } from '../academic-calendar/academic-calendar.service';
 import { EmployeeStatus, AttendanceType } from '../../common/enums';
@@ -19,6 +20,17 @@ import {
   eachMonthOfInterval
 } from 'date-fns';
 
+/** Resolve what status an employee had on a specific calendar day by walking the history log. */
+function resolveStatusOnDay(logs: EmployeeStatusLog[], day: Date): EmployeeStatus | null {
+  const dayStr = format(day, 'yyyy-MM-dd');
+  const match = logs.find(log => {
+    const start = format(new Date(log.startDate), 'yyyy-MM-dd');
+    const end = log.endDate ? format(new Date(log.endDate), 'yyyy-MM-dd') : null;
+    return dayStr >= start && (end === null || dayStr <= end);
+  });
+  return match ? match.status : null;
+}
+
 @Injectable()
 export class AttendanceReportService {
   constructor(
@@ -26,6 +38,8 @@ export class AttendanceReportService {
     private readonly attendanceRepo: Repository<AttendanceLog>,
     @InjectRepository(Employee)
     private readonly employeeRepo: Repository<Employee>,
+    @InjectRepository(EmployeeStatusLog)
+    private readonly statusLogRepo: Repository<EmployeeStatusLog>,
     private readonly holidaysService: HolidaysService,
     private readonly academicCalendarService: AcademicCalendarService,
   ) {}
@@ -36,12 +50,12 @@ export class AttendanceReportService {
     return this.getReportForRange(employeeId, startDate, endDate);
   }
 
-  async getTermReport(employeeId: string, termId: string) {
+  async getTermReport(employeeId: string, termId: string, preloadedLogs?: EmployeeStatusLog[]) {
     const term = await this.academicCalendarService.findOneTerm(termId);
     const startDate = parseISO(term.startDate);
     const endDate = parseISO(term.endDate);
     
-    const fullReport = await this.getReportForRange(employeeId, startDate, endDate);
+    const fullReport = await this.getReportForRange(employeeId, startDate, endDate, preloadedLogs);
     
     // Group by month for "monthly tabs"
     const months: any[] = [];
@@ -104,47 +118,92 @@ export class AttendanceReportService {
   }
 
   async getBulkMonthlyReport(month: number, year: number, branchId?: string) {
-    const query: any = { status: In([EmployeeStatus.ACTIVE, EmployeeStatus.SUSPENDED]) };
-    if (branchId) {
-      query.branch = { id: branchId };
-    }
+    const query: any = {};
+    if (branchId) query.branch = { id: branchId };
     const employees = await this.employeeRepo.find({ where: query });
-    
+    const startDate = startOfMonth(new Date(year, month - 1));
+    const endDate = endOfMonth(startDate);
+
+    // One bulk query for all status logs in the report range — O(1) for any employee count
+    const allLogs = await this.statusLogRepo
+      .createQueryBuilder('log')
+      .leftJoinAndSelect('log.employee', 'emp')
+      .where('log.start_date <= :end', { end: format(endDate, 'yyyy-MM-dd') })
+      .andWhere('(log.end_date IS NULL OR log.end_date >= :start)', { start: format(startDate, 'yyyy-MM-dd') })
+      .getMany();
+
+    const logsByEmployee = new Map<string, EmployeeStatusLog[]>();
+    allLogs.forEach(log => {
+      const empId = log.employee.id;
+      if (!logsByEmployee.has(empId)) logsByEmployee.set(empId, []);
+      logsByEmployee.get(empId)!.push(log);
+    });
+
     const results = await Promise.all(employees.map(async (emp) => {
-      const report = await this.getMonthlyReport(emp.id, month, year);
-      return {
-        employee: report.employee,
-        summary: report.summary
-      };
+      const empLogs = logsByEmployee.get(emp.id) ?? [];
+      // Skip employees who were fully inactive before this month and never worked it
+      const wasEverActive = empLogs.some(l => l.status === EmployeeStatus.ACTIVE);
+      if (!wasEverActive && emp.status === EmployeeStatus.INACTIVE) return null;
+
+      const report = await this.getReportForRange(emp.id, startDate, endDate, empLogs);
+      if (emp.status === EmployeeStatus.INACTIVE && report.summary.daysWorked === 0) return null;
+
+      return { employee: report.employee, summary: report.summary };
     }));
 
-    return results;
+    return results.filter(r => r !== null);
   }
 
   async getBulkTermReport(termId: string, branchId?: string) {
-    const query: any = { status: In([EmployeeStatus.ACTIVE, EmployeeStatus.SUSPENDED]) };
-    if (branchId) {
-      query.branch = { id: branchId };
-    }
+    const query: any = {};
+    if (branchId) query.branch = { id: branchId };
     const employees = await this.employeeRepo.find({ where: query });
-    
+
+    const term = await this.academicCalendarService.findOneTerm(termId);
+    const startDate = parseISO(term.startDate);
+    const endDate = parseISO(term.endDate);
+
+    // One bulk query for all status logs in the term range
+    const allLogs = await this.statusLogRepo
+      .createQueryBuilder('log')
+      .leftJoinAndSelect('log.employee', 'emp')
+      .where('log.start_date <= :end', { end: term.endDate })
+      .andWhere('(log.end_date IS NULL OR log.end_date >= :start)', { start: term.startDate })
+      .getMany();
+
+    const logsByEmployee = new Map<string, EmployeeStatusLog[]>();
+    allLogs.forEach(log => {
+      const empId = log.employee.id;
+      if (!logsByEmployee.has(empId)) logsByEmployee.set(empId, []);
+      logsByEmployee.get(empId)!.push(log);
+    });
+
     const results = await Promise.all(employees.map(async (emp) => {
-      const report = await this.getTermReport(emp.id, termId);
-      return {
-        employee: report.employee,
-        summary: report.summary
-      };
+      const empLogs = logsByEmployee.get(emp.id) ?? [];
+      const wasEverActive = empLogs.some(l => l.status === EmployeeStatus.ACTIVE);
+      if (!wasEverActive && emp.status === EmployeeStatus.INACTIVE) return null;
+
+      const report = await this.getTermReport(emp.id, termId, empLogs);
+      if (emp.status === EmployeeStatus.INACTIVE && report.summary.daysWorked === 0) return null;
+
+      return { employee: report.employee, summary: report.summary };
     }));
 
-    return results;
+    return results.filter(r => r !== null);
   }
 
-  private async getReportForRange(employeeId: string, startDate: Date, endDate: Date) {
+  private async getReportForRange(employeeId: string, startDate: Date, endDate: Date, preloadedLogs?: EmployeeStatusLog[]) {
     const employee = await this.employeeRepo.findOne({
       where: { id: employeeId },
       relations: ['user', 'shift'],
     });
     if (!employee) throw new NotFoundException('Employee not found');
+
+    // Fetch this employee's status history if not preloaded (for individual reports)
+    const statusLogs: EmployeeStatusLog[] = preloadedLogs ?? await this.statusLogRepo.find({
+      where: { employee: { id: employeeId } },
+      order: { startDate: 'ASC' },
+    });
 
     const logs = await this.attendanceRepo.find({
       where: {
@@ -274,12 +333,16 @@ export class AttendanceReportService {
         }
         
         totalHours += hours;
-      } else if (isFuture || isToday) {
-        // If it's today or the future and they haven't clocked out yet, don't mark as absent
-        if (employee.status === EmployeeStatus.INACTIVE) {
+      } else {
+        // ── Temporal Status Resolution using History Log ──────────────────
+        // Look up what status this employee actually had on this specific day.
+        const effectiveStatus = resolveStatusOnDay(statusLogs, day);
+
+        if (effectiveStatus === EmployeeStatus.INACTIVE) {
           status = 'INACTIVE';
-        } else if (employee.status === EmployeeStatus.SUSPENDED) {
-          status = 'SUSPENDED';
+        } else if (effectiveStatus === EmployeeStatus.SUSPENDED) {
+          status = isFuture || isToday ? 'SUSPENDED' : 'ABSENT (SUSPENDED)';
+          if (!isFuture && !isToday) daysAbsent++;
         } else if (isWeekEnd) {
           status = 'WEEKEND';
         } else if (holiday) {
@@ -288,35 +351,28 @@ export class AttendanceReportService {
           status = `BREAK (${breakItem.name})`;
         } else if (!term) {
           status = 'OFF-TERM / VACATION';
+        } else if (day < registrationDate) {
+          status = 'NOT REGISTERED';
         } else {
-          if (isToday && employee.shift) {
-            const [eHours, eMins] = employee.shift.endTime.split(':').map(Number);
-            const sEnd = new Date(day);
-            sEnd.setHours(eHours, eMins, 0, 0);
-            
-            if (new Date() > sEnd) {
-              status = 'ABSENT';
-              daysAbsent++;
+          if (isFuture || isToday) {
+            if (isToday && employee.shift) {
+              const [eHours, eMins] = employee.shift.endTime.split(':').map(Number);
+              const sEnd = new Date(day);
+              sEnd.setHours(eHours, eMins, 0, 0);
+              if (new Date() > sEnd) {
+                status = 'ABSENT';
+                daysAbsent++;
+              } else {
+                status = 'AWAITING';
+              }
             } else {
-              status = 'AWAITING';
+              status = isToday ? 'AWAITING' : 'SCHEDULED';
             }
           } else {
-            status = isToday ? 'AWAITING' : 'SCHEDULED';
+            status = 'ABSENT';
+            daysAbsent++;
           }
         }
-      } else if (isWeekEnd) {
-        status = 'WEEKEND';
-      } else if (holiday) {
-        status = `HOLIDAY (${holiday.name})`;
-      } else if (breakItem) {
-        status = `BREAK (${breakItem.name})`;
-      } else if (!term) {
-        status = 'OFF-TERM / VACATION';
-      } else if (day < registrationDate) {
-        status = 'NOT REGISTERED';
-      } else {
-        status = employee.status === EmployeeStatus.SUSPENDED ? 'ABSENT (SUSPENDED)' : 'ABSENT';
-        daysAbsent++;
       }
 
       return {

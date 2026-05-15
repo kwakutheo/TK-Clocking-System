@@ -1,24 +1,61 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Employee } from './employee.entity';
+import { EmployeeStatusLog } from './employee-status-log.entity';
 import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import { UserRole, EmployeeStatus } from '../../common/enums';
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
-export class EmployeesService {
+export class EmployeesService implements OnModuleInit {
+  private readonly logger = new Logger(EmployeesService.name);
+
   constructor(
     @InjectRepository(Employee)
     private readonly repo: Repository<Employee>,
+    @InjectRepository(EmployeeStatusLog)
+    private readonly statusLogRepo: Repository<EmployeeStatusLog>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly users: UsersService,
     private readonly dataSource: DataSource,
     private readonly auditService: AuditService,
   ) {}
+
+  /**
+   * One-time migration: ensures every existing employee has at least one
+   * status log entry so the history system works from day one.
+   */
+  async onModuleInit() {
+    try {
+      const employees = await this.repo.find();
+      for (const emp of employees) {
+        const existing = await this.statusLogRepo.findOne({
+          where: { employee: { id: emp.id } },
+        });
+        if (!existing) {
+          const startDate = emp.hireDate
+            ? new Date(emp.hireDate)
+            : new Date(emp.createdAt);
+          startDate.setHours(0, 0, 0, 0);
+          await this.statusLogRepo.save(
+            this.statusLogRepo.create({
+              employee: emp,
+              status: emp.status,
+              startDate,
+              endDate: null,
+            }),
+          );
+        }
+      }
+      this.logger.log('Employee status history migration complete.');
+    } catch (err) {
+      this.logger.error('Error during status history migration', err);
+    }
+  }
 
   findAll(): Promise<Employee[]> {
     return this.repo.find({
@@ -134,6 +171,19 @@ export class EmployeesService {
       }
 
       const savedEmployee = await queryRunner.manager.save(employee);
+
+      // Create the first status history log (Active from hire date)
+      const logStartDate = payload.hireDate ? new Date(payload.hireDate) : new Date();
+      logStartDate.setHours(0, 0, 0, 0);
+      await queryRunner.manager.save(
+        this.statusLogRepo.create({
+          employee: savedEmployee,
+          status: EmployeeStatus.ACTIVE,
+          startDate: logStartDate,
+          endDate: null,
+        }),
+      );
+
       await queryRunner.commitTransaction();
 
       if (adminUser) {
@@ -227,7 +277,36 @@ export class EmployeesService {
     if (branchId !== undefined) (emp as any).branch = branchId ? { id: branchId } : null;
     if (shiftId !== undefined) (emp as any).shift = shiftId ? { id: shiftId } : null;
     if (hireDate !== undefined) emp.hireDate = hireDate ? new Date(hireDate) : null as any;
-    if (data.status !== undefined) emp.status = data.status as any;
+    if (data.status !== undefined) {
+      if (emp.status !== data.status) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Close the current open status log
+        const openLog = await this.statusLogRepo.findOne({
+          where: { employee: { id: emp.id }, endDate: IsNull() },
+        });
+        if (openLog) {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          openLog.endDate = yesterday;
+          await this.statusLogRepo.save(openLog);
+        }
+
+        // Open a new status log starting today
+        await this.statusLogRepo.save(
+          this.statusLogRepo.create({
+            employee: { id: emp.id } as any,
+            status: data.status,
+            startDate: today,
+            endDate: null,
+          }),
+        );
+
+        emp.statusChangeDate = today;
+      }
+      emp.status = data.status as any;
+    }
     Object.assign(emp, employeeData);
 
     await this.repo.save(emp);
