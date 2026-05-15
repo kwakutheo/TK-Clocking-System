@@ -18,6 +18,66 @@ export default function HolidaysPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', date: '', isRecurring: true });
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const currentYearStr = new Date().getFullYear().toString();
+
+  const { recurring, groupedByYear, sortedYears } = useMemo(() => {
+    const recurring: any[] = [];
+    const byYear: Record<string, any[]> = {};
+
+    holidays.forEach(h => {
+      if (h.isRecurring) {
+        recurring.push(h);
+      } else {
+        const year = format(parseISO(h.date), 'yyyy');
+        if (!byYear[year]) byYear[year] = [];
+        byYear[year].push(h);
+      }
+    });
+
+    // Sort years descending so newest is on top
+    const sortedYears = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+    return { recurring, groupedByYear: byYear, sortedYears };
+  }, [holidays]);
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => ({ ...prev, [groupName]: prev[groupName] === undefined ? false : !prev[groupName] }));
+  };
+
+  const isGroupExpanded = (groupName: string, isPastYear: boolean = false) => {
+    if (expandedGroups[groupName] !== undefined) return expandedGroups[groupName];
+    return !isPastYear; // Past years collapsed by default, others expanded
+  };
+
+  const renderHolidayRow = (h: any, index: number) => (
+    <tr 
+      key={h.id}
+      className="emp-row-animate"
+      style={{ 
+        background: 'transparent', 
+        animationDelay: `${index * 0.05}s`
+      }}
+    >
+      <td style={{ fontWeight: 600 }}>{h.name}</td>
+      <td>{format(parseISO(h.date), 'dd MMMM')} {h.isRecurring ? '' : format(parseISO(h.date), 'yyyy')}</td>
+      <td>
+        <span className={`badge ${h.isRecurring ? 'badge-blue' : 'badge-amber'}`}>
+          {h.isRecurring ? 'Every Year' : 'One-time'}
+        </span>
+      </td>
+      <td style={{ textAlign: 'right' }}>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+          <button className="btn btn-sm btn-ghost" onClick={() => openEdit(h)} aria-label="Edit Holiday">
+            <Edit size={16} />
+          </button>
+          <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(h.id)} aria-label="Delete Holiday">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
 
   const userRole = useMemo(() => user?.role, [user]);
 
@@ -109,29 +169,59 @@ export default function HolidaysPage() {
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {holidays.map((h) => (
-                <tr key={h.id}>
-                  <td style={{ fontWeight: 600 }}>{h.name}</td>
-                  <td>{format(parseISO(h.date), 'dd MMMM')} {h.isRecurring ? '' : format(parseISO(h.date), 'yyyy')}</td>
-                  <td>
-                    <span className={`badge ${h.isRecurring ? 'badge-blue' : 'badge-amber'}`}>
-                      {h.isRecurring ? 'Every Year' : 'One-time'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button className="btn btn-sm btn-ghost" onClick={() => openEdit(h)} aria-label="Edit Holiday">
-                        <Edit size={16} />
-                      </button>
-                      <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(h.id)} aria-label="Delete Holiday">
-                        <Trash2 size={16} />
-                      </button>
+            {recurring.length > 0 && (
+              <tbody key="recurring">
+                <tr 
+                  onClick={() => toggleGroup('recurring')}
+                  style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.02)', borderTop: '2px solid var(--border)', borderBottom: isGroupExpanded('recurring') ? '1px solid var(--border)' : 'none' }}
+                >
+                  <td colSpan={4} style={{ padding: '12px 16px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ 
+                        fontSize: 10, 
+                        opacity: 0.5,
+                        display: 'inline-block',
+                        transform: isGroupExpanded('recurring') ? 'rotate(90deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s ease'
+                      }}>▶</span>
+                      <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>Permanent Holidays (Every Year)</span>
+                      <span className="badge badge-gray" style={{ fontSize: 11 }}>{recurring.length}</span>
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+                {isGroupExpanded('recurring') && recurring.map((h, index) => renderHolidayRow(h, index))}
+              </tbody>
+            )}
+
+            {sortedYears.map(year => {
+              const isPastYear = year < currentYearStr;
+              const expanded = isGroupExpanded(year, isPastYear);
+              const yearHolidays = groupedByYear[year];
+
+              return (
+                <tbody key={year}>
+                  <tr 
+                    onClick={() => toggleGroup(year)}
+                    style={{ cursor: 'pointer', background: 'rgba(255,255,255,0.02)', borderTop: '2px solid var(--border)', borderBottom: expanded ? '1px solid var(--border)' : 'none' }}
+                  >
+                    <td colSpan={4} style={{ padding: '12px 16px', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ 
+                          fontSize: 10, 
+                          opacity: 0.5,
+                          display: 'inline-block',
+                          transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.3s ease'
+                        }}>▶</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{year} One-Time Holidays {isPastYear && <span style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500 }}>(Archived)</span>}</span>
+                        <span className="badge badge-gray" style={{ fontSize: 11 }}>{yearHolidays.length}</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {expanded && yearHolidays.map((h, index) => renderHolidayRow(h, index))}
+                </tbody>
+              );
+            })}
           </table>
         )}
       </div>
