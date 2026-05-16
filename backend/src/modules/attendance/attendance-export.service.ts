@@ -324,9 +324,10 @@ export class AttendanceExportService {
       }
 
       let statusColor = '#000000';
-      if (d.status === 'ABSENT') statusColor = '#ef4444';
-      else if (d.status.includes('HOLIDAY') || d.status === 'WEEKEND') statusColor = '#6b7280';
-      else if (d.status === 'PRESENT') statusColor = '#059669'; // Darker green for good contrast
+      if (d.status === 'ABSENT') statusColor = '#ef4444'; // Red
+      else if (d.status === 'SUSPENDED' || d.status === 'INACTIVE') statusColor = '#f59e0b'; // Amber/Orange
+      else if (d.status.includes('HOLIDAY') || d.status === 'WEEKEND' || d.status.includes('BREAK') || d.status.includes('OFF-TERM')) statusColor = '#6b7280'; // Gray
+      else if (d.status === 'PRESENT') statusColor = '#059669'; // Green
 
       return [
         formatDate(d.date),
