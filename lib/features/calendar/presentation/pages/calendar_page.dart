@@ -109,7 +109,10 @@ class _TermsList extends StatelessWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(
             side: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: ExpansionTile(
@@ -117,7 +120,8 @@ class _TermsList extends StatelessWidget {
               term.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text(dateRange, style: const TextStyle(color: Colors.grey)),
+            subtitle:
+                Text(dateRange, style: const TextStyle(color: Colors.grey)),
             leading: const CircleAvatar(
               backgroundColor: Colors.blueAccent,
               child: Icon(Icons.school, color: Colors.white, size: 20),
@@ -137,10 +141,14 @@ class _TermsList extends StatelessWidget {
                         : '${b.startDate} - ${b.endDate}';
 
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 32),
                       title: Text(b.name, style: const TextStyle(fontSize: 14)),
-                      trailing: Text(bRange, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      leading: const Icon(Icons.free_breakfast, size: 16, color: Colors.orange),
+                      trailing: Text(bRange,
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey)),
+                      leading: const Icon(Icons.free_breakfast,
+                          size: 16, color: Colors.orange),
                     );
                   }).toList(),
           ),
@@ -169,7 +177,7 @@ class _HolidaysList extends StatelessWidget {
         final holiday = holidays[index];
         DateTime? date;
         String dateStr = holiday.date;
-        
+
         // Handle recurring dates like "MM-DD"
         if (holiday.date.length == 5) {
           final year = DateTime.now().year;
@@ -186,7 +194,10 @@ class _HolidaysList extends StatelessWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(
             side: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.5)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: ListTile(
@@ -203,7 +214,7 @@ class _HolidaysList extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              holiday.isRecurring ? 'Recurring Annually' : 'One-time Event',
+              holiday.isRecurring ? 'Recurring Annually' : 'Date may change',
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
             trailing: Text(

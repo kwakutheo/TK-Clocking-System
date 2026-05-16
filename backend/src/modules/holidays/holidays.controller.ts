@@ -20,6 +20,12 @@ export class HolidaysController {
     return this.service.findAll();
   }
 
+  @Get('current-year')
+  @ApiOperation({ summary: 'List holidays for the current calendar year (includes all recurring holidays)' })
+  findCurrentYear() {
+    return this.service.findCurrentYear();
+  }
+
   @Post()
   @UseGuards(PermissionsGuard)
   @RequirePermissions('holidays.manage')

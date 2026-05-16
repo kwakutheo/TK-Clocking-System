@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { AcademicTerm } from './term.entity';
 import { TermBreak } from './term-break.entity';
 
@@ -17,6 +17,39 @@ export class AcademicCalendarService {
     return this.termRepo.find({
       relations: ['breaks'],
       order: { startDate: 'DESC' },
+    });
+  }
+
+  /**
+   * Returns terms for the current academic year.
+   * An academic year is detected by:
+   * 1. Finding any isActive term and using its academicYear value.
+   * 2. Falling back to the year that spans the current date (e.g. "2025/2026").
+   */
+  async findCurrentYearTerms(): Promise<AcademicTerm[]> {
+    // Try to get the academic year from an active term first
+    const activeTerm = await this.termRepo.findOne({
+      where: { isActive: true },
+      order: { startDate: 'DESC' },
+    });
+
+    let targetYear: string | null = activeTerm?.academicYear ?? null;
+
+    if (!targetYear) {
+      // Fall back: compute the academic year that covers today
+      const now = new Date();
+      const calYear = now.getFullYear();
+      const month = now.getMonth() + 1; // 1-12
+      // Assume academic year starts in September (month 9)
+      const startYear = month >= 9 ? calYear : calYear - 1;
+      const endYear = startYear + 1;
+      targetYear = `${startYear}/${endYear}`;
+    }
+
+    return this.termRepo.find({
+      where: { academicYear: targetYear },
+      relations: ['breaks'],
+      order: { startDate: 'ASC' },
     });
   }
 

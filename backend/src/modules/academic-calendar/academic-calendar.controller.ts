@@ -23,6 +23,12 @@ export class AcademicCalendarController {
     return this.service.findAllTerms();
   }
 
+  @Get('terms/current-year')
+  @ApiOperation({ summary: 'List academic terms for the current academic year' })
+  findCurrentYearTerms() {
+    return this.service.findCurrentYearTerms();
+  }
+
   @Post('terms')
   @UseGuards(PermissionsGuard)
   @RequirePermissions('calendar.create')

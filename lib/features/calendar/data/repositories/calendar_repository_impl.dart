@@ -13,7 +13,7 @@ class CalendarRepositoryImpl implements CalendarRepository {
   @override
   Future<Either<String, List<AcademicTermEntity>>> getTerms() async {
     try {
-      final response = await apiClient.get('/academic-calendar/terms');
+      final response = await apiClient.get('/academic-calendar/terms/current-year');
       final List<dynamic> data = response.data;
       final terms = data
           .cast<Map<String, dynamic>>()
@@ -30,7 +30,7 @@ class CalendarRepositoryImpl implements CalendarRepository {
   @override
   Future<Either<String, List<HolidayEntity>>> getHolidays() async {
     try {
-      final response = await apiClient.get('/holidays');
+      final response = await apiClient.get('/holidays/current-year');
       final List<dynamic> data = response.data;
       final holidays = data
           .cast<Map<String, dynamic>>()

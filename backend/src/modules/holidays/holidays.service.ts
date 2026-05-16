@@ -14,6 +14,22 @@ export class HolidaysService {
     return this.repo.find({ order: { date: 'ASC' } });
   }
 
+  /**
+   * Returns holidays relevant for the current calendar year:
+   * - Recurring holidays (isRecurring = true) are always included (they apply every year).
+   * - Non-recurring holidays are only included if their date falls in the current year.
+   */
+  async findCurrentYear(): Promise<Holiday[]> {
+    const currentYear = new Date().getFullYear();
+    const all = await this.repo.find({ order: { date: 'ASC' } });
+    return all.filter((h) => {
+      if (h.isRecurring) return true;
+      // date is stored as YYYY-MM-DD
+      const year = parseInt(h.date.substring(0, 4), 10);
+      return year === currentYear;
+    });
+  }
+
   async create(data: Partial<Holiday>): Promise<Holiday> {
     const holiday = this.repo.create(data);
     return this.repo.save(holiday);

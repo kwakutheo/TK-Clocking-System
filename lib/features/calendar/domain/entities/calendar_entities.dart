@@ -22,6 +22,8 @@ class AcademicTermEntity extends Equatable {
   final String name;
   final String startDate;
   final String endDate;
+  final String? academicYear;
+  final bool? isActive;
   final List<TermBreakEntity> breaks;
 
   const AcademicTermEntity({
@@ -29,11 +31,13 @@ class AcademicTermEntity extends Equatable {
     required this.name,
     required this.startDate,
     required this.endDate,
+    this.academicYear,
+    this.isActive,
     required this.breaks,
   });
 
   @override
-  List<Object?> get props => [id, name, startDate, endDate, breaks];
+  List<Object?> get props => [id, name, startDate, endDate, academicYear, isActive, breaks];
 }
 
 class HolidayEntity extends Equatable {
