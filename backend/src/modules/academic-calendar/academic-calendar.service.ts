@@ -22,28 +22,40 @@ export class AcademicCalendarService {
 
   /**
    * Returns terms for the current academic year.
-   * An academic year is detected by:
-   * 1. Finding any isActive term and using its academicYear value.
-   * 2. Falling back to the year that spans the current date (e.g. "2025/2026").
+   * Detection priority:
+   * 1. Find the term whose date range contains TODAY → use its academicYear.
+   * 2. Fall back: find the most-recently-started active term before today.
+   * 3. Last resort: compute academic year from calendar (Sep–Aug boundary).
    */
   async findCurrentYearTerms(): Promise<AcademicTerm[]> {
-    // Try to get the academic year from an active term first
-    const activeTerm = await this.termRepo.findOne({
-      where: { isActive: true },
-      order: { startDate: 'DESC' },
-    });
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-    let targetYear: string | null = activeTerm?.academicYear ?? null;
+    // Priority 1: term that spans today's date
+    const spanningTerm = await this.termRepo
+      .createQueryBuilder('term')
+      .where(':today BETWEEN term.startDate AND term.endDate', { today: todayStr })
+      .orderBy('term.startDate', 'ASC')
+      .getOne();
+
+    let targetYear: string | null = spanningTerm?.academicYear ?? null;
 
     if (!targetYear) {
-      // Fall back: compute the academic year that covers today
+      // Priority 2: most-recently-started active term before or on today
+      const recentTerm = await this.termRepo
+        .createQueryBuilder('term')
+        .where('term.startDate <= :today', { today: todayStr })
+        .andWhere('term.isActive = true')
+        .orderBy('term.startDate', 'DESC')
+        .getOne();
+      targetYear = recentTerm?.academicYear ?? null;
+    }
+
+    if (!targetYear) {
+      // Priority 3: compute from calendar — academic year starts in September
       const now = new Date();
-      const calYear = now.getFullYear();
       const month = now.getMonth() + 1; // 1-12
-      // Assume academic year starts in September (month 9)
-      const startYear = month >= 9 ? calYear : calYear - 1;
-      const endYear = startYear + 1;
-      targetYear = `${startYear}/${endYear}`;
+      const startYear = month >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+      targetYear = `${startYear}/${startYear + 1}`;
     }
 
     return this.termRepo.find({
