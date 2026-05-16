@@ -35,6 +35,8 @@ export class EmployeesService implements OnModuleInit {
       this.logger.log('Running automatic database migrations...');
       
       await this.dataSource.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS status_change_date DATE NULL;`);
+      await this.dataSource.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token TEXT NULL;`);
+
       
       await this.dataSource.query(`
         CREATE TABLE IF NOT EXISTS employee_status_logs (
