@@ -35,3 +35,13 @@ class AuthLogoutEvent extends AuthEvent {
 class AuthSyncProfileEvent extends AuthEvent {
   const AuthSyncProfileEvent();
 }
+
+/// Fired to update the user's FCM token on the backend.
+class AuthUpdateFcmTokenEvent extends AuthEvent {
+  const AuthUpdateFcmTokenEvent({required this.token});
+
+  final String token;
+
+  @override
+  List<Object?> get props => [token];
+}

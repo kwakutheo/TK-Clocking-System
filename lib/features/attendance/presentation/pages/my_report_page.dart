@@ -3,6 +3,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
 import 'package:tk_clocking_system/features/attendance/domain/entities/term_report_entity.dart';
 import 'package:tk_clocking_system/features/attendance/domain/repositories/attendance_repository.dart';
+import 'package:tk_clocking_system/features/attendance/presentation/pages/monthly_details_page.dart';
 import 'package:tk_clocking_system/shared/widgets/loading_indicator.dart';
 
 class MyReportPage extends StatefulWidget {
@@ -197,17 +198,31 @@ class _MonthCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final summary = month.summary;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          // Header
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MonthlyDetailsPage(monthSummary: month),
+              ),
+            );
+          },
+          child: Card(
+            margin: EdgeInsets.zero,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                // Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -315,6 +330,9 @@ class _MonthCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
+    ),
+    ),
     );
   }
 }

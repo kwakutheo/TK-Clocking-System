@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:tk_clocking_system/features/attendance/domain/entities/daily_log_entity.dart';
 
 class ReportSummary extends Equatable {
   final double totalHours;
@@ -37,14 +38,16 @@ class ReportSummary extends Equatable {
 class MonthSummary extends Equatable {
   final String name;
   final ReportSummary summary;
+  final List<DailyLogEntity> days;
 
   const MonthSummary({
     required this.name,
     required this.summary,
+    required this.days,
   });
 
   @override
-  List<Object?> get props => [name, summary];
+  List<Object?> get props => [name, summary, days];
 }
 
 class TermReportEntity extends Equatable {

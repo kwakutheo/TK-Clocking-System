@@ -23,7 +23,9 @@ import 'package:tk_clocking_system/features/attendance/presentation/pages/my_rep
 import 'package:tk_clocking_system/shared/enums/attendance_type.dart';
 import 'package:tk_clocking_system/shared/enums/sync_status.dart';
 import 'package:tk_clocking_system/core/services/location_service.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:tk_clocking_system/core/services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 
 /// Shell home page with bottom navigation between Attendance, History,
 /// and Profile tabs.
@@ -113,6 +115,21 @@ class _DashboardTabState extends State<_DashboardTab> {
     // if a visibility-triggered fetch is simultaneously in progress.
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _loadData(silent: true, force: true);
+    });
+
+    // Update FCM Token on login
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final token = await sl<NotificationService>().getFcmToken();
+      if (token != null && mounted) {
+        context.read<AuthBloc>().add(AuthUpdateFcmTokenEvent(token: token));
+      }
+
+      // Also listen for token refreshes
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        if (mounted) {
+          context.read<AuthBloc>().add(AuthUpdateFcmTokenEvent(token: newToken));
+        }
+      });
     });
   }
 
@@ -1165,7 +1182,6 @@ class _QuickActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Card(
       elevation: 4,
@@ -1250,6 +1266,25 @@ class _QuickActionsCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      elevation: 3,
+                      borderRadius: BorderRadius.circular(12),
+                      child: _QuickAction(
+                        label: 'Calendar',
+                        icon: Icons.event_note_rounded,
+                        color: Colors.teal,
+                        onTap: () => context.go('/home/calendar'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(child: SizedBox()), // Placeholder for balance
                 ],
               ),
             ],
@@ -1451,7 +1486,6 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
     if (_dismissed) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    const bannerColor = Color(0xFF3B82F6); // blue-500
 
     return FadeTransition(
       opacity: _fade,
@@ -1473,7 +1507,7 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -1492,7 +1526,7 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
                   Text(
                     'Clocked in by Administrator',
                     style: theme.textTheme.labelMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.75),
+                      color: Colors.white.withValues(alpha: 0.75),
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.3,
                     ),
@@ -1512,13 +1546,13 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
+                        color: Colors.white.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         widget.note!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           height: 1.4,
                         ),
                       ),
@@ -1533,7 +1567,7 @@ class _AdminOverrideBannerState extends State<_AdminOverrideBanner>
               onTap: _dismiss,
               child: Icon(
                 Icons.close_rounded,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 size: 18,
               ),
             ),

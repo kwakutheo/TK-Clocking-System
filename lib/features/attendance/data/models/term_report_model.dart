@@ -1,4 +1,5 @@
 import 'package:tk_clocking_system/features/attendance/domain/entities/term_report_entity.dart';
+import 'package:tk_clocking_system/features/attendance/domain/entities/daily_log_entity.dart';
 
 class ReportSummaryModel extends ReportSummary {
   const ReportSummaryModel({
@@ -26,16 +27,51 @@ class ReportSummaryModel extends ReportSummary {
   }
 }
 
+class DailyLogModel extends DailyLogEntity {
+  const DailyLogModel({
+    required super.date,
+    required super.status,
+    required super.hours,
+    required super.isLate,
+    required super.lateMinutes,
+    required super.isEarlyOut,
+    required super.earlyOutMinutes,
+    required super.missingClockIn,
+    required super.missingClockOut,
+    super.clockIn,
+    super.clockOut,
+  });
+
+  factory DailyLogModel.fromJson(Map<String, dynamic> json) {
+    return DailyLogModel(
+      date: json['date'] as String? ?? '',
+      status: json['status'] as String? ?? 'UNKNOWN',
+      hours: (json['hours'] as num?)?.toDouble() ?? 0.0,
+      isLate: json['isLate'] as bool? ?? false,
+      lateMinutes: json['lateMinutes'] as int? ?? 0,
+      isEarlyOut: json['isEarlyOut'] as bool? ?? false,
+      earlyOutMinutes: json['earlyOutMinutes'] as int? ?? 0,
+      missingClockIn: json['missingClockIn'] as bool? ?? false,
+      missingClockOut: json['missingClockOut'] as bool? ?? false,
+      clockIn: json['clockIn'] as String?,
+      clockOut: json['clockOut'] as String?,
+    );
+  }
+}
+
 class MonthSummaryModel extends MonthSummary {
   const MonthSummaryModel({
     required super.name,
     required super.summary,
+    required super.days,
   });
 
   factory MonthSummaryModel.fromJson(Map<String, dynamic> json) {
+    final daysList = json['days'] as List<dynamic>? ?? [];
     return MonthSummaryModel(
       name: json['name'] as String? ?? '',
       summary: ReportSummaryModel.fromJson(json['summary'] as Map<String, dynamic>? ?? {}),
+      days: daysList.cast<Map<String, dynamic>>().map(DailyLogModel.fromJson).toList(),
     );
   }
 }

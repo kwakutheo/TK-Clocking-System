@@ -23,10 +23,17 @@ import 'package:tk_clocking_system/features/auth/domain/usecases/get_cached_user
 import 'package:tk_clocking_system/features/auth/domain/usecases/login_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/sync_profile_usecase.dart';
+import 'package:tk_clocking_system/features/auth/domain/usecases/update_fcm_token_usecase.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:tk_clocking_system/features/leaves/domain/repositories/leaves_repository.dart';
 import 'package:tk_clocking_system/features/leaves/data/repositories/leaves_repository_impl.dart';
 import 'package:tk_clocking_system/features/leaves/presentation/bloc/leaves_bloc.dart';
+import 'package:tk_clocking_system/features/profile/data/repositories/profile_repository_impl.dart';
+import 'package:tk_clocking_system/features/profile/domain/repositories/profile_repository.dart';
+import 'package:tk_clocking_system/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:tk_clocking_system/features/calendar/domain/repositories/calendar_repository.dart';
+import 'package:tk_clocking_system/features/calendar/data/repositories/calendar_repository_impl.dart';
+import 'package:tk_clocking_system/features/calendar/presentation/bloc/calendar_bloc.dart';
 
 /// Global service locator.
 final GetIt sl = GetIt.instance;
@@ -81,6 +88,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => LogoutUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => GetCachedUserUseCase(sl<AuthRepository>()));
   sl.registerLazySingleton(() => SyncProfileUseCase(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => UpdateFcmTokenUseCase(sl<AuthRepository>()));
 
   sl.registerFactory(
     () => AuthBloc(
@@ -88,6 +96,7 @@ Future<void> init() async {
       logoutUseCase: sl<LogoutUseCase>(),
       getCachedUserUseCase: sl<GetCachedUserUseCase>(),
       syncProfileUseCase: sl<SyncProfileUseCase>(),
+      updateFcmTokenUseCase: sl<UpdateFcmTokenUseCase>(),
     ),
   );
 
@@ -128,6 +137,24 @@ Future<void> init() async {
 
   sl.registerFactory(
     () => LeavesBloc(repository: sl<LeavesRepository>()),
+  );
+
+  // ── Calendar ───────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<CalendarRepository>(
+    () => CalendarRepositoryImpl(apiClient: sl<ApiClient>()),
+  );
+
+  sl.registerFactory(
+    () => CalendarBloc(repository: sl<CalendarRepository>()),
+  );
+
+  // ── Profile ────────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(apiClient: sl<ApiClient>()),
+  );
+
+  sl.registerFactory(
+    () => ProfileBloc(repository: sl<ProfileRepository>()),
   );
 }
 

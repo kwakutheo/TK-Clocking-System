@@ -260,4 +260,8 @@ export class AuthService {
 
     return { message: 'Password has been reset successfully.' };
   }
+
+  async updateFcmToken(userId: string, token: string | null): Promise<void> {
+    await this.users.updateFcmToken(userId, token);
+  }
 }

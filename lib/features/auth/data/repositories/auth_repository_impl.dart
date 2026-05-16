@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:dio/dio.dart';
 import 'package:dartz/dartz.dart';
 
@@ -166,6 +166,21 @@ class AuthRepositoryImpl implements AuthRepository {
       if (e.response?.statusCode == 401) {
         return const Left(InvalidCredentialsFailure());
       }
+      return Left(ServerFailure(e.message ?? 'Server error.'));
+    } catch (_) {
+      return const Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateFcmToken(String token) async {
+    try {
+      await _api.patch(
+        '/auth/me/fcm-token',
+        data: {'token': token},
+      );
+      return const Right(null);
+    } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error.'));
     } catch (_) {
       return const Left(ServerFailure());

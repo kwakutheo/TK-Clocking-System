@@ -11,7 +11,7 @@ import 'package:tk_clocking_system/features/attendance/presentation/bloc/attenda
 import 'package:tk_clocking_system/features/attendance/presentation/bloc/attendance_event.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_event.dart';
-import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.dart';
+
 import 'package:tk_clocking_system/shared/widgets/connectivity_banner.dart';
 
 class App extends StatefulWidget {

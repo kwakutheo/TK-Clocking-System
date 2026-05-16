@@ -21,4 +21,7 @@ abstract interface class AuthRepository {
 
   /// Fetches the latest user profile from the backend and updates the cache.
   Future<Either<Failure, UserEntity>> syncProfile();
+
+  /// Updates the FCM push notification token on the backend.
+  Future<Either<Failure, void>> updateFcmToken(String token);
 }

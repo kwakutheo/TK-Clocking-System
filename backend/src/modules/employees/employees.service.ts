@@ -474,4 +474,11 @@ export class EmployeesService implements OnModuleInit {
     // Employee.user has onDelete: 'CASCADE'.
     await this.userRepo.delete(emp.user.id);
   }
+
+  async getStatusHistory(employeeId: string): Promise<EmployeeStatusLog[]> {
+    return this.statusLogRepo.find({
+      where: { employee: { id: employeeId } },
+      order: { startDate: 'DESC' },
+    });
+  }
 }

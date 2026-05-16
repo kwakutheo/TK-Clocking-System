@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   UseGuards,
   HttpCode,
@@ -76,5 +77,16 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid PIN or no reset requested' })
   completePasswordReset(@Body() dto: CompletePasswordResetDto) {
     return this.auth.completePasswordReset(dto);
+  }
+
+  @Patch('me/fcm-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update FCM token for the authenticated user' })
+  updateFcmToken(
+    @CurrentUser() user: User,
+    @Body('token') token: string | null,
+  ) {
+    return this.auth.updateFcmToken(user.id, token);
   }
 }

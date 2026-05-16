@@ -103,7 +103,7 @@ class _LeaveRequestFormPageState extends State<LeaveRequestFormPage> {
             child: ListView(
               children: [
                 DropdownButtonFormField<String>(
-                  value: _leaveType,
+                  initialValue: _leaveType,
                   decoration: const InputDecoration(
                     labelText: 'Leave Type',
                     border: OutlineInputBorder(),

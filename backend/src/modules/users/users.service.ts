@@ -62,4 +62,8 @@ export class UsersService {
     const { passwordHash: _, ...safe } = user;
     return safe;
   }
+
+  async updateFcmToken(id: string, token: string | null): Promise<void> {
+    await this.repo.update(id, { fcmToken: token });
+  }
 }

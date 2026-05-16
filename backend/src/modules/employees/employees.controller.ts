@@ -7,6 +7,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums';
 import { Employee } from './employee.entity';
+import { EmployeeStatusLog } from './employee-status-log.entity';
 import { User } from '../users/user.entity';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -89,5 +90,21 @@ export class EmployeesController {
   @ApiOperation({ summary: 'Delete employee' })
   remove(@Param('id') id: string, @CurrentUser() adminUser: User): Promise<void> {
     return this.service.remove(id, adminUser);
+  }
+
+  @Get('me/history')
+  @ApiOperation({ summary: 'Get current employee status history' })
+  async getMyHistory(@CurrentUser() user: { id: string }): Promise<EmployeeStatusLog[]> {
+    const emp = await this.service.findByUserId(user.id);
+    if (!emp) throw new Error('Employee profile not found.');
+    return this.service.getStatusHistory(emp.id);
+  }
+
+  @Get(':id/history')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions('employees.view')
+  @ApiOperation({ summary: 'Get employee status history by ID' })
+  getHistory(@Param('id') id: string): Promise<EmployeeStatusLog[]> {
+    return this.service.getStatusHistory(id);
   }
 }

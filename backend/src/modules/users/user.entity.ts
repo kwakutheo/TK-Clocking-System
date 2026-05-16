@@ -46,6 +46,9 @@ export class User {
   @Column({ name: 'reset_pin', type: 'varchar', nullable: true })
   resetPin: string | null;
 
+  @Column({ name: 'fcm_token', type: 'text', nullable: true })
+  fcmToken: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

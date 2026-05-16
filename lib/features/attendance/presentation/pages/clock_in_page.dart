@@ -645,8 +645,6 @@ class _QrScanButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return _BouncingWidget(
       onTap: (isLoading || isDisabled)
           ? null

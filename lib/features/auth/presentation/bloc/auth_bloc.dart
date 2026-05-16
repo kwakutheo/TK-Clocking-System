@@ -1,10 +1,11 @@
-import 'package:dartz/dartz.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tk_clocking_system/core/errors/failures.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/get_cached_user_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/login_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/sync_profile_usecase.dart';
+import 'package:tk_clocking_system/features/auth/domain/usecases/update_fcm_token_usecase.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_event.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.dart';
 
@@ -18,21 +19,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required LogoutUseCase logoutUseCase,
     required GetCachedUserUseCase getCachedUserUseCase,
     required SyncProfileUseCase syncProfileUseCase,
+    required UpdateFcmTokenUseCase updateFcmTokenUseCase,
   })  : _login = loginUseCase,
         _logout = logoutUseCase,
         _getCachedUser = getCachedUserUseCase,
         _syncProfile = syncProfileUseCase,
+        _updateFcmToken = updateFcmTokenUseCase,
         super(const AuthInitial()) {
     on<AuthCheckSessionEvent>(_onCheckSession);
     on<AuthLoginEvent>(_onLogin);
     on<AuthLogoutEvent>(_onLogout);
     on<AuthSyncProfileEvent>(_onSyncProfile);
+    on<AuthUpdateFcmTokenEvent>(_onUpdateFcmToken);
   }
 
   final LoginUseCase _login;
   final LogoutUseCase _logout;
   final GetCachedUserUseCase _getCachedUser;
   final SyncProfileUseCase _syncProfile;
+  final UpdateFcmTokenUseCase _updateFcmToken;
 
   // ── Session restore ───────────────────────────────────────────────────────
   Future<void> _onCheckSession(
@@ -105,5 +110,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       },
       (user) => emit(AuthAuthenticated(user)),
     );
+  }
+
+  // ── Update FCM Token ──────────────────────────────────────────────────────
+  Future<void> _onUpdateFcmToken(
+    AuthUpdateFcmTokenEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    // We do not change the current state, just fire and forget the token update.
+    await _updateFcmToken(token: event.token);
   }
 }

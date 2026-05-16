@@ -36,6 +36,7 @@
     "class-validator": "^0.15.1",
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
+    "firebase-admin": "^13.10.0",
     "helmet": "^8.1.0",
     "nodemailer": "^8.0.7",
     "passport": "^0.7.0",

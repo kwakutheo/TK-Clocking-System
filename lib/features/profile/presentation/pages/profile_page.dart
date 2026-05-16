@@ -13,10 +13,14 @@ import 'package:tk_clocking_system/features/auth/domain/entities/user_entity.dar
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_event.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_state.dart';
+import 'package:tk_clocking_system/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:tk_clocking_system/features/profile/presentation/bloc/profile_event.dart';
+import 'package:tk_clocking_system/features/profile/presentation/bloc/profile_state.dart';
 import 'package:tk_clocking_system/shared/enums/user_role.dart';
+import 'package:intl/intl.dart';
 import 'package:tk_clocking_system/shared/widgets/app_text_field.dart';
 import 'package:tk_clocking_system/shared/widgets/primary_button.dart';
-import 'package:tk_clocking_system/core/constants/app_constants.dart';
+
 
 /// Profile tab — shows user info and allows editing.
 class ProfilePage extends StatefulWidget {
@@ -161,8 +165,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final authState = context.watch<AuthBloc>().state;
     final user = authState is AuthAuthenticated ? authState.user : null;
 
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ProfileBloc>(
+          create: (context) => sl<ProfileBloc>()..add(LoadWorkHistoryEvent(employeeId: user?.id)),
+        ),
+      ],
+      child: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
         if (state is AuthUnauthenticated) {
           AppRouter.router.go('/login');
         }
@@ -462,6 +472,51 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ],
                                 ),
                               const SizedBox(height: 16),
+                              // ── Work History Timeline ──────────────────
+                              _InfoSection(
+                                title: 'Work History',
+                                items: [], // We'll put the timeline below
+                                customBody: BlocBuilder<ProfileBloc, ProfileState>(
+                                  builder: (context, state) {
+                                    if (state is ProfileLoading || state is ProfileInitial) {
+                                      return const Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Center(child: CircularProgressIndicator()),
+                                      );
+                                    } else if (state is ProfileError) {
+                                      return Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Center(child: Text(state.message, style: TextStyle(color: cs.error))),
+                                      );
+                                    } else if (state is ProfileHistoryLoaded) {
+                                      final history = state.history;
+                                      if (history.isEmpty) {
+                                        return const Padding(
+                                          padding: EdgeInsets.all(16.0),
+                                          child: Center(child: Text('No work history found.')),
+                                        );
+                                      }
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                                        child: Column(
+                                          children: List.generate(history.length, (index) {
+                                            final log = history[index];
+                                            final isLast = index == history.length - 1;
+                                            return _TimelineTile(
+                                              status: log.status,
+                                              startDate: log.startDate,
+                                              endDate: log.endDate,
+                                              isLast: isLast,
+                                            );
+                                          }),
+                                        ),
+                                      );
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                             ],
                           ],
                           _InfoSection(
@@ -532,6 +587,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );
@@ -657,7 +713,6 @@ class _AnimatedMeshBackgroundState extends State<_AnimatedMeshBackground>
 
   @override
   Widget build(BuildContext context) {
-    final cs = widget.colorScheme;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
@@ -773,10 +828,11 @@ class _EditSection extends StatelessWidget {
 }
 
 class _InfoSection extends StatelessWidget {
-  const _InfoSection({required this.title, required this.items});
+  const _InfoSection({required this.title, required this.items, this.customBody});
 
   final String title;
   final List<_InfoItem> items;
+  final Widget? customBody;
 
   @override
   Widget build(BuildContext context) {
@@ -803,7 +859,7 @@ class _InfoSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(color: cs.outline.withValues(alpha: 0.15)),
           ),
-          child: Column(
+          child: customBody ?? Column(
             children: [
               for (int i = 0; i < items.length; i++) ...[
                 items[i],
@@ -876,6 +932,120 @@ class _InfoItem extends StatelessWidget {
             if (trailing != null) trailing!,
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Work History Timeline ───────────────────────────────────────────────────
+class _TimelineTile extends StatelessWidget {
+  const _TimelineTile({
+    required this.status,
+    required this.startDate,
+    this.endDate,
+    required this.isLast,
+  });
+
+  final String status;
+  final DateTime startDate;
+  final DateTime? endDate;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final DateFormat formatter = DateFormat('MMM d, yyyy');
+
+    Color statusColor;
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        statusColor = Colors.green;
+        break;
+      case 'ON_LEAVE':
+        statusColor = Colors.orange;
+        break;
+      case 'TERMINATED':
+      case 'SUSPENDED':
+        statusColor = Colors.red;
+        break;
+      default:
+        statusColor = cs.primary;
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Timeline Line & Dot ──
+          SizedBox(
+            width: 30,
+            child: Column(
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  margin: const EdgeInsets.only(top: 18),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: statusColor,
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.3),
+                      width: 4,
+                    ),
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: cs.outlineVariant.withValues(alpha: 0.5),
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 16), // Padding for the last item
+              ],
+            ),
+          ),
+          // ── Timeline Content ──
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12, top: 14, bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      status.toUpperCase().replaceAll('_', ' '),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    endDate != null
+                        ? '${formatter.format(startDate)} — ${formatter.format(endDate!)}'
+                        : '${formatter.format(startDate)} — Present',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

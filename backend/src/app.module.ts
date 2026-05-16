@@ -14,6 +14,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
 import { AcademicCalendarModule } from './modules/academic-calendar/academic-calendar.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { LeavesModule } from './modules/leaves/leaves.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -54,6 +55,7 @@ import { APP_GUARD } from '@nestjs/core';
     AcademicCalendarModule,
     SettingsModule,
     LeavesModule,
+    NotificationsModule,
   ],
   providers: [],
 })
