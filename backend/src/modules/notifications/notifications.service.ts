@@ -48,4 +48,21 @@ export class NotificationsService implements OnModuleInit {
       return false;
     }
   }
+  /**
+   * Sends a silent data message to trigger real-time app sync (no visible popup).
+   */
+  async sendSilentSyncToToken(token: string, action: string): Promise<boolean> {
+    if (!this.initialized || !token) return false;
+
+    try {
+      await admin.messaging().send({
+        token,
+        data: { action },
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send silent sync to token ${token}`, error);
+      return false;
+    }
+  }
 }

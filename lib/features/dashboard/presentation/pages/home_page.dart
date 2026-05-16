@@ -152,6 +152,7 @@ class _DashboardTabState extends State<_DashboardTab> {
   bool _checkingLocation = false;
   bool? _isInWorkZone;
   String? _locationError;
+  StreamSubscription? _syncSubscription;
 
   @override
   void initState() {
@@ -163,6 +164,14 @@ class _DashboardTabState extends State<_DashboardTab> {
     // if a visibility-triggered fetch is simultaneously in progress.
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _loadData(silent: true, force: true);
+    });
+
+    // Listen for real-time silent sync events from Firebase Cloud Messaging
+    _syncSubscription = sl<NotificationService>().onSyncEvent.listen((_) {
+      if (mounted) {
+        debugPrint('Received silent sync event, refreshing dashboard...');
+        _loadData(silent: true, force: true);
+      }
     });
 
     // Update FCM Token on login
@@ -184,6 +193,7 @@ class _DashboardTabState extends State<_DashboardTab> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _syncSubscription?.cancel();
     super.dispose();
   }
 

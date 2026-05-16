@@ -8,6 +8,7 @@ import { Employee } from '../employees/employee.entity';
 import { User } from '../users/user.entity';
 import { LeaveStatus, UserRole } from '../../common/enums';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class LeavesService {
@@ -17,6 +18,7 @@ export class LeavesService {
     @InjectRepository(Employee)
     private readonly employeeRepo: Repository<Employee>,
     private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ── Employee Actions ──────────────────────────────────────────────────────
@@ -142,6 +144,21 @@ export class LeavesService {
       oldValues: { status: oldStatus },
       newValues: { status: decision.status, reviewNote: decision.reviewNote },
     });
+
+    // Send a silent sync to the employee's phone to refresh their dashboard instantly
+    if (leave.employee?.user?.fcmToken) {
+      await this.notificationsService.sendSilentSyncToToken(
+        leave.employee.user.fcmToken,
+        'refresh_dashboard'
+      );
+      
+      // Also send a visible push notification to inform them of the decision
+      await this.notificationsService.sendPushToToken(
+        leave.employee.user.fcmToken,
+        'Leave Request Update',
+        `Your leave request has been ${decision.status.toLowerCase()}.`
+      );
+    }
 
     return saved;
   }

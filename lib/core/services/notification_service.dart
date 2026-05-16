@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -11,6 +12,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  
+  // Stream to broadcast silent data events to the app (e.g., to refresh UI)
+  final _syncEventController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get onSyncEvent => _syncEventController.stream;
 
   Future<void> init() async {
     tz.initializeTimeZones();
@@ -43,6 +48,11 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Got a message whilst in the foreground!');
       debugPrint('Message data: ${message.data}');
+
+      // If it's a silent data message intended for real-time sync
+      if (message.data.containsKey('action')) {
+        _syncEventController.add(message.data);
+      }
 
       if (message.notification != null) {
         debugPrint('Message also contained a notification: ${message.notification}');
@@ -138,5 +148,9 @@ class NotificationService {
   Future<void> cancelClockOutReminder() async {
     await _notifications.cancel(101);
     debugPrint('Cancelled clock-out reminder');
+  }
+
+  void dispose() {
+    _syncEventController.close();
   }
 }
