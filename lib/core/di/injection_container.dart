@@ -24,6 +24,9 @@ import 'package:tk_clocking_system/features/auth/domain/usecases/login_usecase.d
 import 'package:tk_clocking_system/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:tk_clocking_system/features/auth/domain/usecases/sync_profile_usecase.dart';
 import 'package:tk_clocking_system/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:tk_clocking_system/features/leaves/domain/repositories/leaves_repository.dart';
+import 'package:tk_clocking_system/features/leaves/data/repositories/leaves_repository_impl.dart';
+import 'package:tk_clocking_system/features/leaves/presentation/bloc/leaves_bloc.dart';
 
 /// Global service locator.
 final GetIt sl = GetIt.instance;
@@ -117,6 +120,14 @@ Future<void> init() async {
       qrClock: sl<QrClockUseCase>(),
       locationService: sl<LocationService>(),
     ),
+  );
+  // ── Leaves ─────────────────────────────────────────────────────────────────
+  sl.registerLazySingleton<LeavesRepository>(
+    () => LeavesRepositoryImpl(apiClient: sl<ApiClient>()),
+  );
+
+  sl.registerFactory(
+    () => LeavesBloc(repository: sl<LeavesRepository>()),
   );
 }
 

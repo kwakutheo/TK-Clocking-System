@@ -1183,53 +1183,74 @@ class _QuickActionsCard extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: Material(
-                  elevation: 3,
-                  borderRadius: BorderRadius.circular(12),
-                  child: _QuickAction(
-                    label: 'Time Clock',
-                    icon: Icons.access_time_rounded,
-                    color: Colors.green,
-                    onTap: () => context.go('/home/clock-in'),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      elevation: 3,
+                      borderRadius: BorderRadius.circular(12),
+                      child: _QuickAction(
+                        label: 'Time Clock',
+                        icon: Icons.access_time_rounded,
+                        color: Colors.green,
+                        onTap: () => context.go('/home/clock-in'),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Material(
+                      elevation: 3,
+                      borderRadius: BorderRadius.circular(12),
+                      child: _QuickAction(
+                        label: 'History',
+                        icon: Icons.history_rounded,
+                        color: const Color.fromARGB(255, 2, 44, 255),
+                        onTap: () {
+                          context
+                              .findAncestorStateOfType<HomePageState>()
+                              ?.setTab(1);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Material(
-                  elevation: 3,
-                  borderRadius: BorderRadius.circular(12),
-                  child: _QuickAction(
-                    label: 'History',
-                    icon: Icons.history_rounded,
-                    color: const Color.fromARGB(255, 2, 44, 255),
-                    onTap: () {
-                      context
-                          .findAncestorStateOfType<HomePageState>()
-                          ?.setTab(1);
-                    },
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      elevation: 3,
+                      borderRadius: BorderRadius.circular(12),
+                      child: _QuickAction(
+                        label: 'Report',
+                        icon: Icons.analytics_rounded,
+                        color: Colors.orange,
+                        onTap: () {
+                          context
+                              .findAncestorStateOfType<HomePageState>()
+                              ?.setTab(2);
+                        },
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Material(
-                  elevation: 3,
-                  borderRadius: BorderRadius.circular(12),
-                  child: _QuickAction(
-                    label: 'Report',
-                    icon: Icons.analytics_rounded,
-                    color: Colors.orange,
-                    onTap: () {
-                      context
-                          .findAncestorStateOfType<HomePageState>()
-                          ?.setTab(2);
-                    },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Material(
+                      elevation: 3,
+                      borderRadius: BorderRadius.circular(12),
+                      child: _QuickAction(
+                        label: 'Leaves',
+                        icon: Icons.calendar_month_rounded,
+                        color: Colors.purple,
+                        onTap: () => context.go('/home/leaves'),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

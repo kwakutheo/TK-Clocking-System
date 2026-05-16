@@ -8,6 +8,7 @@ import 'package:tk_clocking_system/features/dashboard/presentation/pages/home_pa
 import 'package:tk_clocking_system/features/attendance/presentation/pages/clock_in_page.dart';
 import 'package:tk_clocking_system/features/attendance/presentation/pages/history_page.dart';
 import 'package:tk_clocking_system/features/attendance/presentation/pages/my_report_page.dart';
+import 'package:tk_clocking_system/features/leaves/presentation/pages/leaves_page.dart';
 import 'package:tk_clocking_system/shared/widgets/loading_indicator.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
 import 'package:tk_clocking_system/core/router/go_router_refresh_stream.dart';
@@ -48,6 +49,10 @@ abstract final class AppRouter {
               GoRoute(
                 path: 'my-report',
                 builder: (_, __) => const MyReportPage(),
+              ),
+              GoRoute(
+                path: 'leaves',
+                builder: (_, __) => const LeavesPage(),
               ),
             ],
           ),
