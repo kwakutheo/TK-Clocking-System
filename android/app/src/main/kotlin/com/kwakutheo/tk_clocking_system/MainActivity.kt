@@ -1,4 +1,4 @@
-package com.clocking.tk.tk_clocking_system
+package com.kwakutheo.tk_clocking_system
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

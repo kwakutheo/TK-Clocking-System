@@ -43,6 +43,50 @@ class HomePageState extends State<HomePage> {
     setState(() => _selectedIndex = index);
   }
 
+  void _showMoreMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.person_rounded),
+                title: const Text('Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _selectedIndex = 3);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_rounded),
+                title: const Text('Leaves'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/home/leaves');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.event_note_rounded),
+                title: const Text('Calendar'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/home/calendar');
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,7 +102,11 @@ class HomePageState extends State<HomePage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
+          if (index == 3) {
+            _showMoreMenu();
+          } else {
+            setState(() => _selectedIndex = index);
+          }
         },
         destinations: const [
           NavigationDestination(
@@ -77,9 +125,9 @@ class HomePageState extends State<HomePage> {
             label: 'Report',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
+            icon: Icon(Icons.more_vert_rounded),
+            selectedIcon: Icon(Icons.more_vert_rounded),
+            label: 'More',
           ),
         ],
       ),
@@ -141,7 +189,7 @@ class _DashboardTabState extends State<_DashboardTab> {
 
   Future<void> _initData() async {
     // 1. Try to load from cache immediately for "Instant-On"
-    final box = Hive.box(AppConstants.userBox);
+    final box = Hive.box<Map>(AppConstants.userBox);
     final cached = box.get('home_data_cache');
     if (cached != null) {
       try {
@@ -191,7 +239,7 @@ class _DashboardTabState extends State<_DashboardTab> {
             // Update cache safely
             if (data is HomeDataModel) {
               try {
-                final box = Hive.box(AppConstants.userBox);
+                final box = Hive.box<Map>(AppConstants.userBox);
                 box.put('home_data_cache', data.toJson());
               } catch (e) {
                 debugPrint('Failed to save cache: $e');
@@ -1200,92 +1248,17 @@ class _QuickActionsCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Material(
-                      elevation: 3,
-                      borderRadius: BorderRadius.circular(12),
-                      child: _QuickAction(
-                        label: 'Time Clock',
-                        icon: Icons.access_time_rounded,
-                        color: Colors.green,
-                        onTap: () => context.go('/home/clock-in'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Material(
-                      elevation: 3,
-                      borderRadius: BorderRadius.circular(12),
-                      child: _QuickAction(
-                        label: 'History',
-                        icon: Icons.history_rounded,
-                        color: const Color.fromARGB(255, 2, 44, 255),
-                        onTap: () {
-                          context
-                              .findAncestorStateOfType<HomePageState>()
-                              ?.setTab(1);
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Material(
-                      elevation: 3,
-                      borderRadius: BorderRadius.circular(12),
-                      child: _QuickAction(
-                        label: 'Report',
-                        icon: Icons.analytics_rounded,
-                        color: Colors.orange,
-                        onTap: () {
-                          context
-                              .findAncestorStateOfType<HomePageState>()
-                              ?.setTab(2);
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Material(
-                      elevation: 3,
-                      borderRadius: BorderRadius.circular(12),
-                      child: _QuickAction(
-                        label: 'Leaves',
-                        icon: Icons.calendar_month_rounded,
-                        color: Colors.purple,
-                        onTap: () => context.go('/home/leaves'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Material(
-                      elevation: 3,
-                      borderRadius: BorderRadius.circular(12),
-                      child: _QuickAction(
-                        label: 'Calendar',
-                        icon: Icons.event_note_rounded,
-                        color: Colors.teal,
-                        onTap: () => context.go('/home/calendar'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(child: SizedBox()), // Placeholder for balance
-                ],
+              Material(
+                elevation: 3,
+                borderRadius: BorderRadius.circular(12),
+                child: _QuickAction(
+                  label: 'Time Clock',
+                  icon: Icons.access_time_rounded,
+                  color: Colors.green,
+                  onTap: () => context.go('/home/clock-in'),
+                ),
               ),
             ],
           ),
