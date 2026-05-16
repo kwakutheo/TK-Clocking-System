@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 // Force the Node process to a specific timezone to prevent cloud deployment bugs.
 // Defaults to Africa/Accra (Ghana) as per project requirements unless overridden.
@@ -41,6 +42,9 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // ── Global Error Handling ───────────────────────────────────────────────────
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // ── Global prefix ───────────────────────────────────────────────────────────
   app.setGlobalPrefix('api/v1', {

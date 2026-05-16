@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:tk_clocking_system/core/network/api_client.dart';
+import 'package:tk_clocking_system/core/network/network_exception.dart';
 import 'package:tk_clocking_system/features/calendar/data/models/calendar_models.dart';
 import 'package:tk_clocking_system/features/calendar/domain/entities/calendar_entities.dart';
 import 'package:tk_clocking_system/features/calendar/domain/repositories/calendar_repository.dart';
@@ -21,9 +22,10 @@ class CalendarRepositoryImpl implements CalendarRepository {
           .toList();
       return Right(terms);
     } on DioException catch (e) {
-      return Left(e.response?.data?['message'] ?? 'Failed to load calendar');
+      final networkException = NetworkException.fromDioError(e);
+      return Left(networkException.message);
     } catch (e) {
-      return Left('An unexpected error occurred');
+      return Left('An unexpected error occurred: ${e.toString()}');
     }
   }
 
@@ -38,9 +40,10 @@ class CalendarRepositoryImpl implements CalendarRepository {
           .toList();
       return Right(holidays);
     } on DioException catch (e) {
-      return Left(e.response?.data?['message'] ?? 'Failed to load holidays');
+      final networkException = NetworkException.fromDioError(e);
+      return Left(networkException.message);
     } catch (e) {
-      return Left('An unexpected error occurred');
+      return Left('An unexpected error occurred: ${e.toString()}');
     }
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:tk_clocking_system/core/di/injection_container.dart';
+import 'package:tk_clocking_system/core/presentation/widgets/error_state_view.dart';
 import 'package:tk_clocking_system/features/calendar/domain/entities/calendar_entities.dart';
 import 'package:tk_clocking_system/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:tk_clocking_system/features/calendar/presentation/bloc/calendar_event.dart';
@@ -44,24 +45,11 @@ class _CalendarView extends StatelessWidget {
             }
 
             if (state is CalendarFailure) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.error_outline_rounded,
-                        size: 56, color: Theme.of(context).colorScheme.error),
-                    const SizedBox(height: 16),
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () {
-                        context.read<CalendarBloc>().add(CalendarLoadEvent());
-                      },
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              return ErrorStateView(
+                message: state.message,
+                onRetry: () {
+                  context.read<CalendarBloc>().add(CalendarLoadEvent());
+                },
               );
             }
 
