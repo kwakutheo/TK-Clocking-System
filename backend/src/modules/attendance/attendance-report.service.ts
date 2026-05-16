@@ -359,9 +359,8 @@ export class AttendanceReportService {
 
         if (effectiveStatus === EmployeeStatus.INACTIVE) {
           status = 'INACTIVE';
-        } else if (effectiveStatus === EmployeeStatus.SUSPENDED) {
-          status = isFuture || isToday ? 'SUSPENDED' : 'ABSENT (SUSPENDED)';
-          if (!isFuture && !isToday) daysAbsent++;
+        } else if (day < registrationDate) {
+          status = 'NOT REGISTERED';
         } else if (isWeekEnd) {
           status = 'WEEKEND';
         } else if (holiday) {
@@ -370,8 +369,8 @@ export class AttendanceReportService {
           status = `BREAK (${breakItem.name})`;
         } else if (!term) {
           status = 'OFF-TERM / VACATION';
-        } else if (day < registrationDate) {
-          status = 'NOT REGISTERED';
+        } else if (effectiveStatus === EmployeeStatus.SUSPENDED) {
+          status = 'SUSPENDED';
         } else {
           // ── Check approved personal leaves before marking ABSENT ──────────
           const onLeave = approvedLeaves.find(
