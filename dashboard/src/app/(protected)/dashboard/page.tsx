@@ -8,7 +8,7 @@ import { AttendanceChart } from '@/components/attendance-chart';
 import { StatCardSkeleton, TableSkeleton } from '@/components/skeleton';
 import { AdminManualClockModal } from '@/components/admin-manual-clock-modal';
 import {
-  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck, X, ChevronLeft, ChevronRight
+  TrendingUp, TrendingDown, Users, FileText, Building2, Clock, Calendar, AlertTriangle, UserCheck, X, ChevronLeft, ChevronRight, Plane
 } from 'lucide-react';
 
 const fetcher = (fn: () => Promise<unknown>) => () => fn().then((r: any) => r.data);
@@ -301,6 +301,20 @@ export default function DashboardPage() {
                 data: dashboardStats.absentEmployees ?? []
               })}
             />
+            {(dashboardStats.onLeaveToday ?? 0) > 0 && (
+              <StatCard
+                icon={<Plane size={20} />}
+                value={dashboardStats.onLeaveToday}
+                label={isToday ? "On Leave Today" : "On Leave"}
+                color="#0284c7"
+                secondary={isToday ? "Approved leave — authorized absence" : "On approved leave this day"}
+                onClick={() => setModalDetails({
+                  title: isToday ? "On Leave Today" : "On Leave",
+                  type: 'onLeave',
+                  data: dashboardStats.onLeaveEmployees ?? []
+                })}
+              />
+            )}
             <StatCard
               icon={<Clock size={20} />}
               value={dashboardStats.earlyOuts ?? 0}
@@ -607,6 +621,9 @@ export default function DashboardPage() {
                       {modalDetails.type === 'absent' && (
                         <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Shift</th>
                       )}
+                      {modalDetails.type === 'onLeave' && (
+                        <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Leave Type</th>
+                      )}
                       {modalDetails.type === 'earlyOut' && (
                         <>
                           <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>Shift End</th>
@@ -658,6 +675,19 @@ export default function DashboardPage() {
 
                         {modalDetails.type === 'absent' && (
                           <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{emp.shift || '—'}</td>
+                        )}
+
+                        {modalDetails.type === 'onLeave' && (
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, padding: '3px 10px',
+                              borderRadius: 20, background: 'rgba(2,132,199,0.12)',
+                              color: '#0284c7', border: '1px solid rgba(2,132,199,0.3)',
+                              textTransform: 'uppercase', letterSpacing: 0.5,
+                            }}>
+                              {emp.leaveType ?? '—'}
+                            </span>
+                          </td>
                         )}
 
                         {modalDetails.type === 'earlyOut' && (
