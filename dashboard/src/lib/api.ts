@@ -7,11 +7,24 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ── Attach token from localStorage on every request ────────────────────────
+// ── Attach token & tenant from localStorage on every request ────────────────────────
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('access_token');
+    const userString = localStorage.getItem('auth-storage');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+    
+    // Attach the Tenant ID to all requests automatically
+    if (userString) {
+      try {
+        const { state } = JSON.parse(userString);
+        if (state?.user?.tenantId) {
+          config.headers['x-tenant-id'] = state.user.tenantId;
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
   }
   return config;
 });
@@ -31,8 +44,8 @@ api.interceptors.response.use(
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (identifier: string, password: string) =>
-    api.post('/auth/login', { identifier, password }),
+  login: (identifier: string, password: string, tenantSlug?: string) =>
+    api.post('/auth/login', { identifier, password, tenantSlug }),
   me: () => api.get('/auth/me'),
   updateProfile: (data: {
     fullName?: string;

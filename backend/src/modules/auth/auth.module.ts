@@ -9,12 +9,14 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
 import { EmployeesModule } from '../employees/employees.module';
+import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
     UsersModule,
     EmployeesModule,
     AuditModule,
+    TenantsModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

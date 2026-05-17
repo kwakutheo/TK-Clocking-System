@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { TermBreak } from './term-break.entity';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Entity('academic_terms')
 export class AcademicTerm {
@@ -29,4 +30,11 @@ export class AcademicTerm {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string | null;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
 }

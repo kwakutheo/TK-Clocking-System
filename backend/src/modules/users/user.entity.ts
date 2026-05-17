@@ -5,8 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { UserRole } from '../../common/enums';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Entity('users')
 export class User {
@@ -48,6 +51,13 @@ export class User {
 
   @Column({ name: 'fcm_token', type: 'text', nullable: true })
   fcmToken: string | null;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string | null;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

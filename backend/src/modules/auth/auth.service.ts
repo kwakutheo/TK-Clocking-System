@@ -15,6 +15,8 @@ import { AuditService } from '../audit/audit.service';
 import { UserRole } from '../../common/enums';
 import * as nodemailer from 'nodemailer';
 import { EmployeesService } from '../employees/employees.service';
+import { TenantsService } from '../tenants/tenants.service';
+import { tenantStorage } from '../../common/middleware/tenant.middleware';
 
 const SALT_ROUNDS = 12;
 
@@ -26,14 +28,32 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly auditService: AuditService,
     private readonly employees: EmployeesService,
+    private readonly tenantsService: TenantsService,
   ) {}
 
   // ── Validate credentials (used by LocalStrategy) ──────────────────────────
   async validateUser(
     identifier: string,
     password: string,
+    tenantSlug?: string,
   ): Promise<User | null> {
-    const user = await this.users.findByIdentifier(identifier);
+    
+    // 1. Resolve Tenant if provided
+    let tenantId: string | null = null;
+    if (tenantSlug) {
+      const tenant = await this.tenantsService.findOneBySlug(tenantSlug);
+      if (!tenant) throw new UnauthorizedException('School/Tenant not found.');
+      tenantId = tenant.id;
+    }
+
+    // 2. Find User (Scoped to tenant if tenantId exists)
+    // We run this inside the AsyncLocalStorage context so TenantBoundRepository picks it up!
+    const user = await new Promise<User | null>((resolve) => {
+      tenantStorage.run(tenantId || '', async () => {
+        resolve(await this.users.findByIdentifier(identifier));
+      });
+    });
+
     if (!user) return null;
 
     const matches = await bcrypt.compare(password, user.passwordHash);
@@ -57,7 +77,7 @@ export class AuthService {
 
   // ── Login — returns access + refresh tokens ────────────────────────────────
   async login(user: User) {
-    const payload = { sub: user.id, role: user.role };
+    const payload = { sub: user.id, role: user.role, tenantId: user.tenantId };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {

@@ -8,6 +8,7 @@ import { Department } from '../departments/department.entity';
 import { Branch } from '../branches/branch.entity';
 import { Shift } from '../shifts/shift.entity';
 import { EmployeeStatus } from '../../common/enums';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Entity('employees')
 export class Employee {
@@ -54,6 +55,13 @@ export class Employee {
 
   @OneToMany('EmployeeStatusLog', 'employee', { cascade: true })
   statusLogs: any[];
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string | null;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

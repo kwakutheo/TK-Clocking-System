@@ -1,7 +1,8 @@
 import {
   Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, UpdateDateColumn,
+  CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn,
 } from 'typeorm';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Entity('branches')
 export class Branch {
@@ -25,6 +26,13 @@ export class Branch {
 
   @Column({ name: 'qr_code_updated_at', nullable: true })
   qrCodeUpdatedAt: Date;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string | null;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

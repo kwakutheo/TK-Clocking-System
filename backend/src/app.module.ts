@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -15,8 +15,10 @@ import { AcademicCalendarModule } from './modules/academic-calendar/academic-cal
 import { SettingsModule } from './modules/settings/settings.module';
 import { LeavesModule } from './modules/leaves/leaves.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
 import { APP_GUARD } from '@nestjs/core';
+import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 @Module({
   imports: [
@@ -56,7 +58,12 @@ import { APP_GUARD } from '@nestjs/core';
     SettingsModule,
     LeavesModule,
     NotificationsModule,
+    TenantsModule,
   ],
   providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantMiddleware).forRoutes('*');
+  }
+}

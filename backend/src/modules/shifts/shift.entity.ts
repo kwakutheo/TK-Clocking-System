@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Entity('shifts')
 export class Shift {
@@ -16,4 +17,11 @@ export class Shift {
 
   @Column({ name: 'grace_minutes', default: 10 })
   graceMinutes: number;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string | null;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
 }

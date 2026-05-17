@@ -5,6 +5,7 @@ import {
 import { Employee } from '../employees/employee.entity';
 import { Branch } from '../branches/branch.entity';
 import { AttendanceType } from '../../common/enums';
+import { Tenant } from '../tenants/tenant.entity';
 
 @Entity('attendance_logs')
 @Index(['employee', 'timestamp'])
@@ -55,6 +56,13 @@ export class AttendanceLog {
 
   @Column({ name: 'admin_override_name', nullable: true })
   adminOverrideName: string;
+
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string | null;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
