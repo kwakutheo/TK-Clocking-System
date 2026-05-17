@@ -299,7 +299,7 @@ export default function LeavesPage() {
         </div>
         <button
           onClick={() => { setShowForm(!showForm); setError(''); setSuccess(''); }}
-          className="btn-primary"
+          className="btn btn-primary"
           style={{ display: 'flex', alignItems: 'center', gap: 8, outline: 'none', border: 'none' }}
         >
           <Plus size={16} /> Request Leave
