@@ -135,7 +135,7 @@ describe('LeavesService', () => {
     });
 
     it('should NOT send notifications if employee has no FCM token', async () => {
-      const leave = buildLeave(null); // No token
+      const leave = buildLeave(undefined); // No token
       mockLeaveRepo.findOne.mockResolvedValue(leave);
       mockLeaveRepo.save.mockResolvedValue({ ...leave, status: LeaveStatus.APPROVED });
 

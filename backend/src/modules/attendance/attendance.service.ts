@@ -10,8 +10,9 @@ import { RecordAttendanceDto } from './dto/record-attendance.dto';
 import { SyncOfflineDto } from './dto/sync-offline.dto';
 import { QrClockDto } from './dto/qr-clock.dto';
 import { AdminManualClockDto } from './dto/admin-manual-clock.dto';
-import { AttendanceType, UserRole } from '../../common/enums';
+import { AttendanceType, UserRole, LeaveStatus } from '../../common/enums';
 import { AuditService } from '../audit/audit.service';
+import { LeavesService } from '../leaves/leaves.service';
 import { User } from '../users/user.entity';
 
 
@@ -27,8 +28,7 @@ export class AttendanceService {
     private readonly holidays: HolidaysService,
     private readonly academicCalendar: AcademicCalendarService,
     private readonly auditService: AuditService,
-
-
+    private readonly leavesService: LeavesService,
   ) {}
 
   // ── Record single event ───────────────────────────────────────────────────
@@ -57,6 +57,21 @@ export class AttendanceService {
     if (dayStatus.isNonWorking) {
       throw new BadRequestException(
         `Action denied: Today is a ${dayStatus.name}. Clocking is not allowed on non-working days.`,
+      );
+    }
+
+    // ── Individual Leave guard ────────────────────────────────────────────
+    const dateStr = now.toISOString().split('T')[0];
+    const approvedLeaves = await this.leavesService.findApprovedInRange(
+      employee.id,
+      dateStr,
+      dateStr,
+    );
+
+    if (approvedLeaves.length > 0) {
+      const leave = approvedLeaves[0];
+      throw new BadRequestException(
+        `Action denied: You have an approved ${leave.leaveType.toUpperCase()} for today. Clocking is not allowed while on leave.`,
       );
     }
 
@@ -498,6 +513,21 @@ export class AttendanceService {
     if (dayStatus.isNonWorking) {
       throw new BadRequestException(
         `Action denied: Today is a ${dayStatus.name}. Clocking is not allowed on non-working days.`,
+      );
+    }
+
+    // ── Individual Leave guard ────────────────────────────────────────────
+    const dateStr = now.toISOString().split('T')[0];
+    const approvedLeaves = await this.leavesService.findApprovedInRange(
+      employee.id,
+      dateStr,
+      dateStr,
+    );
+
+    if (approvedLeaves.length > 0) {
+      const leave = approvedLeaves[0];
+      throw new BadRequestException(
+        `Action denied: You have an approved ${leave.leaveType.toUpperCase()} for today. Clocking is not allowed while on leave.`,
       );
     }
 
