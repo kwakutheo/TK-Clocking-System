@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { can } from '@/lib/permissions';
-import { CheckCircle, XCircle, Clock, FileText, Plus, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, Plus, ChevronDown, ChevronUp, AlertTriangle, Search, Filter, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -175,6 +175,12 @@ export default function LeavesPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // ── Pagination & Search State ──
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterYear, setFilterYear] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
   const [form, setForm] = useState({
     leaveType: 'SICK', startDate: '', endDate: '', reason: '',
   });
@@ -246,6 +252,40 @@ export default function LeavesPage() {
 
   const pendingCount = allLeaves.filter(l => l.status === 'PENDING').length;
 
+  // ── Compute Filtered & Paginated List ──
+  const filteredLeaves = useMemo(() => {
+    return allLeaves.filter(leave => {
+      // Filter by Search Term
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const empName = leave.employee?.user?.fullName?.toLowerCase() || '';
+        const empCode = leave.employee?.employeeCode?.toLowerCase() || '';
+        if (!empName.includes(term) && !empCode.includes(term)) return false;
+      }
+      // Filter by Year
+      if (filterYear !== 'ALL') {
+        if (!leave.startDate.startsWith(filterYear)) return false;
+      }
+      return true;
+    });
+  }, [allLeaves, searchTerm, filterYear]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterYear, filterStatus]);
+
+  const totalPages = Math.ceil(filteredLeaves.length / itemsPerPage) || 1;
+  const paginatedLeaves = filteredLeaves.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    allLeaves.forEach(l => {
+      if (l.startDate) years.add(l.startDate.substring(0, 4));
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [allLeaves]);
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -308,7 +348,11 @@ export default function LeavesPage() {
                     border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13,
                   }}
                 >
-                  {LEAVE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  {LEAVE_TYPES.map(t => (
+                    <option key={t} value={t} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -402,17 +446,97 @@ export default function LeavesPage() {
             </div>
           </div>
 
-          {allLeaves.length === 0 ? (
+          {/* Search & Filter Bar */}
+          <div style={{
+            display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap',
+            background: 'var(--bg-card)', padding: '12px 16px', borderRadius: 12,
+            border: '1px solid var(--border)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 200, position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, color: 'var(--text-secondary)' }} />
+              <input
+                type="text"
+                placeholder="Search by employee name or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 14px 10px 36px', borderRadius: 8,
+                  background: 'var(--bg-input)', border: '1px solid var(--border)',
+                  color: 'var(--text-primary)', fontSize: 13, outline: 'none'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Calendar size={16} style={{ color: 'var(--text-secondary)' }} />
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                style={{
+                  padding: '10px 14px', borderRadius: 8, background: 'var(--bg-input)',
+                  border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13,
+                  outline: 'none', cursor: 'pointer'
+                }}
+              >
+                <option value="ALL" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>All Years</option>
+                {availableYears.map(y => (
+                  <option key={y} value={y} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {filteredLeaves.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)', fontSize: 14 }}>
               <Clock size={36} style={{ opacity: 0.3, marginBottom: 12, display: 'block', margin: '0 auto 12px' }} />
-              No {filterStatus === 'ALL' ? '' : filterStatus.toLowerCase()} leave requests found.
+              No {filterStatus === 'ALL' ? '' : filterStatus.toLowerCase()} leave requests found matching your filters.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {allLeaves.map(leave => (
-                <LeaveCard key={leave.id} leave={leave} isAdmin onReview={handleReview} />
-              ))}
-            </div>
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {paginatedLeaves.map(leave => (
+                  <LeaveCard key={leave.id} leave={leave} isAdmin onReview={handleReview} />
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, padding: '12px 16px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredLeaves.length)} of {filteredLeaves.length} entries
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '6px 10px', borderRadius: 6, background: 'var(--bg-input)',
+                        border: '1px solid var(--border)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                        display: 'flex', alignItems: 'center'
+                      }}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', padding: '0 8px' }}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        padding: '6px 10px', borderRadius: 6, background: 'var(--bg-input)',
+                        border: '1px solid var(--border)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                        color: currentPage === totalPages ? 'var(--text-muted)' : 'var(--text-primary)',
+                        display: 'flex', alignItems: 'center'
+                      }}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
