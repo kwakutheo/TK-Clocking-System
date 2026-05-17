@@ -353,6 +353,7 @@ export default function LeavesPage() {
                   <Tag size={14} /> Leave Type
                 </label>
                 <select
+                  className="form-input"
                   value={form.leaveType}
                   onChange={(e) => setForm({ ...form, leaveType: e.target.value })}
                   aria-label="Leave type"
@@ -529,6 +530,7 @@ export default function LeavesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Calendar size={16} style={{ color: 'var(--text-secondary)' }} />
               <select
+                className="form-input"
                 aria-label="Filter by year"
                 value={filterYear}
                 onChange={(e) => setFilterYear(e.target.value)}
