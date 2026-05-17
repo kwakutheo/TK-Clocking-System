@@ -117,6 +117,20 @@ export class LeavesService {
       .getMany();
   }
 
+  /** Get all approved leaves for all employees that overlap with a date range. */
+  async findAllApprovedInRange(
+    startDate: string,
+    endDate: string,
+  ): Promise<LeaveRequest[]> {
+    return this.leaveRepo
+      .createQueryBuilder('leave')
+      .leftJoinAndSelect('leave.employee', 'employee')
+      .where('leave.status = :status', { status: LeaveStatus.APPROVED })
+      .andWhere('leave.start_date <= :endDate', { endDate })
+      .andWhere('leave.end_date >= :startDate', { startDate })
+      .getMany();
+  }
+
   /** Approve or reject a leave request. */
   async reviewLeave(
     leaveId: string,

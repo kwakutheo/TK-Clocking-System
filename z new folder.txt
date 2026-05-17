@@ -1,24 +1,33 @@
-FEATURES TO BE ADDED TO THE MOBILE APP HOME PAGE
+Viewed attendance-report.service.ts:1-445
+Viewed attendance.service.ts:1197-1235
+Viewed attendance.service.ts:1235-1270
+Viewed attendance.service.ts:1270-1300
+Viewed attendance-export.service.ts:1-369
 
-### 1. Interactive Shift Progress (Visual)
-Since you already have `isClockedIn` and `todayHours`, you can a **Live Shift Progress Bar or Circle**.
-*   **Feature**: A circular progress indicator that fills up as the shift progresses 
-    (e.g., progress towards 8 hours but remember different employees may has different shift time and due to that, they may have different working durations).
-*   **Benefit**: Gives employees an immediate visual sense of how much of their workday is remaining.
+Based on an audit of how approved leaves interact with the rest of the application, there are **three key areas** that should be updated to make the system 100% robust and consistent:
 
+---
 
-### 2. "Upcoming" Schedule Section
-Add a horizontal scrolling list or a small card below the stats for "What's Next".
-*   **Feature**: Shows tomorrow's shift start time and any upcoming public holidays (using `holidayName` if the backend can provide future ones).
-*   **Benefit**: Helps employees plan their next day without navigating away from the home screen.
+### 1. The Admin Dashboard Stats (Most Critical) ⚠️
+*   **The Issue:** On the web/desktop admin dashboard, the system counts **who is absent today**. Currently, if an employee has an approved leave, doesn't clock in, and today is a normal working day, the backend groups them under **`absentEmployees`** and adds them to the **`absentToday`** count.
+*   **Why it's bad:** HR managers will see employees flagged as "Absent" when they are actually away on approved leave.
+*   **The Fix:** Update `getDashboardStats` in `attendance.service.ts` to check for approved leaves today. We should:
+    1.  Filter leave-takers out of the `absentEmployees` list.
+    2.  Add a new category: **`onLeaveToday`** and return **`onLeaveEmployees`** so the admin dashboard can show exactly who is out on leave.
 
-### 3. Weekly Goal Tracker
-Use the `weekHours` data to show a progress bar.
-*   **Feature**: A "Weekly Target" bar (e.g., "32h / 40h completed").
-*   **Benefit**: Encourages employees to meet their contracted hours and provides transparency on their productivity.
+---
 
-### 4. Location/Geofence Validator
-"Work Zone" indicator.
-*   **Feature**: A subtle badge near the greeting that says "📍 Inside Work Zone" or "📍 Outside Work Zone".
-*   **Benefit**: Saves the user from opening the "Clock In" page only to find out they aren't close enough yet.
+### 2. PDF Attendance Export Styling (Visual Polish) 🎨
+*   **The Issue:** When generating monthly or term PDF reports, the daily log correctly lists the status as `LEAVE (Sick Leave)` or `LEAVE (Annual Leave)` (which is great!). However, the PDF styling defaults the text color to standard black.
+*   **The Fix:** Update `AttendanceExportService` to render the `LEAVE` status in a professional, distinct color (like **teal** or **blue**) so managers can visually scan monthly logs and easily tell leaves apart from active work (green) and absences (red).
 
+---
+
+### 3. Next Shift Planning & Scheduling Guards (Logic Safety) 📅
+*   **The Issue:** The dashboard computes a countdown or lists when the employee's "Next Shift" is scheduled. If their next typical shift falls on a day they have approved leave for, the system shouldn't recommend it or count down to it.
+*   **The Fix:** When finding the "Next Shift" date (e.g. for the countdown banner), make sure the calculation skips dates that fall within the employee's approved leaves.
+
+---
+
+### What would you like to tackle next?
+Updating the **Admin Dashboard Stats (No. 1)** is highly recommended since it directly affects HR decision-making and report accuracy. Would you like me to implement that next?

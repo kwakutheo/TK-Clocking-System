@@ -328,6 +328,7 @@ export class AttendanceExportService {
       else if (d.status === 'SUSPENDED' || d.status === 'INACTIVE') statusColor = '#f59e0b'; // Amber/Orange
       else if (d.status.includes('HOLIDAY') || d.status === 'WEEKEND' || d.status.includes('BREAK') || d.status.includes('OFF-TERM')) statusColor = '#6b7280'; // Gray
       else if (d.status === 'PRESENT') statusColor = '#059669'; // Green
+      else if (d.status.includes('LEAVE')) statusColor = '#0284c7'; // Blue
 
       return [
         formatDate(d.date),

@@ -777,6 +777,8 @@ export class AttendanceService {
 
     // Check non-working day
     const dayStatus = await this._checkNonWorkingDay(new Date());
+    let isNonWorking = dayStatus.isNonWorking;
+
     if (dayStatus.isNonWorking) {
       if (dayStatus.type === 'weekend') isWeekend = true;
       else if (dayStatus.type === 'holiday') holidayName = dayStatus.name;
@@ -784,6 +786,19 @@ export class AttendanceService {
         isVacation = true;
         vacationName = dayStatus.name;
       }
+    }
+
+    // Check individual approved leave for today
+    const dateStr = today.toISOString().split('T')[0];
+    const approvedLeaves = await this.leavesService.findApprovedInRange(
+      employee.id,
+      dateStr,
+      dateStr,
+    );
+    if (approvedLeaves.length > 0) {
+      isVacation = true;
+      vacationName = `Leave (${approvedLeaves[0].leaveType})`;
+      isNonWorking = true;
     }
 
     // Determine current clock-in status
@@ -873,13 +888,13 @@ export class AttendanceService {
       const bannerLateStart = new Date(today);
       bannerLateStart.setHours(sHours, sMins, 0, 0);
 
-      if (!hasClockedInToday && now >= bannerLateStart && now <= shiftEnd && !dayStatus.isNonWorking) {
+      if (!hasClockedInToday && now >= bannerLateStart && now <= shiftEnd && !isNonWorking) {
         const minutesLate = (now.getTime() - bannerLateStart.getTime()) / 60000;
         lateStatus = minutesLate > 180 ? 'persistent_late' : 'late';
       }
 
       // Absent today: shift is over and employee never clocked in at all
-      if (isShiftOver && !hasClockedInToday && !dayStatus.isNonWorking) {
+      if (isShiftOver && !hasClockedInToday && !isNonWorking) {
         isAbsentToday = true;
       }
 
@@ -1017,9 +1032,23 @@ export class AttendanceService {
         tempDate.setDate(tempDate.getDate() + 1); // start checking from tomorrow
       }
 
+      // Fetch approved leaves for the next 60 days
+      const limitDate = new Date(tempDate);
+      limitDate.setDate(limitDate.getDate() + 60);
+      const startLimitStr = tempDate.toISOString().split('T')[0];
+      const endLimitStr = limitDate.toISOString().split('T')[0];
+      const futureLeaves = await this.leavesService.findApprovedInRange(
+        employee.id,
+        startLimitStr,
+        endLimitStr
+      );
+
       for (let i = 0; i < 60; i++) { // check up to 60 days ahead
         const status = await this._checkNonWorkingDay(tempDate);
-        if (!status.isNonWorking) {
+        const tempStr = tempDate.toISOString().split('T')[0];
+        const isLeave = futureLeaves.some(l => tempStr >= l.startDate && tempStr <= l.endDate);
+
+        if (!status.isNonWorking && !isLeave) {
           nextShiftDateStr = tempDate.toISOString();
           break;
         }
@@ -1107,6 +1136,9 @@ export class AttendanceService {
 
     const dayStatus = await this._checkNonWorkingDay(targetDate);
     const evaluationTime = isHistorical ? endOfDay : new Date();
+
+    const dateStrFormatted = startOfDay.toISOString().split('T')[0];
+    const approvedLeaves = await this.leavesService.findAllApprovedInRange(dateStrFormatted, dateStrFormatted);
 
     const logs = await this.repo
       .createQueryBuilder('log')
@@ -1225,6 +1257,7 @@ export class AttendanceService {
     }
 
     const absentEmployees: any[] = [];
+    const onLeaveEmployees: any[] = [];
 
     if (!dayStatus.isNonWorking) {
       const allEmployees = await this.employees.findAll();
@@ -1248,14 +1281,25 @@ export class AttendanceService {
         shiftStart.setHours(sHours, sMins + (emp.shift.graceMinutes || 0), 0, 0);
 
         if (evaluationTime > shiftStart) {
-          absentEmployees.push({
+          const leaveRecord = approvedLeaves.find(l => l.employee?.id === emp.id);
+          
+          const empData = {
             id: emp.id,
             fullName: (emp as any).user?.fullName ?? 'Unknown',
             employeeCode: emp.employeeCode,
             branch: (emp as any).branch?.name ?? null,
             shift: `${emp.shift.startTime} – ${emp.shift.endTime}`,
             isSuspended: emp.status === 'suspended',
-          });
+          };
+
+          if (leaveRecord) {
+            onLeaveEmployees.push({
+              ...empData,
+              leaveType: leaveRecord.leaveType,
+            });
+          } else {
+            absentEmployees.push(empData);
+          }
         }
       });
     }
@@ -1265,11 +1309,13 @@ export class AttendanceService {
       currentlyOnSite,
       lateArrivals: lateEmployees.length,
       absentToday: absentEmployees.length,
+      onLeaveToday: onLeaveEmployees.length,
       earlyOuts: earlyOutEmployees.length,
       forgotClockOut: forgotOutEmployees.length,
       presentEmployees,
       lateEmployees,
       absentEmployees,
+      onLeaveEmployees,
       earlyOutEmployees,
       forgotOutEmployees,
       dayStatus,
