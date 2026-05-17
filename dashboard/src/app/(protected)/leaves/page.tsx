@@ -300,7 +300,7 @@ export default function LeavesPage() {
         <button
           onClick={() => { setShowForm(!showForm); setError(''); setSuccess(''); }}
           className="btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, outline: 'none', border: 'none' }}
         >
           <Plus size={16} /> Request Leave
         </button>
@@ -366,7 +366,7 @@ export default function LeavesPage() {
                   onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
                 >
                   {LEAVE_TYPES.map(t => (
-                    <option key={t} value={t} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: 10 }}>
+                    <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
@@ -538,9 +538,9 @@ export default function LeavesPage() {
                   outline: 'none', cursor: 'pointer'
                 }}
               >
-                <option value="ALL" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>All Years</option>
+                <option value="ALL">All Years</option>
                 {availableYears.map(y => (
-                  <option key={y} value={y} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>{y}</option>
+                  <option key={y} value={y}>{y}</option>
                 ))}
               </select>
             </div>
