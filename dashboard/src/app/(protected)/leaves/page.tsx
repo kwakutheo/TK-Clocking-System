@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore } from '@/lib/store';
 import { can } from '@/lib/permissions';
-import { CheckCircle, XCircle, Clock, FileText, Plus, ChevronDown, ChevronUp, AlertTriangle, Search, Filter, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, Plus, ChevronDown, ChevronUp, AlertTriangle, Search, Filter, ChevronLeft, ChevronRight, Calendar, Tag, AlignLeft } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -314,7 +314,7 @@ export default function LeavesPage() {
           display: 'flex', alignItems: 'center', gap: 8, fontSize: 14,
         }}>
           <AlertTriangle size={16} /> {error}
-          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+          <button aria-label="Dismiss error" onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
       {success && (
@@ -324,39 +324,59 @@ export default function LeavesPage() {
           display: 'flex', alignItems: 'center', gap: 8, fontSize: 14,
         }}>
           <CheckCircle size={16} /> {success}
-          <button onClick={() => setSuccess('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+          <button aria-label="Dismiss success message" onClick={() => setSuccess('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
       {/* Request Leave Form */}
       {showForm && (
         <div style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 16, padding: 24, marginBottom: 24,
+          background: 'linear-gradient(145deg, var(--bg-card) 0%, rgba(128,128,128,0.03) 100%)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(128, 128, 128, 0.15)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
+          borderRadius: 20, padding: 28, marginBottom: 32,
+          position: 'relative', overflow: 'hidden'
         }}>
-          <h3 style={{ margin: '0 0 18px', color: 'var(--text-primary)', fontSize: 16 }}>New Leave Request</h3>
+          {/* Subtle gradient accent line at the top */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--primary), #8b5cf6, #ec4899)' }} />
+          
+          <h3 style={{ margin: '0 0 24px', color: 'var(--text-primary)', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FileText size={20} style={{ color: 'var(--primary)' }} /> New Leave Request
+          </h3>
+          
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Leave Type</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 20 }}>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Tag size={14} /> Leave Type
+                </label>
                 <select
                   value={form.leaveType}
                   onChange={(e) => setForm({ ...form, leaveType: e.target.value })}
                   aria-label="Leave type"
                   style={{
-                    padding: '10px 14px', borderRadius: 8, background: 'var(--bg-input)',
-                    border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13,
+                    padding: '12px 16px', borderRadius: 10, background: 'var(--bg-input)',
+                    border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14,
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', outline: 'none', cursor: 'pointer',
+                    transition: 'border-color 0.2s, box-shadow 0.2s'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
                 >
                   {LEAVE_TYPES.map(t => (
-                    <option key={t} value={t} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                    <option key={t} value={t} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: 10 }}>
                       {t}
                     </option>
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Start Date</label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Calendar size={14} /> Start Date
+                </label>
                 <input
                   type="date"
                   value={form.startDate}
@@ -364,13 +384,20 @@ export default function LeavesPage() {
                   required
                   aria-label="Start date"
                   style={{
-                    padding: '10px 14px', borderRadius: 8, background: 'var(--bg-input)',
-                    border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13,
+                    padding: '12px 16px', borderRadius: 10, background: 'var(--bg-input)',
+                    border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14,
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>End Date</label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Calendar size={14} /> End Date
+                </label>
                 <input
                   type="date"
                   value={form.endDate}
@@ -378,38 +405,69 @@ export default function LeavesPage() {
                   required
                   aria-label="End date"
                   style={{
-                    padding: '10px 14px', borderRadius: 8, background: 'var(--bg-input)',
-                    border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13,
+                    padding: '12px 16px', borderRadius: 10, background: 'var(--bg-input)',
+                    border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14,
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
                 />
               </div>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-                Reason (optional)
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <AlignLeft size={14} /> Reason (optional)
               </label>
               <textarea
                 value={form.reason}
                 onChange={(e) => setForm({ ...form, reason: e.target.value })}
                 rows={3}
-                placeholder="Describe the reason for your leave..."
+                placeholder="Describe the reason for your leave (e.g. Doctor's appointment, Personal matters)..."
                 aria-label="Reason"
                 style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 8,
+                  width: '100%', padding: '14px 16px', borderRadius: 10,
                   background: 'var(--bg-input)', border: '1px solid var(--border)',
-                  color: 'var(--text-primary)', fontSize: 13, resize: 'vertical',
+                  color: 'var(--text-primary)', fontSize: 14, resize: 'vertical',
                   fontFamily: 'inherit', boxSizing: 'border-box',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', outline: 'none',
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
                 }}
+                onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
               />
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button type="submit" disabled={loading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {loading ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Submitting...</> : 'Submit Request'}
+
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <button 
+                type="submit" 
+                disabled={loading} 
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10,
+                  background: 'var(--primary)', color: '#fff', fontSize: 14, fontWeight: 600,
+                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s ease',
+                  opacity: loading ? 0.7 : 1
+                }}
+                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={(e) => { if (!loading) e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                {loading ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Submitting...</> : <><CheckCircle size={18} /> Submit Request</>}
               </button>
-              <button type="button" onClick={() => setShowForm(false)} style={{
-                padding: '10px 20px', borderRadius: 8, background: 'var(--bg-card-hover)',
-                border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-              }}>Cancel</button>
+              <button 
+                type="button" 
+                onClick={() => setShowForm(false)} 
+                style={{
+                  padding: '12px 24px', borderRadius: 10, background: 'var(--bg-card-hover)',
+                  border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+              >
+                Cancel
+              </button>
             </div>
           </form>
         </div>
@@ -456,6 +514,7 @@ export default function LeavesPage() {
               <Search size={16} style={{ position: 'absolute', left: 12, color: 'var(--text-secondary)' }} />
               <input
                 type="text"
+                aria-label="Search leaves"
                 placeholder="Search by employee name or code..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -470,6 +529,7 @@ export default function LeavesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Calendar size={16} style={{ color: 'var(--text-secondary)' }} />
               <select
+                aria-label="Filter by year"
                 value={filterYear}
                 onChange={(e) => setFilterYear(e.target.value)}
                 style={{
@@ -507,6 +567,7 @@ export default function LeavesPage() {
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <button
+                      aria-label="Previous page"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                       style={{
@@ -522,6 +583,7 @@ export default function LeavesPage() {
                       Page {currentPage} of {totalPages}
                     </span>
                     <button
+                      aria-label="Next page"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
                       style={{
