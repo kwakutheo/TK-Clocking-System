@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ForbiddenException,
+  Injectable, NotFoundException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -39,6 +39,49 @@ export class LeavesService {
       .where('user.id = :userId', { userId })
       .getOne();
     if (!employee) throw new NotFoundException('Employee profile not found.');
+
+    // ── Guard 1: Date Sanity Checks ───────────────────────────────────────────
+    const start = new Date(data.startDate);
+    const end   = new Date(data.endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new BadRequestException('Invalid date format. Please use YYYY-MM-DD.');
+    }
+
+    if (end < start) {
+      throw new BadRequestException(
+        'Invalid date range: the end date cannot be before the start date.',
+      );
+    }
+
+    // Allow SICK leave retroactively (e.g., employee was already home sick)
+    const isSick = data.leaveType?.toUpperCase() === 'SICK';
+    if (!isSick && end < today) {
+      throw new BadRequestException(
+        'Invalid date range: leave requests cannot be submitted for dates entirely in the past.',
+      );
+    }
+
+    // ── Guard 2: Overlap Prevention ───────────────────────────────────────────
+    const conflicting = await this.leaveRepo
+      .createQueryBuilder('leave')
+      .where('leave.employee_id = :empId', { empId: employee.id })
+      .andWhere('leave.status IN (:...statuses)', {
+        statuses: [LeaveStatus.PENDING, LeaveStatus.APPROVED],
+      })
+      .andWhere('leave.start_date <= :end', { end: data.endDate })
+      .andWhere('leave.end_date >= :start', { start: data.startDate })
+      .getOne();
+
+    if (conflicting) {
+      throw new BadRequestException(
+        `You already have an overlapping ${conflicting.status.toLowerCase()} ${conflicting.leaveType} leave ` +
+        `from ${conflicting.startDate} to ${conflicting.endDate}. ` +
+        `Please cancel it first or choose different dates.`,
+      );
+    }
 
     const leave = this.leaveRepo.create({
       employee,

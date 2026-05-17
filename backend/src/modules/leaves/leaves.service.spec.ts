@@ -161,4 +161,128 @@ describe('LeavesService', () => {
       );
     });
   });
+
+  // ── requestLeave ───────────────────────────────────────────────────────────
+
+  describe('requestLeave', () => {
+    const userId = 'user-uuid';
+    const empId  = 'emp-uuid';
+
+    const mockEmployee = { id: empId, user: { id: userId } };
+
+    const buildQb = (overlapResult: any = null) => ({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(overlapResult),
+    });
+
+    beforeEach(() => {
+      // Employee repo: always resolves the mock employee
+      mockEmployeeRepo.createQueryBuilder.mockReturnValue(buildQb(mockEmployee));
+    });
+
+    it('should throw BadRequestException when endDate is before startDate', async () => {
+      await expect(
+        service.requestLeave(userId, {
+          leaveType: 'ANNUAL',
+          startDate: '2099-06-10',
+          endDate: '2099-06-05', // end before start
+        }),
+      ).rejects.toThrow('end date cannot be before the start date');
+    });
+
+    it('should throw BadRequestException for invalid date format', async () => {
+      await expect(
+        service.requestLeave(userId, {
+          leaveType: 'ANNUAL',
+          startDate: 'not-a-date',
+          endDate: '2099-06-10',
+        }),
+      ).rejects.toThrow('Invalid date format');
+    });
+
+    it('should throw BadRequestException when non-SICK leave is entirely in the past', async () => {
+      await expect(
+        service.requestLeave(userId, {
+          leaveType: 'ANNUAL',
+          startDate: '2020-01-01',
+          endDate: '2020-01-05',
+        }),
+      ).rejects.toThrow('dates entirely in the past');
+    });
+
+    it('should allow SICK leave submitted for past dates', async () => {
+      // No overlap
+      mockLeaveRepo.createQueryBuilder.mockReturnValue(buildQb(null));
+      mockLeaveRepo.create.mockReturnValue({ leaveType: 'SICK' });
+      mockLeaveRepo.save.mockResolvedValue({ leaveType: 'SICK', status: LeaveStatus.PENDING });
+
+      const result = await service.requestLeave(userId, {
+        leaveType: 'SICK',
+        startDate: '2020-01-01',
+        endDate: '2020-01-05',
+      });
+
+      expect(result.status).toBe(LeaveStatus.PENDING);
+    });
+
+    it('should throw BadRequestException when an overlapping PENDING leave exists', async () => {
+      const conflicting = {
+        id: 'conflict-id',
+        status: LeaveStatus.PENDING,
+        leaveType: 'ANNUAL',
+        startDate: '2099-06-12',
+        endDate: '2099-06-18',
+      };
+      // Employee QB resolves the employee; leave QB resolves conflicting leave
+      mockEmployeeRepo.createQueryBuilder.mockReturnValue(buildQb(mockEmployee));
+      mockLeaveRepo.createQueryBuilder.mockReturnValue(buildQb(conflicting));
+
+      await expect(
+        service.requestLeave(userId, {
+          leaveType: 'CASUAL',
+          startDate: '2099-06-15',
+          endDate: '2099-06-20',
+        }),
+      ).rejects.toThrow('overlapping');
+    });
+
+    it('should throw BadRequestException when an overlapping APPROVED leave exists', async () => {
+      const conflicting = {
+        id: 'conflict-id',
+        status: LeaveStatus.APPROVED,
+        leaveType: 'SICK',
+        startDate: '2099-07-01',
+        endDate: '2099-07-07',
+      };
+      mockEmployeeRepo.createQueryBuilder.mockReturnValue(buildQb(mockEmployee));
+      mockLeaveRepo.createQueryBuilder.mockReturnValue(buildQb(conflicting));
+
+      await expect(
+        service.requestLeave(userId, {
+          leaveType: 'ANNUAL',
+          startDate: '2099-07-05',
+          endDate: '2099-07-10',
+        }),
+      ).rejects.toThrow('overlapping');
+    });
+
+    it('should create and save the leave when all validations pass', async () => {
+      // No overlap
+      mockLeaveRepo.createQueryBuilder.mockReturnValue(buildQb(null));
+      mockLeaveRepo.create.mockReturnValue({ leaveType: 'ANNUAL' });
+      mockLeaveRepo.save.mockResolvedValue({ leaveType: 'ANNUAL', status: LeaveStatus.PENDING });
+
+      const result = await service.requestLeave(userId, {
+        leaveType: 'ANNUAL',
+        startDate: '2099-08-01',
+        endDate: '2099-08-07',
+      });
+
+      expect(mockLeaveRepo.create).toHaveBeenCalledTimes(1);
+      expect(mockLeaveRepo.save).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe(LeaveStatus.PENDING);
+    });
+  });
 });
